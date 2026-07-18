@@ -29,7 +29,9 @@ Nominal unik = kunci matching. Tiap order pending dijamin punya nominal beda, ja
 ## Struktur
 
 ```
-worker/     Cloudflare Worker (Hono + D1) — payment gateway
+src/         Worker code (Hono + D1)
+migrations/  Schema D1
+wrangler.jsonc  Config Worker
 android/    Source APK GatePay Catcher (NotificationListenerService)
 releases/   gatepay-catcher.apk (siap install)
 docs/       Dokumentasi tambahan
@@ -44,7 +46,7 @@ docs/       Dokumentasi tambahan
 Butuh akun Cloudflare + [wrangler](https://developers.cloudflare.com/workers/wrangler/).
 
 ```bash
-cd worker
+# (di root repo)
 npm install
 
 # Bikin D1 database (sekali aja)
