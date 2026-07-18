@@ -1,5 +1,9 @@
 import { Hono } from 'hono';
 import { renderDashboard } from './dashboard.js';
+import { makeDynamic, isValidQris, qrisInfo } from './qris.js';
+import { renderLanding } from './pages/landing.js';
+import { renderDocs } from './pages/docs.js';
+import { renderCheckout } from './pages/checkout.js';
 
 const app = new Hono();
 
@@ -96,6 +100,17 @@ app.post('/api/orders', async (c) => {
     .bind(id, merchant.id, body.reference ?? null, base, uniqueAmount, expires, t)
     .run();
 
+  // Generate QRIS dinamis dari QRIS statis merchant (kalau ada)
+  let qris = null;
+  if (merchant.qris_static) {
+    try {
+      qris = makeDynamic(merchant.qris_static, uniqueAmount, body.reference || id);
+    } catch (e) {
+      qris = null;
+    }
+  }
+
+  const origin = new URL(c.req.url).origin;
   return json(c, {
     id,
     status: 'pending',
@@ -103,6 +118,8 @@ app.post('/api/orders', async (c) => {
     unique_amount: uniqueAmount,
     unique_suffix: uniqueAmount - base,
     reference: body.reference ?? null,
+    qris,
+    checkout_url: `${origin}/pay/${id}`,
     expires_at: expires,
     expires_in: ttl,
   });
@@ -165,6 +182,84 @@ app.post('/api/orders/:id/cancel', async (c) => {
   await c.env.DB.prepare("UPDATE orders SET status='cancelled' WHERE id=?").bind(order.id).run();
   return json(c, { id: order.id, status: 'cancelled' });
 });
+
+// ─────────────────────────────────────────────────────────
+// Merchant: upload / set QRIS statis
+// POST /api/merchant/qris  { qris: "<isi string QRIS statis>" }
+// ─────────────────────────────────────────────────────────
+app.post('/api/merchant/qris', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return json(c, { error: 'invalid json' }, 400);
+  }
+  const payload = String(body.qris || '').trim();
+  if (!isValidQris(payload)) {
+    return json(c, { error: 'QRIS tidak valid (cek CRC / format). Pastikan ini teks QRIS statis.' }, 400);
+  }
+  const info = qrisInfo(payload);
+  await c.env.DB.prepare('UPDATE merchants SET qris_static = ?, qris_merchant_name = ? WHERE id = ?')
+    .bind(payload, info.merchantName || null, merchant.id)
+    .run();
+  return json(c, { ok: true, merchant_name: info.merchantName, city: info.merchantCity });
+});
+
+// Info QRIS merchant saat ini
+app.get('/api/merchant/qris', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  if (!merchant.qris_static) return json(c, { has_qris: false });
+  return json(c, { has_qris: true, ...qrisInfo(merchant.qris_static) });
+});
+
+// ─────────────────────────────────────────────────────────
+// Checkout page publik (customer scan QR di sini)
+// GET /pay/:id
+// ─────────────────────────────────────────────────────────
+app.get('/pay/:id', async (c) => {
+  const order = await c.env.DB.prepare(
+    `SELECT o.*, m.qris_static, m.qris_merchant_name, m.name as merchant_name
+     FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id WHERE o.id = ?`,
+  )
+    .bind(c.req.param('id'))
+    .first();
+  if (!order) return c.html('<h1>Order tidak ditemukan</h1>', 404);
+
+  if (order.status === 'pending' && order.expires_at <= now()) {
+    await c.env.DB.prepare("UPDATE orders SET status='expired' WHERE id=?").bind(order.id).run();
+    order.status = 'expired';
+  }
+
+  let qris = null;
+  if (order.qris_static && order.status === 'pending') {
+    try {
+      qris = makeDynamic(order.qris_static, order.unique_amount, order.reference || order.id);
+    } catch {}
+  }
+  return c.html(renderCheckout({ order, qris }));
+});
+
+// Status order buat polling checkout (publik, cuma status)
+app.get('/pay/:id/status', async (c) => {
+  const order = await c.env.DB.prepare('SELECT id, status, expires_at FROM orders WHERE id = ?')
+    .bind(c.req.param('id'))
+    .first();
+  if (!order) return json(c, { error: 'not found' }, 404);
+  if (order.status === 'pending' && order.expires_at <= now()) {
+    await c.env.DB.prepare("UPDATE orders SET status='expired' WHERE id=?").bind(order.id).run();
+    order.status = 'expired';
+  }
+  return json(c, { status: order.status });
+});
+
+// ─────────────────────────────────────────────────────────
+// Halaman publik: landing + docs
+// ─────────────────────────────────────────────────────────
+app.get('/', (c) => c.html(renderLanding()));
+app.get('/docs', (c) => c.html(renderDocs()));
 
 // ─────────────────────────────────────────────────────────
 // Device ingest: notif / transaksi dari Redroid catcher
@@ -303,8 +398,6 @@ async function fireCallback(env, order, eventId) {
 // ─────────────────────────────────────────────────────────
 // Dashboard (HTML)
 // ─────────────────────────────────────────────────────────
-app.get('/', (c) => c.redirect('/dashboard'));
-
 app.get('/dashboard', async (c) => {
   const orders = await c.env.DB.prepare(
     `SELECT o.*, m.name as merchant_name FROM orders o
