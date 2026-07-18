@@ -4,6 +4,7 @@ import { makeDynamic, isValidQris, qrisInfo } from './qris.js';
 import { renderLanding } from './pages/landing.js';
 import { renderDocs } from './pages/docs.js';
 import { renderCheckout } from './pages/checkout.js';
+import { renderAdmin } from './pages/admin.js';
 
 const app = new Hono();
 
@@ -133,6 +134,7 @@ app.post('/api/login', async (c) => {
     merchant_name: m.qris_merchant_name || m.name,
     fee_percent: m.fee_percent || 0,
     unique_digits: m.unique_digits || 2,
+    is_admin: !!m.is_admin,
   });
 });
 
@@ -337,6 +339,23 @@ app.post('/api/merchant/settings', async (c) => {
   return json(c, { ok: true, fee_percent: fee, unique_digits: digits });
 });
 
+// Ganti password sendiri (butuh password lama)
+app.post('/api/merchant/change-password', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  const body = await c.req.json().catch(() => ({}));
+  const oldP = String(body.old_password || '');
+  const newP = String(body.new_password || '');
+  if (newP.length < 6) return json(c, { error: 'password baru minimal 6 karakter' }, 400);
+  if (!merchant.password_hash) return json(c, { error: 'akun tidak punya password' }, 400);
+  const ok = await verifyPassword(oldP, merchant.password_salt, merchant.password_hash);
+  if (!ok) return json(c, { error: 'password lama salah' }, 401);
+  const { salt, hash } = await hashPassword(newP);
+  await c.env.DB.prepare('UPDATE merchants SET password_hash = ?, password_salt = ? WHERE id = ?')
+    .bind(hash, salt, merchant.id).run();
+  return json(c, { ok: true });
+});
+
 // ─────────────────────────────────────────────────────────
 // Checkout page publik (customer scan QR di sini)
 // GET /pay/:id
@@ -402,9 +421,15 @@ app.post('/ingest/event', async (c) => {
     if (legacy) deviceSecret = legacy.secret;
   }
   if (!deviceSecret) return json(c, { error: 'unknown device' }, 401);
+  if (owner && owner.active === 0) return json(c, { error: 'merchant suspended' }, 403);
 
   const expected = await hmacHex(deviceSecret, raw);
   if (!safeEqual(expected, signature)) return json(c, { error: 'bad signature' }, 401);
+
+  // update last_seen device merchant
+  if (owner) {
+    await c.env.DB.prepare('UPDATE merchants SET last_seen = ? WHERE id = ?').bind(now(), owner.id).run();
+  }
 
   let body;
   try {
@@ -566,43 +591,94 @@ app.get('/dashboard/data', async (c) => {
 });
 
 // ─────────────────────────────────────────────────────────
-// Admin — kelola merchant (butuh header x-admin-key = env ADMIN_KEY)
+// Admin — kelola merchant (butuh akun dengan is_admin=1)
 // ─────────────────────────────────────────────────────────
-function requireAdmin(c) {
-  const k = c.req.header('x-admin-key') || '';
-  return !!(k && c.env.ADMIN_KEY && k === c.env.ADMIN_KEY);
+async function requireAdmin(c) {
+  const m = await requireMerchant(c);
+  return m && m.is_admin ? m : null;
 }
 
-app.post('/api/admin/merchants', async (c) => {
-  if (!requireAdmin(c)) return json(c, { error: 'unauthorized' }, 401);
-  const body = await c.req.json().catch(() => ({}));
-  const name = String(body.name || 'Merchant').slice(0, 80);
-  const id = rid('mch');
-  const apiKey = 'sk_live_' + hex(16);
-  const cbSecret = 'cbk_' + hex(24);
-  await c.env.DB.prepare(
-    `INSERT INTO merchants (id, name, api_key, notify_url, callback_secret, created_at, fee_percent, unique_digits)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 2)`,
-  )
-    .bind(id, name, apiKey, body.notify_url || null, cbSecret, now(), Number(body.fee_percent) || 0)
-    .run();
-  return json(c, { id, name, api_key: apiKey, callback_secret: cbSecret });
-});
-
+// List merchant + statistik ringkas per merchant
 app.get('/api/admin/merchants', async (c) => {
-  if (!requireAdmin(c)) return json(c, { error: 'unauthorized' }, 401);
+  if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
   const r = await c.env.DB.prepare(
-    `SELECT id, name, api_key, notify_url, fee_percent, unique_digits, created_at,
-            (qris_static IS NOT NULL) as has_qris
-     FROM merchants ORDER BY created_at DESC`,
+    `SELECT m.id, m.name, m.username, m.api_key, m.device_id, m.fee_percent, m.unique_digits,
+            m.active, m.is_admin, m.last_seen, m.created_at,
+            (m.qris_static IS NOT NULL) as has_qris,
+            (SELECT COUNT(*) FROM orders o WHERE o.merchant_id = m.id) as total_orders,
+            (SELECT COUNT(*) FROM orders o WHERE o.merchant_id = m.id AND o.status='paid') as paid_orders,
+            (SELECT COALESCE(SUM(base_amount),0) FROM orders o WHERE o.merchant_id = m.id AND o.status='paid') as revenue
+     FROM merchants m ORDER BY m.created_at DESC`,
   ).all();
   return json(c, { merchants: r.results || [] });
 });
 
-app.post('/api/admin/login', async (c) => {
+// Suspend / aktifkan
+app.post('/api/admin/merchants/:id/active', async (c) => {
+  if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
   const body = await c.req.json().catch(() => ({}));
-  const ok = !!(body.key && c.env.ADMIN_KEY && body.key === c.env.ADMIN_KEY);
-  return json(c, { ok }, ok ? 200 : 401);
+  const active = body.active ? 1 : 0;
+  await c.env.DB.prepare('UPDATE merchants SET active = ? WHERE id = ?').bind(active, c.req.param('id')).run();
+  return json(c, { ok: true, active });
 });
+
+// Hapus merchant
+app.post('/api/admin/merchants/:id/delete', async (c) => {
+  const admin = await requireAdmin(c);
+  if (!admin) return json(c, { error: 'unauthorized' }, 401);
+  const id = c.req.param('id');
+  if (id === admin.id) return json(c, { error: 'tidak bisa hapus akun admin sendiri' }, 400);
+  await c.env.DB.prepare('DELETE FROM merchants WHERE id = ?').bind(id).run();
+  return json(c, { ok: true });
+});
+
+// Reset password → password baru random
+app.post('/api/admin/merchants/:id/reset-password', async (c) => {
+  if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
+  const newPass = hex(6);
+  const { salt, hash } = await hashPassword(newPass);
+  await c.env.DB.prepare('UPDATE merchants SET password_hash = ?, password_salt = ? WHERE id = ?')
+    .bind(hash, salt, c.req.param('id')).run();
+  return json(c, { ok: true, new_password: newPass });
+});
+
+// Regenerate API key
+app.post('/api/admin/merchants/:id/regenerate-key', async (c) => {
+  if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
+  const apiKey = 'sk_live_' + hex(16);
+  await c.env.DB.prepare('UPDATE merchants SET api_key = ? WHERE id = ?').bind(apiKey, c.req.param('id')).run();
+  return json(c, { ok: true, api_key: apiKey });
+});
+
+// Statistik global
+app.get('/api/admin/stats', async (c) => {
+  if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
+  const merchants = await c.env.DB.prepare('SELECT COUNT(*) as n, SUM(active) as active FROM merchants').first();
+  const orders = await c.env.DB.prepare(
+    `SELECT COUNT(*) as total,
+       SUM(CASE WHEN status='paid' THEN 1 ELSE 0 END) as paid,
+       SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending,
+       SUM(CASE WHEN status='paid' THEN base_amount ELSE 0 END) as revenue
+     FROM orders`,
+  ).first();
+  return json(c, { merchants, orders });
+});
+
+// Log global (order + event lintas merchant)
+app.get('/api/admin/log', async (c) => {
+  if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
+  const orders = await c.env.DB.prepare(
+    `SELECT o.*, m.username FROM orders o LEFT JOIN merchants m ON m.id=o.merchant_id
+     ORDER BY o.created_at DESC LIMIT 100`,
+  ).all();
+  const events = await c.env.DB.prepare(
+    `SELECT e.*, m.username FROM events e LEFT JOIN merchants m ON m.id=e.merchant_id
+     ORDER BY e.created_at DESC LIMIT 100`,
+  ).all();
+  return json(c, { orders: orders.results || [], events: events.results || [] });
+});
+
+// Halaman admin
+app.get('/admin', (c) => c.html(renderAdmin()));
 
 export default app;

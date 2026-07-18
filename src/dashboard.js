@@ -154,6 +154,21 @@ export function renderDashboard() {
     <div class="dim" style="font-size:11px;margin-top:8px">Install APK di HP → isi Server URL, Device ID, Device Secret di atas → aktifkan Notification Access.</div>
   </div>
 
+  <div class="grid">
+    <div class="panel">
+      <h2>Ganti Password</h2>
+      <label>Password Lama</label><input id="oldpw" type="password" placeholder="password sekarang">
+      <label>Password Baru</label><input id="newpw" type="password" placeholder="minimal 6 karakter">
+      <button onclick="changePw()">Ganti Password</button>
+      <div class="msg" id="pwmsg"></div>
+    </div>
+    <div class="panel" id="adminpanel" style="display:none">
+      <h2>Admin</h2>
+      <div class="dim" style="font-size:12px;margin-bottom:8px">Kamu punya akses admin.</div>
+      <a href="/admin"><button>Buka Dashboard Admin →</button></a>
+    </div>
+  </div>
+
   <div class="panel full" style="margin-bottom:16px">
     <h2>Orders (50 terakhir)</h2>
     <table><thead><tr><th>ID</th><th>Nominal</th><th>Status</th><th>Ref</th><th>Checkout</th><th>Waktu</th></tr></thead>
@@ -207,8 +222,20 @@ export function renderDashboard() {
     $('c-devsec').textContent=s.device_secret||'-';
     if(s.fee_percent!=null) $('fee').value=s.fee_percent;
     if(s.unique_digits!=null) $('digits').value=s.unique_digits;
+    if(s.is_admin) $('adminpanel').style.display='block';
     loadSettings();
     tick(); setInterval(tick,3000);
+  }
+
+  async function changePw(){
+    var o=$('oldpw').value, n=$('newpw').value;
+    if(!o||!n) return msg('pwmsg','err','Isi password lama & baru');
+    try{
+      var r=await fetch('/api/merchant/change-password',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({old_password:o,new_password:n})});
+      var j=await r.json();
+      if(r.ok){ msg('pwmsg','ok','Password berhasil diganti'); $('oldpw').value=''; $('newpw').value=''; }
+      else msg('pwmsg','err',j.error||'gagal');
+    }catch(e){ msg('pwmsg','err',String(e)); }
   }
 
   // ── QRIS decode ──
