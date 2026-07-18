@@ -11,7 +11,7 @@
       "binding": "DB",
       "database_name": "paygate",
       // Ganti dengan database_id hasil `wrangler d1 create paygate`
-      "database_id": "REPLACE_AFTER_CREATE"
+      "database_id": "c9e0efc5-97f5-4d55-bc2f-c6c7058c5513"
     }
   ],
   "vars": {
