@@ -12,13 +12,34 @@ const app = new Hono();
 // ─────────────────────────────────────────────────────────
 const now = () => Math.floor(Date.now() / 1000);
 
+function hex(nbytes) {
+  const b = crypto.getRandomValues(new Uint8Array(nbytes));
+  return [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+
 function rid(prefix) {
-  const b = crypto.getRandomValues(new Uint8Array(12));
-  const hex = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
-  return `${prefix}_${hex}`;
+  return `${prefix}_${hex(12)}`;
 }
 
 const enc = new TextEncoder();
+
+// ── Password hashing (PBKDF2-SHA256 via Web Crypto) ──
+async function hashPassword(password, salt) {
+  salt = salt || hex(16);
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    256,
+  );
+  const hashHex = [...new Uint8Array(bits)].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return { salt, hash: hashHex };
+}
+
+async function verifyPassword(password, salt, expectedHash) {
+  const { hash } = await hashPassword(password, salt);
+  return safeEqual(hash, expectedHash);
+}
 
 async function hmacHex(secret, message) {
   const key = await crypto.subtle.importKey(
@@ -57,6 +78,63 @@ async function requireMerchant(c) {
 // Health
 // ─────────────────────────────────────────────────────────
 app.get('/health', (c) => json(c, { ok: true, ts: now() }));
+
+// ─────────────────────────────────────────────────────────
+// Auth: register (daftar) + login (username/password)
+// ─────────────────────────────────────────────────────────
+app.post('/api/register', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const username = String(body.username || '').trim().toLowerCase();
+  const password = String(body.password || '');
+  if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+    return json(c, { error: 'username 3-20 karakter, hanya huruf/angka/underscore' }, 400);
+  }
+  if (password.length < 6) return json(c, { error: 'password minimal 6 karakter' }, 400);
+
+  const existing = await c.env.DB.prepare('SELECT id FROM merchants WHERE username = ?').bind(username).first();
+  if (existing) return json(c, { error: 'username sudah dipakai' }, 409);
+
+  const { salt, hash } = await hashPassword(password);
+  const id = rid('mch');
+  const apiKey = 'sk_live_' + hex(16);
+  const deviceId = 'dev_' + hex(6);
+  const deviceSecret = 'gpdev_' + hex(16);
+  const cbSecret = 'cbk_' + hex(24);
+  await c.env.DB.prepare(
+    `INSERT INTO merchants (id, name, username, password_hash, password_salt, api_key, device_id, device_secret, callback_secret, created_at, fee_percent, unique_digits)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 2)`,
+  )
+    .bind(id, username, username, hash, salt, apiKey, deviceId, deviceSecret, cbSecret, now())
+    .run();
+
+  return json(c, {
+    ok: true,
+    username,
+    api_key: apiKey,
+    device_id: deviceId,
+    device_secret: deviceSecret,
+  });
+});
+
+app.post('/api/login', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const username = String(body.username || '').trim().toLowerCase();
+  const password = String(body.password || '');
+  const m = await c.env.DB.prepare('SELECT * FROM merchants WHERE username = ?').bind(username).first();
+  if (!m || !m.password_hash) return json(c, { error: 'username / password salah' }, 401);
+  const ok = await verifyPassword(password, m.password_salt, m.password_hash);
+  if (!ok) return json(c, { error: 'username / password salah' }, 401);
+  return json(c, {
+    ok: true,
+    username: m.username,
+    api_key: m.api_key,
+    device_id: m.device_id,
+    device_secret: m.device_secret,
+    merchant_name: m.qris_merchant_name || m.name,
+    fee_percent: m.fee_percent || 0,
+    unique_digits: m.unique_digits || 2,
+  });
+});
 
 // ─────────────────────────────────────────────────────────
 // Merchant API: create order
@@ -316,10 +394,16 @@ app.post('/ingest/event', async (c) => {
   const signature = c.req.header('x-signature') || '';
   const raw = await c.req.text();
 
-  const device = await c.env.DB.prepare('SELECT * FROM devices WHERE id = ?').bind(deviceId).first();
-  if (!device) return json(c, { error: 'unknown device' }, 401);
+  // device_id ada di merchant (per-tenant). Fallback ke tabel devices lama.
+  let owner = await c.env.DB.prepare('SELECT * FROM merchants WHERE device_id = ?').bind(deviceId).first();
+  let deviceSecret = owner ? owner.device_secret : null;
+  if (!owner) {
+    const legacy = await c.env.DB.prepare('SELECT * FROM devices WHERE id = ?').bind(deviceId).first();
+    if (legacy) deviceSecret = legacy.secret;
+  }
+  if (!deviceSecret) return json(c, { error: 'unknown device' }, 401);
 
-  const expected = await hmacHex(device.secret, raw);
+  const expected = await hmacHex(deviceSecret, raw);
   if (!safeEqual(expected, signature)) return json(c, { error: 'bad signature' }, 401);
 
   let body;
@@ -337,9 +421,6 @@ app.post('/ingest/event', async (c) => {
 
   if (!eventId) return json(c, { error: 'event_id wajib' }, 400);
 
-  // update last_seen
-  await c.env.DB.prepare('UPDATE devices SET last_seen = ? WHERE id = ?').bind(t, deviceId).run();
-
   // dedup
   const existing = await c.env.DB.prepare('SELECT id, status, matched_order_id FROM events WHERE id = ?')
     .bind(eventId)
@@ -348,16 +429,27 @@ app.post('/ingest/event', async (c) => {
     return json(c, { status: 'duplicate', event_id: eventId, matched_order_id: existing.matched_order_id });
   }
 
-  // matching: cari order pending dgn nominal == amount, belum expired
+  // matching: cari order pending dgn nominal == amount, belum expired.
+  // Kalau device kebawa merchant tertentu → scoped ke order merchant itu.
   let matchedOrder = null;
   if (amount != null && Number.isFinite(amount)) {
-    matchedOrder = await c.env.DB.prepare(
-      `SELECT * FROM orders
-       WHERE status = 'pending' AND unique_amount = ? AND expires_at > ?
-       ORDER BY created_at ASC LIMIT 1`,
-    )
-      .bind(amount, t)
-      .first();
+    if (owner) {
+      matchedOrder = await c.env.DB.prepare(
+        `SELECT * FROM orders
+         WHERE status = 'pending' AND unique_amount = ? AND expires_at > ? AND merchant_id = ?
+         ORDER BY created_at ASC LIMIT 1`,
+      )
+        .bind(amount, t, owner.id)
+        .first();
+    } else {
+      matchedOrder = await c.env.DB.prepare(
+        `SELECT * FROM orders
+         WHERE status = 'pending' AND unique_amount = ? AND expires_at > ?
+         ORDER BY created_at ASC LIMIT 1`,
+      )
+        .bind(amount, t)
+        .first();
+    }
   }
 
   let evStatus = 'unmatched';
@@ -371,12 +463,13 @@ app.post('/ingest/event', async (c) => {
   }
 
   await c.env.DB.prepare(
-    `INSERT INTO events (id, device_id, source, amount, sender, raw_text, received_at, matched_order_id, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO events (id, device_id, merchant_id, source, amount, sender, raw_text, received_at, matched_order_id, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       eventId,
       deviceId,
+      owner ? owner.id : null,
       source,
       amount,
       body.sender ?? null,
@@ -442,42 +535,74 @@ async function fireCallback(env, order, eventId) {
 // ─────────────────────────────────────────────────────────
 // Dashboard (HTML)
 // ─────────────────────────────────────────────────────────
-app.get('/dashboard', async (c) => {
-  const orders = await c.env.DB.prepare(
-    `SELECT o.*, m.name as merchant_name FROM orders o
-     LEFT JOIN merchants m ON m.id = o.merchant_id
-     ORDER BY o.created_at DESC LIMIT 50`,
-  ).all();
-  const events = await c.env.DB.prepare(
-    `SELECT * FROM events ORDER BY created_at DESC LIMIT 50`,
-  ).all();
-  const stats = await c.env.DB.prepare(
-    `SELECT
-       COUNT(*) as total,
-       SUM(CASE WHEN status='paid' THEN 1 ELSE 0 END) as paid,
-       SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending,
-       SUM(CASE WHEN status='paid' THEN base_amount ELSE 0 END) as revenue
-     FROM orders`,
-  ).first();
-  return c.html(renderDashboard({ orders: orders.results || [], events: events.results || [], stats }));
-});
+// Dashboard shell (data di-load client-side via /dashboard/data + api key)
+app.get('/dashboard', (c) => c.html(renderDashboard()));
 
-// JSON stats untuk polling dashboard
+// Data dashboard — WAJIB api key merchant. Scoped ke order milik merchant itu.
 app.get('/dashboard/data', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+
   const orders = await c.env.DB.prepare(
-    `SELECT o.*, m.name as merchant_name FROM orders o
-     LEFT JOIN merchants m ON m.id = o.merchant_id
-     ORDER BY o.created_at DESC LIMIT 50`,
-  ).all();
-  const events = await c.env.DB.prepare(`SELECT * FROM events ORDER BY created_at DESC LIMIT 50`).all();
+    `SELECT * FROM orders WHERE merchant_id = ? ORDER BY created_at DESC LIMIT 50`,
+  ).bind(merchant.id).all();
+  // events dari device milik merchant ini (+ event lama tanpa merchant_id = null)
+  const events = await c.env.DB.prepare(
+    `SELECT * FROM events WHERE merchant_id = ? OR merchant_id IS NULL ORDER BY created_at DESC LIMIT 50`,
+  ).bind(merchant.id).all();
   const stats = await c.env.DB.prepare(
     `SELECT COUNT(*) as total,
        SUM(CASE WHEN status='paid' THEN 1 ELSE 0 END) as paid,
        SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending,
        SUM(CASE WHEN status='paid' THEN base_amount ELSE 0 END) as revenue
-     FROM orders`,
-  ).first();
-  return json(c, { orders: orders.results || [], events: events.results || [], stats });
+     FROM orders WHERE merchant_id = ?`,
+  ).bind(merchant.id).first();
+  return json(c, {
+    merchant_name: merchant.qris_merchant_name || merchant.name,
+    orders: orders.results || [],
+    events: events.results || [],
+    stats,
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// Admin — kelola merchant (butuh header x-admin-key = env ADMIN_KEY)
+// ─────────────────────────────────────────────────────────
+function requireAdmin(c) {
+  const k = c.req.header('x-admin-key') || '';
+  return !!(k && c.env.ADMIN_KEY && k === c.env.ADMIN_KEY);
+}
+
+app.post('/api/admin/merchants', async (c) => {
+  if (!requireAdmin(c)) return json(c, { error: 'unauthorized' }, 401);
+  const body = await c.req.json().catch(() => ({}));
+  const name = String(body.name || 'Merchant').slice(0, 80);
+  const id = rid('mch');
+  const apiKey = 'sk_live_' + hex(16);
+  const cbSecret = 'cbk_' + hex(24);
+  await c.env.DB.prepare(
+    `INSERT INTO merchants (id, name, api_key, notify_url, callback_secret, created_at, fee_percent, unique_digits)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 2)`,
+  )
+    .bind(id, name, apiKey, body.notify_url || null, cbSecret, now(), Number(body.fee_percent) || 0)
+    .run();
+  return json(c, { id, name, api_key: apiKey, callback_secret: cbSecret });
+});
+
+app.get('/api/admin/merchants', async (c) => {
+  if (!requireAdmin(c)) return json(c, { error: 'unauthorized' }, 401);
+  const r = await c.env.DB.prepare(
+    `SELECT id, name, api_key, notify_url, fee_percent, unique_digits, created_at,
+            (qris_static IS NOT NULL) as has_qris
+     FROM merchants ORDER BY created_at DESC`,
+  ).all();
+  return json(c, { merchants: r.results || [] });
+});
+
+app.post('/api/admin/login', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const ok = !!(body.key && c.env.ADMIN_KEY && body.key === c.env.ADMIN_KEY);
+  return json(c, { ok }, ok ? 200 : 401);
 });
 
 export default app;
