@@ -12,15 +12,15 @@ public class Config {
     }
 
     public static String serverUrl(Context c) {
-        return prefs(c).getString("server_url", "https://paygate.example.workers.dev");
+        return prefs(c).getString("server_url", "https://gatepay.julianspes.workers.dev");
     }
 
     public static String deviceId(Context c) {
-        return prefs(c).getString("device_id", "dev_redroid1");
+        return prefs(c).getString("device_id", "");
     }
 
     public static String deviceSecret(Context c) {
-        return prefs(c).getString("device_secret", "devsecret_CHANGE_ME_redroid1");
+        return prefs(c).getString("device_secret", "");
     }
 
     /** Paket yang notifikasinya ditangkap (comma separated). */

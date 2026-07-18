@@ -90,8 +90,14 @@ public class MainActivity extends Activity {
         // ── Fields ──
         eUrl = field(root, "Server URL", Config.serverUrl(this));
         eDevId = field(root, "Device ID", Config.deviceId(this));
+        eDevId.setHint("copy dari dashboard kamu");
+        eDevId.setHintTextColor(0xFF5A6472);
         eSecret = field(root, "Device Secret", Config.deviceSecret(this));
+        eSecret.setHint("copy dari dashboard kamu");
+        eSecret.setHintTextColor(0xFF5A6472);
         ePkgs = field(root, "Target Packages (pisah koma)", Config.targetPackages(this));
+        ePkgs.setHint("id.dana,ovo.id,com.gojek.app");
+        ePkgs.setHintTextColor(0xFF5A6472);
 
         spacer(root, 8);
 
