@@ -12,7 +12,7 @@ public class Config {
     }
 
     public static String serverUrl(Context c) {
-        return prefs(c).getString("server_url", "https://gatepay.julianspes.workers.dev");
+        return prefs(c).getString("server_url", "https://gatepay.biz.id");
     }
 
     public static String deviceId(Context c) {

@@ -63,7 +63,7 @@ export function renderDocs() {
 
     <h2 id="intro">Pengantar</h2>
     <p>Base URL semua endpoint:</p>
-    <pre><code>https://gatepay.julianspes.workers.dev</code></pre>
+    <pre><code>https://gatepay.biz.id</code></pre>
     <p>Nanti bisa pakai custom domain (mis. <code>https://gatepay.biz.id</code>).</p>
 
     <h2 id="auth">Autentikasi</h2>
@@ -73,7 +73,7 @@ export function renderDocs() {
     <h2 id="qris">Setup QRIS</h2>
     <p>Upload QRIS statis kamu sekali (dari DANA Bisnis / e-wallet). Sistem pakai ini buat generate QRIS dinamis per order.</p>
     <p><span class="method post">POST</span><code>/api/merchant/qris</code></p>
-    <pre><code>curl -X POST https://gatepay.julianspes.workers.dev/api/merchant/qris \\
+    <pre><code>curl -X POST https://gatepay.biz.id/api/merchant/qris \\
   -H "x-api-key: sk_live_xxx" \\
   -H "content-type: application/json" \\
   -d '{"qris": "00020101021126...6304ABCD"}'</code></pre>
@@ -87,7 +87,7 @@ export function renderDocs() {
       <tr><td><code>reference</code></td><td>string</td><td>Nomor invoice/order kamu. Opsional.</td></tr>
       <tr><td><code>ttl_seconds</code></td><td>number</td><td>Masa berlaku (detik). Default 900.</td></tr>
     </table>
-    <pre><code>curl -X POST https://gatepay.julianspes.workers.dev/api/orders \\
+    <pre><code>curl -X POST https://gatepay.biz.id/api/orders \\
   -H "x-api-key: sk_live_xxx" \\
   -H "content-type: application/json" \\
   -d '{"base_amount": 10000, "reference": "INV-001"}'</code></pre>
@@ -105,7 +105,7 @@ export function renderDocs() {
 
     <h2 id="status">Cek Status Order</h2>
     <p><span class="method get">GET</span><code>/api/orders/:id</code></p>
-    <pre><code>curl https://gatepay.julianspes.workers.dev/api/orders/ord_xxx \\
+    <pre><code>curl https://gatepay.biz.id/api/orders/ord_xxx \\
   -H "x-api-key: sk_live_xxx"</code></pre>
     <p>Status: <code>pending</code> · <code>paid</code> · <code>expired</code> · <code>cancelled</code>.</p>
 
