@@ -117,9 +117,13 @@ export function renderDashboard({ orders, events, stats }) {
   <div class="grid">
     <div class="panel">
       <h2>Setup QRIS + Fee</h2>
-      <div class="dim" style="font-size:12px;margin-bottom:4px">Tempel teks QRIS statis (hasil decode QR DANA Bisnis kamu). Sekali aja.</div>
-      <label>QRIS String</label>
-      <textarea id="qris" placeholder="00020101021126...6304ABCD"></textarea>
+      <div class="dim" style="font-size:12px;margin-bottom:8px">Upload foto QRIS statis DANA Bisnis kamu → Decode → Simpan. Sekali aja.</div>
+      <label>Upload QR (foto/gambar QRIS)</label>
+      <input type="file" id="qrfile" accept="image/*">
+      <button class="sec" onclick="decodeQr()">🔍 Decode QR</button>
+      <img id="qrprev" style="max-width:120px;margin-top:8px;display:none;background:#fff;padding:4px">
+      <label>Hasil QRIS String</label>
+      <textarea id="qris" placeholder="hasil decode muncul di sini (atau paste manual)"></textarea>
       <button onclick="uploadQris()">Simpan QRIS</button>
       <div class="msg" id="qmsg"></div>
       <div style="display:flex;gap:10px;margin-top:14px">
@@ -162,8 +166,38 @@ export function renderDashboard({ orders, events, stats }) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
   const $ = id => document.getElementById(id);
+
+  // Decode QR dari gambar yang di-upload (client-side, jsQR)
+  function decodeQr(){
+    var f = $('qrfile').files[0];
+    if(!f) return msg('qmsg','err','Pilih file QR dulu');
+    var img = new Image();
+    img.onload = function(){
+      // batasi ukuran biar cepat
+      var scale = Math.min(1, 1000/Math.max(img.width, img.height));
+      var w = Math.round(img.width*scale), h = Math.round(img.height*scale);
+      var cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+      var ctx = cv.getContext('2d'); ctx.drawImage(img,0,0,w,h);
+      try{
+        var d = ctx.getImageData(0,0,w,h);
+        var code = jsQR(d.data, w, h, {inversionAttempts:'attemptBoth'});
+        if(code && code.data){
+          $('qris').value = code.data;
+          $('qrprev').src = img.src; $('qrprev').style.display='block';
+          msg('qmsg','ok','QR ke-decode ✓ — cek lalu Simpan');
+        } else {
+          msg('qmsg','err','QR nggak kebaca. Coba foto lebih jelas / crop pas ke QR-nya.');
+        }
+      }catch(e){ msg('qmsg','err','Gagal baca gambar: '+e); }
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = function(){ msg('qmsg','err','File bukan gambar valid'); };
+    img.src = URL.createObjectURL(f);
+  }
+
   $('apikey').value = localStorage.getItem('gp_apikey') || '';
   function saveKey(){ localStorage.setItem('gp_apikey', $('apikey').value.trim()); msg('qmsg','ok','API key disimpan'); loadSettings(); }
   function key(){ return $('apikey').value.trim() || localStorage.getItem('gp_apikey') || ''; }
