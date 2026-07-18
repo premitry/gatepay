@@ -90,6 +90,8 @@ export function renderDashboard({ orders, events, stats }) {
   .apibar input{flex:1;min-width:200px}
   .apibar .lbl{font-size:12px;color:var(--dim);white-space:nowrap}
   .full{grid-column:1/-1}
+  .livedot{width:8px;height:8px;background:var(--brand);display:inline-block;box-shadow:0 0 6px var(--brand);animation:bl 1.5s infinite}
+  @keyframes bl{50%{opacity:.35}}
   @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
 </style></head><body>
 <nav><div class="in">
@@ -105,20 +107,27 @@ export function renderDashboard({ orders, events, stats }) {
   </div>
 
   <div class="stats">
-    <div class="stat"><div class="k">Total Order</div><div class="v">${stats?.total || 0}</div></div>
-    <div class="stat"><div class="k">Paid</div><div class="v g">${stats?.paid || 0}</div></div>
-    <div class="stat"><div class="k">Pending</div><div class="v">${stats?.pending || 0}</div></div>
-    <div class="stat"><div class="k">Revenue</div><div class="v">${rupiah(stats?.revenue)}</div></div>
+    <div class="stat"><div class="k">Total Order</div><div class="v" id="s-total">${stats?.total || 0}</div></div>
+    <div class="stat"><div class="k">Paid</div><div class="v g" id="s-paid">${stats?.paid || 0}</div></div>
+    <div class="stat"><div class="k">Pending</div><div class="v" id="s-pending">${stats?.pending || 0}</div></div>
+    <div class="stat"><div class="k">Revenue</div><div class="v" id="s-rev">${rupiah(stats?.revenue)}</div></div>
   </div>
+  <div class="dim" style="font-size:11px;margin:-8px 0 14px;display:flex;align-items:center;gap:6px"><span class="livedot"></span>Live · auto-refresh 3s</div>
 
   <div class="grid">
     <div class="panel">
-      <h2>Setup QRIS Statis</h2>
+      <h2>Setup QRIS + Fee</h2>
       <div class="dim" style="font-size:12px;margin-bottom:4px">Tempel teks QRIS statis (hasil decode QR DANA Bisnis kamu). Sekali aja.</div>
       <label>QRIS String</label>
       <textarea id="qris" placeholder="00020101021126...6304ABCD"></textarea>
       <button onclick="uploadQris()">Simpan QRIS</button>
       <div class="msg" id="qmsg"></div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <div style="flex:1"><label>Fee (%)</label><input id="fee" type="number" step="0.1" placeholder="7"></div>
+        <div style="flex:1"><label>Digit kode unik</label><input id="digits" type="number" min="1" max="3" placeholder="2"></div>
+      </div>
+      <button class="sec" onclick="saveSettings()">Simpan Fee</button>
+      <div class="msg" id="smsg"></div>
     </div>
 
     <div class="panel">
@@ -130,6 +139,7 @@ export function renderDashboard({ orders, events, stats }) {
       <button onclick="createOrder()">Buat Order + QR</button>
       <div class="msg" id="omsg"></div>
       <div class="res" id="ores">
+        <div class="dim" id="rbreak" style="font-size:12px;margin-bottom:8px;font-family:'JetBrains Mono',Consolas,monospace;white-space:pre-line"></div>
         <div class="dim">Bayar persis</div>
         <div class="amt" id="ramt"></div>
         <canvas id="qrcanvas"></canvas>
@@ -141,13 +151,13 @@ export function renderDashboard({ orders, events, stats }) {
   <div class="panel full" style="margin-bottom:16px">
     <h2>Orders (50 terakhir)</h2>
     <table><thead><tr><th>ID</th><th>Nominal</th><th>Status</th><th>Ref</th><th>Checkout</th><th>Waktu</th></tr></thead>
-    <tbody>${orderRows || '<tr><td colspan=6 class=dim style="text-align:center;padding:20px">Belum ada order</td></tr>'}</tbody></table>
+    <tbody id="otbody">${orderRows || '<tr><td colspan=6 class=dim style="text-align:center;padding:20px">Belum ada order</td></tr>'}</tbody></table>
   </div>
 
   <div class="panel full">
     <h2>Events dari Device (50 terakhir)</h2>
     <table><thead><tr><th>Event</th><th>Nominal</th><th>Status</th><th>Raw</th><th>Waktu</th></tr></thead>
-    <tbody>${eventRows || '<tr><td colspan=5 class=dim style="text-align:center;padding:20px">Belum ada event</td></tr>'}</tbody></table>
+    <tbody id="etbody">${eventRows || '<tr><td colspan=5 class=dim style="text-align:center;padding:20px">Belum ada event</td></tr>'}</tbody></table>
   </div>
 </div>
 
@@ -155,9 +165,28 @@ export function renderDashboard({ orders, events, stats }) {
 <script>
   const $ = id => document.getElementById(id);
   $('apikey').value = localStorage.getItem('gp_apikey') || '';
-  function saveKey(){ localStorage.setItem('gp_apikey', $('apikey').value.trim()); msg('qmsg','ok','API key disimpan'); }
+  function saveKey(){ localStorage.setItem('gp_apikey', $('apikey').value.trim()); msg('qmsg','ok','API key disimpan'); loadSettings(); }
   function key(){ return $('apikey').value.trim() || localStorage.getItem('gp_apikey') || ''; }
   function msg(id,cls,t){ var e=$(id); e.className='msg '+cls; e.textContent=t; }
+
+  async function loadSettings(){
+    if(!key()) return;
+    try{
+      var r=await fetch('/api/merchant/settings',{headers:{'x-api-key':key()}});
+      var j=await r.json();
+      if(r.ok){ $('fee').value=j.fee_percent??0; $('digits').value=j.unique_digits??2; }
+    }catch(e){}
+  }
+  async function saveSettings(){
+    if(!key()) return msg('smsg','err','Isi API key dulu');
+    try{
+      var r=await fetch('/api/merchant/settings',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({fee_percent:parseFloat($('fee').value)||0,unique_digits:parseInt($('digits').value,10)||2})});
+      var j=await r.json();
+      if(r.ok) msg('smsg','ok','Fee '+j.fee_percent+'% · kode '+j.unique_digits+' digit tersimpan');
+      else msg('smsg','err',j.error||'gagal');
+    }catch(e){ msg('smsg','err',String(e)); }
+  }
+  if(key()) loadSettings();
 
   async function uploadQris(){
     if(!key()) return msg('qmsg','err','Isi API key dulu');
@@ -178,13 +207,45 @@ export function renderDashboard({ orders, events, stats }) {
       var j = await r.json();
       if(!r.ok) return msg('omsg','err',j.error||'gagal');
       msg('omsg','ok','Order dibuat: '+j.id);
+      var idr=n=>'Rp '+Number(n).toLocaleString('id-ID');
+      $('rbreak').textContent =
+        'base      : '+idr(j.base_amount)+'\\n'+
+        'fee '+(j.fee_percent||0)+'%    : '+idr(j.fee_amount||0)+'\\n'+
+        'kode unik : '+(j.unique_code||0)+'\\n'+
+        '─────────────────\\n'+
+        'TOTAL     : '+idr(j.unique_amount);
       $('ramt').textContent = 'Rp '+Number(j.unique_amount).toLocaleString('id-ID');
       $('rlink').href = j.checkout_url;
       $('ores').classList.add('show');
       if(j.qris){ new QRious({element:$('qrcanvas'),value:j.qris,size:360,level:'M'}); }
       else { msg('omsg','err','Order dibuat tapi QRIS belum ada — upload QRIS statis dulu.'); }
+      setTimeout(tick, 800);
     }catch(e){ msg('omsg','err',String(e)); }
   }
+
+  // ── Real-time refresh tabel ──
+  const rp = n => 'Rp '+(Number(n)||0).toLocaleString('id-ID');
+  const escj = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const agoj = ts => { if(!ts)return'-'; let d=Math.max(0,Math.floor(Date.now()/1000)-ts); if(d<60)return d+'s'; if(d<3600)return Math.floor(d/60)+'m'; if(d<86400)return Math.floor(d/3600)+'j'; return Math.floor(d/86400)+'h'; };
+  const bmap={paid:['#3ddc97','#04120b'],pending:['#f6c445','#241d02'],expired:['#6b7280','#0b0d11'],cancelled:['#ff5c5c','#1c0808'],matched:['#3ddc97','#04120b'],unmatched:['#6b7280','#0b0d11'],duplicate:['#7c6cff','#0b0b1c']};
+  const bdg=s=>{const[bg,fg]=bmap[s]||['#6b7280','#0b0d11'];return '<span class="bd" style="background:'+bg+';color:'+fg+'">'+escj(s)+'</span>';};
+  async function tick(){
+    try{
+      const r=await fetch('/dashboard/data?_='+Date.now(),{cache:'no-store'});
+      const d=await r.json();
+      $('s-total').textContent=d.stats?.total||0;
+      $('s-paid').textContent=d.stats?.paid||0;
+      $('s-pending').textContent=d.stats?.pending||0;
+      $('s-rev').textContent=rp(d.stats?.revenue);
+      $('otbody').innerHTML=(d.orders||[]).map(o=>
+        '<tr><td class=mono>'+escj(o.id.slice(0,12))+'</td><td class=mono>'+rp(o.unique_amount)+'<br><span class=dim>base '+rp(o.base_amount)+'</span></td><td>'+bdg(o.status)+'</td><td class=dim>'+escj(o.reference||'-')+'</td><td><a class=lnk href="/pay/'+escj(o.id)+'" target=_blank>checkout ↗</a></td><td class=dim>'+agoj(o.created_at)+'</td></tr>'
+      ).join('')||'<tr><td colspan=6 class=dim style="text-align:center;padding:20px">Belum ada order</td></tr>';
+      $('etbody').innerHTML=(d.events||[]).map(e=>
+        '<tr><td class=mono>'+escj((e.id||'').slice(0,14))+'</td><td class=mono>'+(e.amount!=null?rp(e.amount):'-')+'</td><td>'+bdg(e.status)+'</td><td class=dim>'+escj((e.raw_text||'').slice(0,44))+'</td><td class=dim>'+agoj(e.created_at)+'</td></tr>'
+      ).join('')||'<tr><td colspan=5 class=dim style="text-align:center;padding:20px">Belum ada event</td></tr>';
+    }catch(e){}
+  }
+  setInterval(tick, 3000);
 </script>
 </body></html>`;
 }

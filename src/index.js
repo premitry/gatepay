@@ -79,25 +79,32 @@ app.post('/api/orders', async (c) => {
     return json(c, { error: 'base_amount harus angka > 0' }, 400);
   }
 
-  const uMin = parseInt(c.env.UNIQUE_MIN ?? '1', 10);
-  const uMax = parseInt(c.env.UNIQUE_MAX ?? '499', 10);
   const ttl = parseInt(body.ttl_seconds ?? c.env.ORDER_TTL_SECONDS ?? '900', 10);
   const t = now();
   const expires = t + ttl;
 
-  // Cari unique_amount yang belum dipakai order pending aktif (global, karena
-  // notif DANA nominalnya global lintas merchant di device yang sama).
-  const uniqueAmount = await pickUniqueAmount(c.env.DB, base, uMin, uMax, t);
+  // Fee: dari param order, fallback ke setting merchant, fallback 0
+  const feePct = body.fee_percent != null ? Number(body.fee_percent) : (merchant.fee_percent || 0);
+  const feeAmount = Math.round((base * feePct) / 100);
+  const subtotal = base + feeAmount;
+
+  // Kode unik: panjang digit dari setting merchant (default 2 → kode 1..99)
+  const digits = merchant.unique_digits || 2;
+  const codeMax = Math.pow(10, digits) - 1; // 2 digit → 99
+
+  // unique_amount = subtotal + kode unik (kode ditambah di belakang).
+  // Pastikan unique_amount belum dipakai order pending aktif lain (global).
+  const uniqueAmount = await pickUniqueAmount(c.env.DB, subtotal, 1, codeMax, t);
   if (uniqueAmount == null) {
-    return json(c, { error: 'tidak ada nominal unik tersisa, coba lagi' }, 503);
+    return json(c, { error: 'kode unik habis (terlalu banyak order pending nominal sama), coba lagi' }, 503);
   }
 
   const id = rid('ord');
   await c.env.DB.prepare(
-    `INSERT INTO orders (id, merchant_id, reference, base_amount, unique_amount, status, expires_at, created_at)
-     VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
+    `INSERT INTO orders (id, merchant_id, reference, base_amount, unique_amount, fee_amount, fee_percent, status, expires_at, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
   )
-    .bind(id, merchant.id, body.reference ?? null, base, uniqueAmount, expires, t)
+    .bind(id, merchant.id, body.reference ?? null, base, uniqueAmount, feeAmount, feePct, expires, t)
     .run();
 
   // Generate QRIS dinamis dari QRIS statis merchant (kalau ada)
@@ -115,8 +122,11 @@ app.post('/api/orders', async (c) => {
     id,
     status: 'pending',
     base_amount: base,
+    fee_percent: feePct,
+    fee_amount: feeAmount,
+    subtotal,
+    unique_code: uniqueAmount - subtotal,
     unique_amount: uniqueAmount,
-    unique_suffix: uniqueAmount - base,
     reference: body.reference ?? null,
     qris,
     checkout_url: `${origin}/pay/${id}`,
@@ -125,17 +135,20 @@ app.post('/api/orders', async (c) => {
   });
 });
 
-// Cari nominal unik yang tidak dipakai order pending aktif lain
-async function pickUniqueAmount(db, base, uMin, uMax, t) {
+// Cari unique_amount (= subtotal + kode) yang belum dipakai order pending aktif lain
+async function pickUniqueAmount(db, subtotal, codeMin, codeMax, t) {
   const rows = await db
     .prepare(
       `SELECT unique_amount FROM orders
        WHERE status = 'pending' AND expires_at > ?
          AND unique_amount BETWEEN ? AND ?`,
     )
-    .bind(t, base + uMin, base + uMax)
+    .bind(t, subtotal + codeMin, subtotal + codeMax)
     .all();
   const used = new Set((rows.results || []).map((r) => r.unique_amount));
+  const base = subtotal;
+  const uMin = codeMin;
+  const uMax = codeMax;
   const total = uMax - uMin + 1;
   if (used.size >= total) return null;
 
@@ -213,6 +226,37 @@ app.get('/api/merchant/qris', async (c) => {
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   if (!merchant.qris_static) return json(c, { has_qris: false });
   return json(c, { has_qris: true, ...qrisInfo(merchant.qris_static) });
+});
+
+// Setting merchant: fee_percent + unique_digits
+app.get('/api/merchant/settings', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  return json(c, {
+    fee_percent: merchant.fee_percent || 0,
+    unique_digits: merchant.unique_digits || 2,
+    has_qris: !!merchant.qris_static,
+    merchant_name: merchant.qris_merchant_name || merchant.name,
+  });
+});
+
+app.post('/api/merchant/settings', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return json(c, { error: 'invalid json' }, 400);
+  }
+  const fee = body.fee_percent != null ? Number(body.fee_percent) : merchant.fee_percent;
+  const digits = body.unique_digits != null ? parseInt(body.unique_digits, 10) : merchant.unique_digits;
+  if (!Number.isFinite(fee) || fee < 0 || fee > 100) return json(c, { error: 'fee_percent harus 0-100' }, 400);
+  if (![1, 2, 3].includes(digits)) return json(c, { error: 'unique_digits harus 1, 2, atau 3' }, 400);
+  await c.env.DB.prepare('UPDATE merchants SET fee_percent = ?, unique_digits = ? WHERE id = ?')
+    .bind(fee, digits, merchant.id)
+    .run();
+  return json(c, { ok: true, fee_percent: fee, unique_digits: digits });
 });
 
 // ─────────────────────────────────────────────────────────
