@@ -317,6 +317,8 @@ app.get('/api/merchant/settings', async (c) => {
     unique_digits: merchant.unique_digits || 2,
     has_qris: !!merchant.qris_static,
     merchant_name: merchant.qris_merchant_name || merchant.name,
+    notify_url: merchant.notify_url || '',
+    callback_secret: merchant.callback_secret || '',
   });
 });
 
@@ -333,10 +335,20 @@ app.post('/api/merchant/settings', async (c) => {
   const digits = body.unique_digits != null ? parseInt(body.unique_digits, 10) : merchant.unique_digits;
   if (!Number.isFinite(fee) || fee < 0 || fee > 100) return json(c, { error: 'fee_percent harus 0-100' }, 400);
   if (![1, 2, 3].includes(digits)) return json(c, { error: 'unique_digits harus 1, 2, atau 3' }, 400);
-  await c.env.DB.prepare('UPDATE merchants SET fee_percent = ?, unique_digits = ? WHERE id = ?')
-    .bind(fee, digits, merchant.id)
+
+  // notify_url opsional — validasi ringan kalau diisi
+  let notifyUrl = merchant.notify_url || null;
+  if (body.notify_url !== undefined) {
+    const u = String(body.notify_url || '').trim();
+    if (u === '') notifyUrl = null;
+    else if (/^https?:\/\/.+/i.test(u)) notifyUrl = u;
+    else return json(c, { error: 'notify_url harus URL http(s) yang valid' }, 400);
+  }
+
+  await c.env.DB.prepare('UPDATE merchants SET fee_percent = ?, unique_digits = ?, notify_url = ? WHERE id = ?')
+    .bind(fee, digits, notifyUrl, merchant.id)
     .run();
-  return json(c, { ok: true, fee_percent: fee, unique_digits: digits });
+  return json(c, { ok: true, fee_percent: fee, unique_digits: digits, notify_url: notifyUrl || '' });
 });
 
 // Ganti password sendiri (butuh password lama)
@@ -568,8 +580,13 @@ app.get('/dashboard/data', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
 
+  // Expire order pending yang udah lewat waktu (biar status di list/stat akurat)
+  await c.env.DB.prepare(
+    `UPDATE orders SET status='expired' WHERE merchant_id = ? AND status='pending' AND expires_at <= ?`,
+  ).bind(merchant.id, now()).run();
+
   const orders = await c.env.DB.prepare(
-    `SELECT * FROM orders WHERE merchant_id = ? ORDER BY created_at DESC LIMIT 50`,
+    `SELECT * FROM orders WHERE merchant_id = ? ORDER BY created_at DESC LIMIT 200`,
   ).bind(merchant.id).all();
   // events dari device milik merchant ini (+ event lama tanpa merchant_id = null)
   const events = await c.env.DB.prepare(
