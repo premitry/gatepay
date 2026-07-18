@@ -1,0 +1,28 @@
+# deps
+node_modules/
+worker/node_modules/
+
+# wrangler / build
+.wrangler/
+worker/.wrangler/
+dist/
+
+# android build artifacts
+android/build/
+android/gen/
+android/classes/
+android/*.apk
+android/*.dex
+*.keystore
+
+# os / editor
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# secrets
+.dev.vars
+.env
+*.pem

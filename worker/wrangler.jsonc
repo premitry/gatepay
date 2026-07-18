@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "paygate",
+  "main": "src/index.js",
+  "compatibility_date": "2025-01-15",
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "paygate",
+      // Ganti dengan database_id hasil `wrangler d1 create paygate`
+      "database_id": "REPLACE_AFTER_CREATE"
+    }
+  ],
+  "vars": {
+    // Nominal unik: base + random cents pada rentang ini (rupiah)
+    "UNIQUE_MIN": "1",
+    "UNIQUE_MAX": "499",
+    // TTL order default (detik) sebelum expired
+    "ORDER_TTL_SECONDS": "900"
+  }
+}
