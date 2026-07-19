@@ -265,9 +265,10 @@ export function renderDashboard() {
             <div style="display:flex;gap:10px;margin-top:12px;border-top:1px solid var(--edge);padding-top:12px">
               <div style="flex:1"><label>Fee (%)</label><input id="fee" type="number" step="0.1" placeholder="7"></div>
               <div style="flex:1"><label>Digit kode</label><input id="digits" type="number" min="1" max="3" placeholder="2"></div>
+              <div style="flex:1"><label>Aktif (menit)</label><input id="ttlmin" type="number" min="1" max="1440" placeholder="15"></div>
             </div>
-            <div class="dim" style="font-size:11px;margin-top:4px">Fee ditambah di atas nominal, kode unik disisipkan di digit terakhir buat matching otomatis.</div>
-            <button class="sec" onclick="saveSettings()">Simpan Fee</button>
+            <div class="dim" style="font-size:11px;margin-top:4px">Fee ditambah di atas nominal, kode unik disisipkan di digit terakhir. Masa aktif = berapa lama QRIS/order berlaku sebelum expired (1-1440 menit).</div>
+            <button class="sec" onclick="saveSettings()">Simpan Pengaturan</button>
             <div class="msg" id="smsg"></div>
           </div>
 
@@ -340,13 +341,14 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <tr><td class=mono>fee_percent</td><td>number</td><td>Persen fee (0-100).</td></tr>
             <tr><td class=mono>unique_digits</td><td>number</td><td>Digit kode unik (1-3).</td></tr>
             <tr><td class=mono>notify_url</td><td>string</td><td>URL webhook (lihat panel atas).</td></tr>
+            <tr><td class=mono>order_ttl</td><td>number</td><td>Masa aktif order default (detik, 60-86400).</td></tr>
           </tbody></table>
 
           <h3><span class="mth p">POST</span> /api/orders — Bikin Order</h3>
           <table><thead><tr><th>Field</th><th>Tipe</th><th>Ket</th></tr></thead><tbody>
             <tr><td class=mono>base_amount</td><td>number</td><td>Harga asli (Rp). Wajib.</td></tr>
             <tr><td class=mono>reference</td><td>string</td><td>No invoice kamu. Opsional.</td></tr>
-            <tr><td class=mono>ttl_seconds</td><td>number</td><td>Masa berlaku detik. Default 900.</td></tr>
+            <tr><td class=mono>ttl_seconds</td><td>number</td><td>Masa berlaku order ini (detik). Default = setting Masa Aktif merchant.</td></tr>
           </tbody></table>
           <pre>curl -X POST https://gatepay.biz.id/api/orders \\
   -H "x-api-key: sk_live_xxx" \\
@@ -545,6 +547,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   async function loadSettings(){
     try{ var r=await fetch('/api/merchant/settings',{headers:{'x-api-key':key()}}); var j=await r.json();
       if(r.ok){ $('fee').value=j.fee_percent??0; $('digits').value=j.unique_digits??2; $('notify').value=j.notify_url||''; $('c-cbsec').textContent=j.callback_secret||'-';
+        if($('ttlmin')) $('ttlmin').value=Math.round((j.order_ttl||900)/60);
         if(j.has_qris){ $('qstat').textContent='✓ QRIS aktif: '+(j.merchant_name||'-'); $('qstat').style.color='var(--ok)'; $('noqris').style.display='none'; $('clearqrisbtn').style.display='block'; }
         else { $('qstat').textContent='○ Belum ada QRIS statis (terputus)'; $('qstat').style.color='var(--bad,#b0362a)'; $('noqris').style.display='block'; $('clearqrisbtn').style.display='none'; }
         // profil
@@ -561,8 +564,9 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     }catch(e){ msg('promsg','err',String(e)); }
   }
   async function saveSettings(){
-    try{ var r=await fetch('/api/merchant/settings',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({fee_percent:parseFloat($('fee').value)||0,unique_digits:parseInt($('digits').value,10)||2})});
-      var j=await r.json(); if(r.ok) msg('smsg','ok','Fee '+j.fee_percent+'% · kode '+j.unique_digits+' digit tersimpan'); else msg('smsg','err',j.error||'gagal');
+    var ttlMin=parseInt($('ttlmin').value,10)||15; var ttlSec=Math.min(86400,Math.max(60,ttlMin*60));
+    try{ var r=await fetch('/api/merchant/settings',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({fee_percent:parseFloat($('fee').value)||0,unique_digits:parseInt($('digits').value,10)||2,order_ttl:ttlSec})});
+      var j=await r.json(); if(r.ok) msg('smsg','ok','Fee '+j.fee_percent+'% · kode '+j.unique_digits+' digit · aktif '+Math.round((j.order_ttl||900)/60)+' menit tersimpan'); else msg('smsg','err',j.error||'gagal');
     }catch(e){ msg('smsg','err',String(e)); }
   }
   async function clearQris(){

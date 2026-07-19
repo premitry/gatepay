@@ -87,6 +87,15 @@ async function ensureSettings(DB) {
   _settingsReady = true;
 }
 
+// Kolom order_ttl (masa berlaku order per merchant, detik) — lazy add
+let _ttlReady = false;
+async function ensureTtlColumn(DB) {
+  if (_ttlReady) return;
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN order_ttl INTEGER').run(); } catch {}
+  _ttlReady = true;
+}
+const DEFAULT_TTL = 900; // 15 menit
+
 async function getSettings(DB) {
   try {
     await ensureSettings(DB);
@@ -218,9 +227,9 @@ app.post('/api/orders', async (c) => {
     return json(c, { error: 'base_amount harus angka > 0' }, 400);
   }
 
-  const ttl = parseInt(body.ttl_seconds ?? c.env.ORDER_TTL_SECONDS ?? '900', 10);
+  const ttl = parseInt(body.ttl_seconds ?? merchant.order_ttl ?? c.env.ORDER_TTL_SECONDS ?? DEFAULT_TTL, 10);
   const t = now();
-  const expires = t + ttl;
+  const expires = t + (Number.isFinite(ttl) && ttl > 0 ? ttl : DEFAULT_TTL);
 
   // Fee: dari param order, fallback ke setting merchant, fallback 0
   const feePct = body.fee_percent != null ? Number(body.fee_percent) : (merchant.fee_percent || 0);
@@ -387,6 +396,7 @@ app.get('/api/merchant/settings', async (c) => {
     merchant_name: merchant.qris_merchant_name || merchant.name,
     notify_url: merchant.notify_url || '',
     callback_secret: merchant.callback_secret || '',
+    order_ttl: merchant.order_ttl || DEFAULT_TTL,
     // profil
     username: merchant.username || '',
     name: merchant.name || '',
@@ -431,10 +441,18 @@ app.post('/api/merchant/settings', async (c) => {
     else return json(c, { error: 'notify_url harus URL http(s) yang valid' }, 400);
   }
 
-  await c.env.DB.prepare('UPDATE merchants SET fee_percent = ?, unique_digits = ?, notify_url = ? WHERE id = ?')
-    .bind(fee, digits, notifyUrl, merchant.id)
+  // order_ttl (detik) opsional — masa berlaku order. Batas 60 detik - 24 jam.
+  await ensureTtlColumn(c.env.DB);
+  let ttl = merchant.order_ttl || DEFAULT_TTL;
+  if (body.order_ttl !== undefined) {
+    ttl = parseInt(body.order_ttl, 10);
+    if (!Number.isFinite(ttl) || ttl < 60 || ttl > 86400) return json(c, { error: 'order_ttl harus 60 - 86400 detik' }, 400);
+  }
+
+  await c.env.DB.prepare('UPDATE merchants SET fee_percent = ?, unique_digits = ?, notify_url = ?, order_ttl = ? WHERE id = ?')
+    .bind(fee, digits, notifyUrl, ttl, merchant.id)
     .run();
-  return json(c, { ok: true, fee_percent: fee, unique_digits: digits, notify_url: notifyUrl || '' });
+  return json(c, { ok: true, fee_percent: fee, unique_digits: digits, notify_url: notifyUrl || '', order_ttl: ttl });
 });
 
 // Ganti password sendiri (butuh password lama)

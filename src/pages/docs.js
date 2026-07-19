@@ -95,7 +95,7 @@ export function renderDocs() {
       <tr><th>Field</th><th>Tipe</th><th>Keterangan</th></tr>
       <tr><td><code>base_amount</code></td><td>number</td><td>Harga asli (rupiah). Wajib.</td></tr>
       <tr><td><code>reference</code></td><td>string</td><td>Nomor invoice/order kamu. Opsional.</td></tr>
-      <tr><td><code>ttl_seconds</code></td><td>number</td><td>Masa berlaku (detik). Default 900.</td></tr>
+      <tr><td><code>ttl_seconds</code></td><td>number</td><td>Masa berlaku order ini (detik). Default ikut setting <b>Masa Aktif</b> merchant (dashboard → QRIS &amp; Order), fallback 900 (15 mnt).</td></tr>
     </table>
     <pre><code>curl -X POST https://gatepay.biz.id/api/orders \\
   -H "x-api-key: sk_live_xxx" \\
