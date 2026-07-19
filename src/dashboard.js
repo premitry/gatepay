@@ -139,6 +139,12 @@ export function renderDashboard() {
   .cred .v{font-size:12px;word-break:break-all;color:var(--term-ok)}
   .cred button{width:auto;margin:0;padding:5px 10px;font-size:10px}
 
+  .doc h3{font-size:13px;margin:14px 0 5px;font-weight:700}
+  .doc p{font-size:13px;color:var(--text);margin-bottom:6px}
+  .doc pre{background:var(--term-bg);color:var(--term-text);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);padding:12px;overflow-x:auto;font-family:'Share Tech Mono',monospace;font-size:12px;line-height:1.55;margin:8px 0;white-space:pre}
+  .doc code{background:#fff;border:1px solid var(--edge);padding:1px 5px;font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--accent)}
+  .doc .mth{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;margin-right:6px;font-family:'Share Tech Mono',monospace;border:1px solid rgba(0,0,0,.3);color:#fff}
+  .doc .mth.p{background:var(--ok)} .doc .mth.g{background:var(--title-a)}
   .scrim{display:none}
   @media(max-width:820px){
     .stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}
@@ -187,7 +193,7 @@ export function renderDashboard() {
       <div class="navi" data-view="qris" onclick="go('qris')"><span class="ic">💳</span><span class="lbl">QRIS &amp; Order</span></div>
       <div class="grp">Integrasi</div>
       <div class="navi" data-view="apk" onclick="go('apk')"><span class="ic">🔑</span><span class="lbl">Kredensial &amp; APK</span></div>
-      <div class="navi" data-view="hook" onclick="go('hook')"><span class="ic">🔗</span><span class="lbl">Webhook</span></div>
+      <div class="navi" data-view="hook" onclick="go('hook')"><span class="ic">📖</span><span class="lbl">Docs &amp; Webhook</span></div>
       <div class="grp">Akun</div>
       <div class="navi" data-view="pw" onclick="go('pw')"><span class="ic">🔒</span><span class="lbl">Ganti Password</span></div>
       <div class="navi hidden" id="nav-events" data-view="events" onclick="go('events')"><span class="ic">📡</span><span class="lbl">Events Device</span></div>
@@ -301,7 +307,44 @@ export function renderDashboard() {
           <div class="cred" style="margin-top:14px"><div><div class="l">Callback Secret (verifikasi HMAC)</div><div class="v" id="c-cbsec">-</div></div><button class="sec" onclick="cp('c-cbsec')">Copy</button></div>
           <div class="dim" style="font-size:11px;margin-top:8px;white-space:pre-line">Payload contoh:
 {"event":"order.paid","order_id":"ord_xxx","reference":"INV-001","unique_amount":10237,"paid_at":1784...}
-Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret). Detail di <a href="/docs#callback">Docs</a>.</div>
+Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
+        </div>
+
+        <div class="panel doc" style="max-width:720px">
+          <h2>API_DOCS.TXT</h2>
+          <p>Base URL semua endpoint: <code>https://gatepay.biz.id</code></p>
+          <h3>Autentikasi</h3>
+          <p>Semua endpoint merchant butuh header API key kamu (ada di menu <b>Kredensial &amp; APK</b>):</p>
+          <pre>x-api-key: sk_live_xxxxxxxxxxxx</pre>
+
+          <h3><span class="mth p">POST</span> /api/orders — Bikin Order</h3>
+          <table><thead><tr><th>Field</th><th>Tipe</th><th>Ket</th></tr></thead><tbody>
+            <tr><td class=mono>base_amount</td><td>number</td><td>Harga asli (Rp). Wajib.</td></tr>
+            <tr><td class=mono>reference</td><td>string</td><td>No invoice kamu. Opsional.</td></tr>
+            <tr><td class=mono>ttl_seconds</td><td>number</td><td>Masa berlaku detik. Default 900.</td></tr>
+          </tbody></table>
+          <pre>curl -X POST https://gatepay.biz.id/api/orders \\
+  -H "x-api-key: sk_live_xxx" \\
+  -H "content-type: application/json" \\
+  -d '{"base_amount":10000,"reference":"INV-001"}'</pre>
+          <p>Response berisi <code>unique_amount</code> (nominal yang harus dibayar), <code>qris</code> (string QRIS dinamis), dan <code>checkout_url</code> (halaman bayar siap pakai).</p>
+
+          <h3><span class="mth g">GET</span> /api/orders/:id — Cek Status</h3>
+          <pre>curl https://gatepay.biz.id/api/orders/ord_xxx \\
+  -H "x-api-key: sk_live_xxx"</pre>
+          <p>Status: <code>pending</code> · <code>paid</code> · <code>expired</code> · <code>cancelled</code>.</p>
+
+          <h3><span class="mth p">POST</span> /api/orders/:id/cancel — Batalin Order</h3>
+          <p>Batalin order yang masih <code>pending</code> biar berhenti nunggu bayar.</p>
+
+          <h3>Alur Lengkap</h3>
+          <pre>1. (sekali) Upload QRIS statis di menu QRIS & Order
+2. Bikin order   -> POST /api/orders  -> dapat qris + checkout_url
+3. Tampilkan QR / arahkan customer ke checkout_url
+4. Customer scan & bayar (nominal terkunci)
+5. Notif kebaca -> order jadi PAID
+6. Webhook ke notify_url kamu (lihat panel atas) + cek via GET status</pre>
+          <p class="dim" style="font-size:12px">Versi lengkap dengan contoh verifikasi webhook: <a href="/docs" target="_blank">buka /docs ↗</a></p>
         </div>
       </section>
 
@@ -375,7 +418,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret). Detail di <a hre
   function logout(){ localStorage.removeItem('gp_sess'); location.reload(); }
 
   // ── shell / navigation ──
-  const TITLES={dash:'Dashboard',qris:'QRIS & Order',apk:'Kredensial & APK',hook:'Webhook',pw:'Ganti Password',events:'Events Device',admin:'Admin'};
+  const TITLES={dash:'Dashboard',qris:'QRIS & Order',apk:'Kredensial & APK',hook:'Docs & Webhook',pw:'Ganti Password',events:'Events Device',admin:'Admin'};
   function go(v){
     document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
     $('v-'+v).classList.add('on');
