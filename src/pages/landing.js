@@ -129,6 +129,22 @@ export function renderLanding() {
 </div></section>
 
 <section><div class="wrap">
+  <div class="win out">
+    <div class="tt">APLIKASI_DIDUKUNG.TXT</div>
+    <div class="bd2">
+      <div class="sec-title"><h2>Aplikasi yang Didukung</h2><p>APK penangkap notif GatePay baca notifikasi "uang masuk" dari aplikasi apa pun di HP kamu.</p></div>
+      <div class="feats" style="grid-template-columns:repeat(2,1fr)">
+        <div class="feat"><div class="ic">💙</div><h3>DANA &amp; DANA Bisnis</h3><p>Paling utama & paling cepat. Notif transaksi masuk langsung ketangkep.<br><span class="mono" style="font-size:12px;color:var(--accent)">id.dana</span></p></div>
+        <div class="feat"><div class="ic">💜</div><h3>E-wallet lain</h3><p>OVO, GoPay, ShopeePay, LinkAja — asal munculin notif uang masuk.<br><span class="mono" style="font-size:12px;color:var(--accent)">ovo.id · com.gojek.app · com.shopee.id</span></p></div>
+        <div class="feat"><div class="ic">🏦</div><h3>Mobile Banking</h3><p>BCA mobile, BRImo, Livin' Mandiri, dll — kalau ngasih notif kredit masuk.<br><span class="mono" style="font-size:12px;color:var(--accent)">com.bca · id.co.bri.brimo</span></p></div>
+        <div class="feat"><div class="ic">➕</div><h3>Bebas Tambah</h3><p>Isi package name aplikasi lain (pisah koma) di APK — apa pun yang notifnya ada nominal Rp.</p></div>
+      </div>
+      <div class="warn" style="margin-top:20px;text-align:left">&gt; SYARAT: kamu harus upload QRIS statis dulu di dashboard. Semua e-wallet/bank di atas bayar ke QRIS itu — GatePay cuma cocokin nominalnya dari notif. Cara nemu package name: Setelan HP → Aplikasi → detail aplikasi, atau isi contoh di atas.</div>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
   <div class="cta-box out">
     <div class="bd2">
       <h2>Siap terima pembayaran?</h2>

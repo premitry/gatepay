@@ -62,7 +62,7 @@ export function renderDocs() {
     <a href="#create">Bikin Order</a>
     <a href="#status">Cek Status</a>
     <a href="#cancel">Cancel Order</a>
-    <a href="#callback">Callback</a>
+    <a href="#callback">Webhook</a>
     <div class="h">Lain</div>
     <a href="#checkout">Halaman Checkout</a>
     <a href="#flow">Alur Lengkap</a>
@@ -122,8 +122,18 @@ export function renderDocs() {
     <h2 id="cancel">Cancel Order</h2>
     <p><span class="method post">POST</span><code>/api/orders/:id/cancel</code></p>
 
-    <h2 id="callback">Callback (Webhook)</h2>
-    <p>Kalau merchant punya <code>notify_url</code>, GatePay POST ke situ saat order paid:</p>
+    <h2 id="callback">Webhook (Callback)</h2>
+    <p>Webhook bikin GatePay <b>ngasih kabar otomatis ke sistem kamu</b> tiap ada order yang jadi <code>paid</code> — jadi toko/bot/invoice kamu tau tanpa perlu polling status terus. Opsional; kalau cuma pakai dashboard, skip aja.</p>
+
+    <h3>Cara aktifin</h3>
+    <p>Buka <a href="/dashboard">Dashboard</a> → menu <b>Webhook</b> → isi <b>Notify URL</b> (endpoint kamu) → Simpan. Di situ juga ada <b>Callback Secret</b> buat verifikasi. Atau lewat API:</p>
+    <pre><code>curl -X POST https://gatepay.biz.id/api/merchant/settings \\
+  -H "x-api-key: sk_live_xxx" \\
+  -H "content-type: application/json" \\
+  -d '{"notify_url": "https://sistem-kamu.com/webhook/gatepay"}'</code></pre>
+
+    <h3>Payload yang dikirim</h3>
+    <p>GatePay <span class="method post">POST</span> ke <code>notify_url</code> saat order paid:</p>
     <pre><code>{
   "event": "order.paid",
   "order_id": "ord_xxx",
@@ -132,7 +142,24 @@ export function renderDocs() {
   "unique_amount": 10237,
   "paid_at": 1784351000
 }</code></pre>
-    <p>Header <code>x-signature</code> = HMAC-SHA256(body, callback_secret). Verifikasi di sisi kamu.</p>
+    <p>Header <code>x-signature</code> = <code>HMAC-SHA256(raw_body, callback_secret)</code> (hex). Verifikasi dulu sebelum percaya isinya:</p>
+    <pre><code>// Node.js / Cloudflare Worker
+import crypto from 'crypto';
+
+app.post('/webhook/gatepay', (req, res) =&gt; {
+  const raw = req.rawBody;                    // string body mentah
+  const sig = req.headers['x-signature'];
+  const expect = crypto.createHmac('sha256', CALLBACK_SECRET)
+                       .update(raw).digest('hex');
+  if (sig !== expect) return res.status(401).end();   // bukan dari GatePay
+
+  const ev = JSON.parse(raw);
+  if (ev.event === 'order.paid') {
+    // ✓ tandai invoice lunas / kirim produk / approve member
+  }
+  res.json({ ok: true });                     // balas 2xx = sukses
+});</code></pre>
+    <div class="tip">💡 Balas HTTP <code>2xx</code> supaya GatePay tau webhook diterima. Kalau endpoint down, pembayaran tetap tercatat <code>paid</code> di dashboard — webhook cuma notifikasi tambahan.</div>
 
     <h2 id="checkout">Halaman Checkout</h2>
     <p>Tiap order otomatis punya halaman bayar di <code>/pay/:id</code> — nampilin QR, nominal, countdown, dan auto-update jadi "Berhasil" pas dibayar. Tinggal redirect customer ke situ.</p>

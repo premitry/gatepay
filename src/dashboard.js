@@ -184,8 +184,7 @@ export function renderDashboard() {
     <nav class="snav" id="snav">
       <div class="grp">Menu</div>
       <div class="navi active" data-view="dash" onclick="go('dash')"><span class="ic">🏠</span><span class="lbl">Dashboard</span></div>
-      <div class="navi" data-view="order" onclick="go('order')"><span class="ic">➕</span><span class="lbl">Buat Order</span></div>
-      <div class="navi" data-view="qris" onclick="go('qris')"><span class="ic">📷</span><span class="lbl">QRIS &amp; Fee</span></div>
+      <div class="navi" data-view="qris" onclick="go('qris')"><span class="ic">💳</span><span class="lbl">QRIS &amp; Order</span></div>
       <div class="grp">Integrasi</div>
       <div class="navi" data-view="apk" onclick="go('apk')"><span class="ic">🔑</span><span class="lbl">Kredensial &amp; APK</span></div>
       <div class="navi" data-view="hook" onclick="go('hook')"><span class="ic">🔗</span><span class="lbl">Webhook</span></div>
@@ -228,49 +227,47 @@ export function renderDashboard() {
         </div>
       </section>
 
-      <!-- BUAT ORDER -->
-      <section class="view" id="v-order">
-        <div class="panel" style="max-width:520px">
-          <h2>NEW_ORDER.EXE</h2>
-          <label>Nominal (Rp)</label>
-          <input id="amt" type="number" placeholder="10000">
-          <label>Reference (opsional)</label>
-          <input id="ref" type="text" placeholder="INV-001">
-          <button onclick="createOrder()">Buat Order + QR</button>
-          <div class="msg" id="omsg"></div>
-          <div class="res" id="ores">
-            <div class="dim" id="rbreak" style="font-size:12px;margin-bottom:8px"></div>
-            <div class="dim">Bayar persis</div>
-            <div class="amt" id="ramt"></div>
-            <canvas id="qrcanvas"></canvas>
-            <div style="margin-top:8px"><a class="lnk" id="rlink" target="_blank">Buka halaman checkout ↗</a></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- QRIS & FEE -->
+      <!-- QRIS & ORDER (gabung) -->
       <section class="view" id="v-qris">
-        <div class="panel" style="max-width:560px">
-          <h2>QRIS_STATIS.CFG</h2>
-          <div class="dim" style="margin-bottom:8px">Upload foto QRIS statis DANA Bisnis kamu → Decode → Simpan.</div>
-          <label>Upload QR (foto/gambar)</label>
-          <input type="file" id="qrfile" accept="image/*">
-          <button class="sec" onclick="decodeQr()">🔍 Decode QR</button>
-          <img id="qrprev">
-          <label>Hasil QRIS String</label>
-          <textarea id="qris" placeholder="hasil decode (atau paste manual)"></textarea>
-          <button onclick="uploadQris()">Simpan QRIS</button>
-          <div class="msg" id="qmsg"></div>
-        </div>
-        <div class="panel" style="max-width:560px">
-          <h2>FEE_KODE.CFG</h2>
-          <div class="dim" style="margin-bottom:8px">Fee ditambah di atas nominal, lalu kode unik disisipkan di digit terakhir buat matching otomatis.</div>
-          <div style="display:flex;gap:10px">
-            <div style="flex:1"><label>Fee (%)</label><input id="fee" type="number" step="0.1" placeholder="7"></div>
-            <div style="flex:1"><label>Digit kode</label><input id="digits" type="number" min="1" max="3" placeholder="2"></div>
+        <div class="grid2">
+          <div class="panel">
+            <h2>QRIS_STATIS.CFG · Langkah 1</h2>
+            <div class="dim" style="margin-bottom:8px">Wajib duluan. Upload foto QRIS statis DANA Bisnis kamu → Decode → Simpan. Order nggak bisa dibuat sebelum QRIS ke-set.</div>
+            <label>Upload QR (foto/gambar)</label>
+            <input type="file" id="qrfile" accept="image/*">
+            <button class="sec" onclick="decodeQr()">🔍 Decode QR</button>
+            <img id="qrprev">
+            <label>Hasil QRIS String</label>
+            <textarea id="qris" placeholder="hasil decode (atau paste manual)"></textarea>
+            <button onclick="uploadQris()">Simpan QRIS</button>
+            <div class="msg" id="qmsg"></div>
+            <div id="qstat" class="dim" style="margin-top:10px;font-family:'Share Tech Mono',monospace"></div>
+            <div style="display:flex;gap:10px;margin-top:12px;border-top:1px solid var(--edge);padding-top:12px">
+              <div style="flex:1"><label>Fee (%)</label><input id="fee" type="number" step="0.1" placeholder="7"></div>
+              <div style="flex:1"><label>Digit kode</label><input id="digits" type="number" min="1" max="3" placeholder="2"></div>
+            </div>
+            <div class="dim" style="font-size:11px;margin-top:4px">Fee ditambah di atas nominal, kode unik disisipkan di digit terakhir buat matching otomatis.</div>
+            <button class="sec" onclick="saveSettings()">Simpan Fee</button>
+            <div class="msg" id="smsg"></div>
           </div>
-          <button onclick="saveSettings()">Simpan Fee</button>
-          <div class="msg" id="smsg"></div>
+
+          <div class="panel">
+            <h2>NEW_ORDER.EXE · Langkah 2</h2>
+            <div id="noqris" class="dim" style="margin-bottom:10px;padding:8px;background:#fff6d9;border:2px solid var(--accent);color:#3a2a00;display:none">⚠ Set QRIS statis dulu di panel kiri sebelum buat order.</div>
+            <label>Nominal (Rp)</label>
+            <input id="amt" type="number" placeholder="10000">
+            <label>Reference (opsional)</label>
+            <input id="ref" type="text" placeholder="INV-001">
+            <button onclick="createOrder()">Buat Order + QR</button>
+            <div class="msg" id="omsg"></div>
+            <div class="res" id="ores">
+              <div class="dim" id="rbreak" style="font-size:12px;margin-bottom:8px"></div>
+              <div class="dim">Bayar persis</div>
+              <div class="amt" id="ramt"></div>
+              <canvas id="qrcanvas"></canvas>
+              <div style="margin-top:8px"><a class="lnk" id="rlink" target="_blank">Buka halaman checkout ↗</a></div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -373,7 +370,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret). Detail di <a hre
   function logout(){ localStorage.removeItem('gp_sess'); location.reload(); }
 
   // ── shell / navigation ──
-  const TITLES={dash:'Dashboard',order:'Buat Order',qris:'QRIS & Fee',apk:'Kredensial & APK',hook:'Webhook',pw:'Ganti Password',events:'Events Device',admin:'Admin'};
+  const TITLES={dash:'Dashboard',qris:'QRIS & Order',apk:'Kredensial & APK',hook:'Webhook',pw:'Ganti Password',events:'Events Device',admin:'Admin'};
   function go(v){
     document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
     $('v-'+v).classList.add('on');
@@ -435,14 +432,17 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret). Detail di <a hre
     try{
       var r=await fetch('/api/merchant/qris',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({qris:$('qris').value.trim()})});
       var j=await r.json();
-      if(r.ok) msg('qmsg','ok','QRIS tersimpan: '+(j.merchant_name||'-')+' ('+(j.city||'-')+')');
+      if(r.ok){ msg('qmsg','ok','QRIS tersimpan: '+(j.merchant_name||'-')+' ('+(j.city||'-')+')'); loadSettings(); }
       else msg('qmsg','err',j.error||'gagal');
     }catch(e){ msg('qmsg','err',String(e)); }
   }
 
   async function loadSettings(){
     try{ var r=await fetch('/api/merchant/settings',{headers:{'x-api-key':key()}}); var j=await r.json();
-      if(r.ok){ $('fee').value=j.fee_percent??0; $('digits').value=j.unique_digits??2; $('notify').value=j.notify_url||''; $('c-cbsec').textContent=j.callback_secret||'-'; } }catch(e){}
+      if(r.ok){ $('fee').value=j.fee_percent??0; $('digits').value=j.unique_digits??2; $('notify').value=j.notify_url||''; $('c-cbsec').textContent=j.callback_secret||'-';
+        if(j.has_qris){ $('qstat').textContent='✓ QRIS aktif: '+(j.merchant_name||'-'); $('qstat').style.color='var(--ok)'; $('noqris').style.display='none'; }
+        else { $('qstat').textContent='○ Belum ada QRIS statis'; $('qstat').style.color='var(--bad,#b0362a)'; $('noqris').style.display='block'; }
+      } }catch(e){}
   }
   async function saveSettings(){
     try{ var r=await fetch('/api/merchant/settings',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({fee_percent:parseFloat($('fee').value)||0,unique_digits:parseInt($('digits').value,10)||2})});
