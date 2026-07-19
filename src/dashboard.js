@@ -21,7 +21,7 @@ export function renderDashboard() {
   }
   *{box-sizing:border-box;border-radius:0!important;margin:0;padding:0}
   body{
-    font-family:Verdana,Tahoma,Geneva,sans-serif;color:var(--text);font-size:13px;line-height:1.6;
+    font-family:Verdana,Tahoma,Geneva,sans-serif;color:var(--text);font-size:14px;line-height:1.65;
     background:
       repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 44px),
       repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 44px),
@@ -38,11 +38,11 @@ export function renderDashboard() {
   .out{border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge)}
   .in{border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
 
-  input,textarea{width:100%;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);color:var(--text);padding:8px 9px;font-family:inherit;font-size:13px}
+  input,textarea{width:100%;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);color:var(--text);padding:10px 11px;font-family:inherit;font-size:14px}
   textarea{resize:vertical;min-height:60px}
-  label{display:block;font-size:11px;color:var(--dim);margin:9px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+  label{display:block;font-size:12px;color:var(--dim);margin:11px 0 5px;text-transform:uppercase;letter-spacing:.04em}
 
-  button{background:linear-gradient(180deg,#4a86c8,#26379d);color:#fff;border:2px solid;border-color:#7fb0e0 #141f5c #141f5c #7fb0e0;padding:9px 16px;font-weight:700;font-size:12px;cursor:pointer;margin-top:10px;width:100%;letter-spacing:.02em}
+  button{background:linear-gradient(180deg,#4a86c8,#26379d);color:#fff;border:2px solid;border-color:#7fb0e0 #141f5c #141f5c #7fb0e0;padding:11px 18px;font-weight:700;font-size:13px;cursor:pointer;margin-top:12px;width:100%;letter-spacing:.02em}
   button:hover{filter:brightness(1.06)}
   button:active{border-color:#141f5c #7fb0e0 #7fb0e0 #141f5c}
   button.sec{background:linear-gradient(180deg,var(--chrome),var(--chrome-2));color:var(--text);border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
@@ -100,20 +100,20 @@ export function renderDashboard() {
   .live{font-size:11px;color:var(--ok);display:flex;align-items:center;gap:6px;margin-left:auto;font-family:'Share Tech Mono',monospace}
   .livedot{width:9px;height:9px;background:var(--ok);display:inline-block;animation:bl 1.4s infinite;border:1px solid rgba(0,0,0,.3)}
   @keyframes bl{50%{opacity:.3}}
-  .page{padding:22px;max-width:1000px}
+  .page{padding:24px 28px;max-width:1240px;margin:0 auto}
   .view{display:none}
   .view.on{display:block}
 
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
   .stat{background:var(--chrome);padding:12px 14px;border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge)}
   .stat .k{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
-  .stat .v{font-size:20px;font-weight:700;margin-top:3px;font-family:'Share Tech Mono',monospace}
+  .stat .v{font-size:24px;font-weight:700;margin-top:3px;font-family:'Share Tech Mono',monospace}
   .stat .v.g{color:var(--ok)}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 
   /* panel = window */
-  .panel{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:2px 2px 0 var(--edge);padding:0 16px 16px;margin-bottom:16px}
-  .panel h2{font-family:'Michroma';font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#fff;margin:0 -16px 14px;padding:7px 14px;background:linear-gradient(90deg,var(--title-a),var(--title-b));border-bottom:2px solid var(--edge-dark)}
+  .panel{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:2px 2px 0 var(--edge);padding:0 18px 18px;margin-bottom:16px}
+  .panel h2{font-family:'Michroma';font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#fff;margin:0 -18px 16px;padding:9px 16px;background:linear-gradient(90deg,var(--title-a),var(--title-b));border-bottom:2px solid var(--edge-dark)}
 
   .res{margin-top:12px;padding:12px;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
   .res{display:none}.res.show{display:block}
