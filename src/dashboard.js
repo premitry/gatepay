@@ -86,7 +86,9 @@ export function renderDashboard() {
   /* collapsed */
   body.col .sidebar{width:60px}
   body.col .logo span:last-child,body.col .snav .grp,body.col .navi .lbl,body.col .side-bot .txt{display:none}
-  body.col .navi{justify-content:center;padding:9px 0;gap:0}
+  body.col .snav{padding:8px 0}
+  body.col .navi{justify-content:center;padding:9px 0;gap:0;margin-left:0;margin-right:0}
+  body.col .navi .ic{width:auto}
   body.col .side-top{padding:0 6px;justify-content:center}
   body.col .side-top .logo{display:none}
   body.col .side-bot{justify-content:center;padding:10px 6px}
@@ -132,6 +134,9 @@ export function renderDashboard() {
   .pager button{width:auto;margin:0;padding:5px 12px}
   .pager button:disabled{opacity:.4;cursor:default}
   .pager .pinfo{font-size:11px;color:var(--dim);font-family:'Share Tech Mono',monospace}
+  .fchip{width:auto;margin:0;padding:5px 12px;font-size:11px;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));color:var(--text);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
+  .fchip.active{background:linear-gradient(180deg,#4a86c8,#26379d);color:#fff;border-color:#141f5c #7fb0e0 #7fb0e0 #141f5c}
+  .btncancel{width:auto;margin:0;padding:4px 10px;font-size:10px;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));color:var(--bad,#b0362a);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
 
   /* kredensial = terminal navy */
   .cred{background:var(--term-bg);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);padding:9px 10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -227,8 +232,15 @@ export function renderDashboard() {
         </div>
         <div class="panel">
           <h2>DELIVERY_RECORD.LOG</h2>
-          <table><thead><tr><th>ID</th><th>Nominal</th><th>Status</th><th>Ref</th><th>Checkout</th><th>Waktu</th></tr></thead>
-          <tbody id="otbody"><tr><td colspan=6 class=dim style="text-align:center;padding:20px">Belum ada order</td></tr></tbody></table>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="ofilter">
+            <button class="fchip active" data-f="all" onclick="setFilter('all')">Semua</button>
+            <button class="fchip" data-f="pending" onclick="setFilter('pending')">Pending</button>
+            <button class="fchip" data-f="paid" onclick="setFilter('paid')">Paid</button>
+            <button class="fchip" data-f="expired" onclick="setFilter('expired')">Expired</button>
+            <button class="fchip" data-f="cancelled" onclick="setFilter('cancelled')">Cancelled</button>
+          </div>
+          <table><thead><tr><th>ID</th><th>Nominal</th><th>Status</th><th>Ref</th><th>Checkout</th><th>Waktu</th><th>Aksi</th></tr></thead>
+          <tbody id="otbody"><tr><td colspan=7 class=dim style="text-align:center;padding:20px">Belum ada order</td></tr></tbody></table>
           <div class="pager">
             <span class="pinfo" id="opinfo"></span>
             <button class="sec" id="oprev" onclick="pageOrders(-1)">‹ Prev</button>
@@ -316,6 +328,20 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
           <h3>Autentikasi</h3>
           <p>Semua endpoint merchant butuh header API key kamu (ada di menu <b>Kredensial &amp; APK</b>):</p>
           <pre>x-api-key: sk_live_xxxxxxxxxxxx</pre>
+
+          <h3><span class="mth p">POST</span> /api/merchant/qris — Setup QRIS Statis</h3>
+          <p>Sekali aja. Isi string QRIS statis (bisa juga lewat menu QRIS &amp; Order pakai upload foto).</p>
+          <pre>curl -X POST https://gatepay.biz.id/api/merchant/qris \\
+  -H "x-api-key: sk_live_xxx" \\
+  -H "content-type: application/json" \\
+  -d '{"qris":"00020101021126...6304ABCD"}'</pre>
+
+          <h3><span class="mth p">POST</span> /api/merchant/settings — Fee, Digit, Webhook</h3>
+          <table><thead><tr><th>Field</th><th>Tipe</th><th>Ket</th></tr></thead><tbody>
+            <tr><td class=mono>fee_percent</td><td>number</td><td>Persen fee (0-100).</td></tr>
+            <tr><td class=mono>unique_digits</td><td>number</td><td>Digit kode unik (1-3).</td></tr>
+            <tr><td class=mono>notify_url</td><td>string</td><td>URL webhook (lihat panel atas).</td></tr>
+          </tbody></table>
 
           <h3><span class="mth p">POST</span> /api/orders — Bikin Order</h3>
           <table><thead><tr><th>Field</th><th>Tipe</th><th>Ket</th></tr></thead><tbody>
@@ -426,12 +452,14 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     $('ptitle').textContent=TITLES[v]||'';
     toggleMnav(false);
   }
-  function toggleCollapse(){ document.body.classList.toggle('col'); localStorage.setItem('gp_col',document.body.classList.contains('col')?'1':''); }
+  function setColArrow(){ var b=document.querySelector('.collapse'); if(b) b.textContent=document.body.classList.contains('col')?'›':'‹'; }
+  function toggleCollapse(){ document.body.classList.toggle('col'); localStorage.setItem('gp_col',document.body.classList.contains('col')?'1':''); setColArrow(); }
   function toggleMnav(on){ document.body.classList.toggle('mnav',on); }
 
   function showApp(){
     var s=sess(); if(!s) return;
     if(localStorage.getItem('gp_col')) document.body.classList.add('col');
+    setColArrow();
     $('authview').classList.add('hidden'); $('appview').classList.remove('hidden');
     $('whoami').textContent='@'+(s.username||'');
     $('avatar').textContent=(s.username||'?').slice(0,1).toUpperCase();
@@ -519,7 +547,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
 
   // ── real-time data + pagination ──
   const PER=10;
-  let allOrders=[], allEvents=[], oPage=0, ePage=0;
+  let allOrders=[], allEvents=[], oPage=0, ePage=0, oFilter='all';
   const escj=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const nows=()=>Math.floor(Date.now()/1000);
   const agoj=ts=>{ if(!ts)return'-'; let d=Math.max(0,nows()-ts); if(d<60)return d+'s'; if(d<3600)return Math.floor(d/60)+'m'; if(d<86400)return Math.floor(d/3600)+'j'; return Math.floor(d/86400)+'h'; };
@@ -530,10 +558,18 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function pageOrders(d){ var mx=Math.max(0,Math.ceil(allOrders.length/PER)-1); oPage=Math.min(mx,Math.max(0,oPage+d)); renderOrders(); }
   function pageEvents(d){ var mx=Math.max(0,Math.ceil(allEvents.length/PER)-1); ePage=Math.min(mx,Math.max(0,ePage+d)); renderEvents(); }
 
+  function setFilter(f){ oFilter=f; oPage=0; document.querySelectorAll('#ofilter .fchip').forEach(b=>b.classList.toggle('active',b.dataset.f===f)); renderOrders(); }
+  async function cancelOrder(id){
+    if(!confirm('Batalin order ini? Nominal uniknya jadi bebas dipakai order lain.')) return;
+    try{ await fetch('/api/orders/'+id+'/cancel',{method:'POST',headers:{'x-api-key':key()}}); tick(); }catch(e){}
+  }
   function renderOrders(){
-    var tot=allOrders.length, mx=Math.max(0,Math.ceil(tot/PER)-1); if(oPage>mx)oPage=mx;
-    var slice=allOrders.slice(oPage*PER,oPage*PER+PER);
-    $('otbody').innerHTML=slice.map(o=>{var st=dispStatus(o);return '<tr><td class=mono>'+escj(o.id.slice(0,12))+'</td><td class=mono>'+idr(o.unique_amount)+'<br><span class=dim>base '+idr(o.base_amount)+'</span></td><td>'+bdg(st)+'</td><td class=dim>'+escj(o.reference||'-')+'</td><td><a class=lnk href="/pay/'+escj(o.id)+'" target=_blank>checkout ↗</a></td><td class=dim>'+agoj(o.created_at)+'</td></tr>';}).join('')||'<tr><td colspan=6 class=dim style="text-align:center;padding:20px">Belum ada order</td></tr>';
+    var list=oFilter==='all'?allOrders:allOrders.filter(o=>dispStatus(o)===oFilter);
+    var tot=list.length, mx=Math.max(0,Math.ceil(tot/PER)-1); if(oPage>mx)oPage=mx;
+    var slice=list.slice(oPage*PER,oPage*PER+PER);
+    $('otbody').innerHTML=slice.map(o=>{var st=dispStatus(o);
+      var aksi=st==='pending'?'<button class=btncancel onclick="cancelOrder(\\''+escj(o.id)+'\\')">Cancel</button>':'<span class=dim>-</span>';
+      return '<tr><td class=mono>'+escj(o.id.slice(0,12))+'</td><td class=mono>'+idr(o.unique_amount)+'<br><span class=dim>base '+idr(o.base_amount)+'</span></td><td>'+bdg(st)+'</td><td class=dim>'+escj(o.reference||'-')+'</td><td><a class=lnk href="/pay/'+escj(o.id)+'" target=_blank>checkout ↗</a></td><td class=dim>'+agoj(o.created_at)+'</td><td>'+aksi+'</td></tr>';}).join('')||'<tr><td colspan=7 class=dim style="text-align:center;padding:20px">Nggak ada order '+(oFilter==='all'?'':escj(oFilter))+'</td></tr>';
     $('opinfo').textContent=tot?('Hal '+(oPage+1)+'/'+(mx+1)+' · '+tot+' order'):'';
     $('oprev').disabled=oPage<=0; $('onext').disabled=oPage>=mx;
   }
