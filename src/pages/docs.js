@@ -25,7 +25,7 @@ export function renderDocs() {
   .logo .mark{background:var(--accent);color:#fff;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
   .btn{padding:9px 16px;font-weight:700;font-size:13px;background:linear-gradient(180deg,#4a86c8,#26379d);color:#fff;border:2px solid;border-color:#7fb0e0 #141f5c #141f5c #7fb0e0}
   .btn:active{border-color:#141f5c #7fb0e0 #7fb0e0 #141f5c}
-  .layout{max-width:1080px;margin:0 auto;padding:24px 20px;display:grid;grid-template-columns:210px 1fr;gap:26px}
+  .layout{max-width:1160px;margin:0 auto;padding:24px 20px;display:grid;grid-template-columns:220px 1fr;gap:28px}
   .side{position:sticky;top:80px;align-self:start;font-size:13px;background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:2px 2px 0 var(--edge);padding:12px}
   .side a{display:block;color:var(--dim);padding:5px 0;border-left:3px solid transparent;padding-left:10px}
   .side a:hover{color:var(--text);border-left-color:var(--accent);text-decoration:none}

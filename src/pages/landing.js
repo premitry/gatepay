@@ -21,7 +21,7 @@ export function renderLanding() {
   a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
   h1,h2,h3,.logo{font-family:'Michroma',sans-serif;font-weight:400}
   .mono{font-family:'Share Tech Mono',monospace}
-  .wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
   .out{border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:2px 2px 0 var(--edge)}
   /* nav = window titlebar */
   nav{background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border-bottom:2px solid var(--edge-dark);box-shadow:0 2px 0 var(--edge);position:sticky;top:0;z-index:10}

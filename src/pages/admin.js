@@ -17,7 +17,7 @@ export function renderAdmin() {
     --ok:#0e7c66;--red:#b0362a;--amber:#c26107;
   }
   *{box-sizing:border-box;border-radius:0!important;margin:0;padding:0}
-  body{font-family:Verdana,Tahoma,Geneva,sans-serif;color:var(--text);font-size:13px;line-height:1.6;
+  body{font-family:Verdana,Tahoma,Geneva,sans-serif;color:var(--text);font-size:14px;line-height:1.65;
     background:repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 44px),repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 44px),linear-gradient(135deg,var(--desk-a),var(--desk-b) 52%,var(--desk-c));background-attachment:fixed;min-height:100vh}
   a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
   h1,.logo,.panel h2{font-family:'Michroma',sans-serif;font-weight:400}
@@ -28,14 +28,14 @@ export function renderAdmin() {
   .logo .mark{background:var(--accent);color:#fff;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
   .navlinks{display:flex;gap:16px;align-items:center}
   .navlinks a,.navlinks span{color:var(--text);font-size:13px;cursor:pointer}
-  .wrap{max-width:1160px;margin:0 auto;padding:22px 20px}
+  .wrap{max-width:1240px;margin:0 auto;padding:24px 28px}
   .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
   .stat{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge);padding:12px 14px}
   .stat .k{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
-  .stat .v{font-size:20px;font-weight:700;margin-top:3px;font-family:'Share Tech Mono',monospace}
+  .stat .v{font-size:24px;font-weight:700;margin-top:3px;font-family:'Share Tech Mono',monospace}
   .stat .v.g{color:var(--ok)}
-  .panel{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:2px 2px 0 var(--edge);padding:0 16px 16px;margin-bottom:16px}
-  .panel h2{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#fff;margin:0 -16px 14px;padding:7px 14px;background:linear-gradient(90deg,var(--title-a),var(--title-b));border-bottom:2px solid var(--edge-dark)}
+  .panel{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:2px 2px 0 var(--edge);padding:0 18px 18px;margin-bottom:16px}
+  .panel h2{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#fff;margin:0 -18px 16px;padding:9px 16px;background:linear-gradient(90deg,var(--title-a),var(--title-b));border-bottom:2px solid var(--edge-dark)}
   table{width:100%;border-collapse:collapse;font-size:12px}
   th{text-align:left;color:#fff;font-weight:700;padding:7px 8px;font-size:10px;text-transform:uppercase;background:linear-gradient(180deg,#3f7fc4,#26379d)}
   td{padding:7px 8px;border-bottom:1px solid var(--edge);vertical-align:middle}
@@ -50,7 +50,7 @@ export function renderAdmin() {
   button:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
   button.red{color:var(--red)}
   button.amber{color:var(--accent)}
-  input{width:100%;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);color:var(--text);padding:8px 10px;font-size:13px}
+  input{width:100%;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);color:var(--text);padding:10px 11px;font-size:14px}
   .msg{font-size:12px;margin-top:8px;padding:8px;display:none;border:2px solid}
   .msg.ok{background:#dff3ea;color:var(--ok);border-color:var(--ok);display:block}
   .msg.err{background:#f7dcd9;color:var(--red);border-color:var(--red);display:block}
