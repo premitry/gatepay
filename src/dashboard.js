@@ -156,6 +156,9 @@ export function renderDashboard() {
   .doc code{background:#fff;border:1px solid var(--edge);padding:1px 5px;font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--accent)}
   .doc .mth{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;margin-right:6px;font-family:'Share Tech Mono',monospace;border:1px solid rgba(0,0,0,.3);color:#fff}
   .doc .mth.p{background:var(--ok)} .doc .mth.g{background:var(--title-a)}
+  .qamt{width:auto;margin:0;padding:6px 12px;font-size:12px;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));color:var(--text);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
+  .qamt:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
+  .oest{margin-top:12px;padding:12px;background:var(--term-bg);color:var(--term-text);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);font-family:'Share Tech Mono',monospace;font-size:12px;line-height:1.7}
   .scrim{display:none}
   @media(max-width:820px){
     .stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}
@@ -165,6 +168,11 @@ export function renderDashboard() {
     .content{margin-left:0!important}
     .topbar .burger{display:block}
     body.mnav .scrim{display:block;position:fixed;inset:0;background:rgba(20,31,92,.45);z-index:35}
+    .page{padding:14px}
+    table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+    thead,tbody{display:table;width:100%;min-width:540px}
+    #qrcanvas{max-width:100%}
+    .cred{flex-wrap:wrap}
   }
 </style></head><body>
 
@@ -298,9 +306,17 @@ export function renderDashboard() {
             <h2>NEW_ORDER.EXE · Langkah 2</h2>
             <div id="noqris" class="dim" style="margin-bottom:10px;padding:8px;background:#fff6d9;border:2px solid var(--accent);color:#3a2a00;display:none">⚠ Set QRIS statis dulu di panel kiri sebelum buat order.</div>
             <label>Nominal (Rp)</label>
-            <input id="amt" type="number" placeholder="10000">
+            <input id="amt" type="number" placeholder="10000" oninput="estOrder()">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+              <button class="qamt" onclick="setAmt(5000)">5rb</button>
+              <button class="qamt" onclick="setAmt(10000)">10rb</button>
+              <button class="qamt" onclick="setAmt(25000)">25rb</button>
+              <button class="qamt" onclick="setAmt(50000)">50rb</button>
+              <button class="qamt" onclick="setAmt(100000)">100rb</button>
+            </div>
             <label>Reference (opsional)</label>
             <input id="ref" type="text" placeholder="INV-001">
+            <div class="oest" id="oest">Isi nominal buat lihat estimasi total yang dibayar customer.</div>
             <button onclick="createOrder()">Buat Order + QR</button>
             <div class="msg" id="omsg"></div>
             <div class="res" id="ores">
@@ -646,6 +662,13 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     }catch(e){ msg('hmsg','err',String(e)); }
   }
 
+  function setAmt(v){ $('amt').value=v; estOrder(); }
+  function estOrder(){
+    var base=parseInt($('amt').value,10)||0, fee=parseFloat($('fee').value)||0;
+    if(base<=0){ $('oest').innerHTML='Isi nominal buat lihat estimasi total yang dibayar customer.'; return; }
+    var feeAmt=Math.round(base*fee/100), sub=base+feeAmt;
+    $('oest').innerHTML='ESTIMASI CUSTOMER BAYAR<br>base      : '+idr(base)+'<br>fee '+fee+'%   : '+idr(feeAmt)+'<br>kode unik : +1 s/d +50<br>─────────────<br><span style="color:#8fe3f7;font-weight:700">≈ '+idr(sub+1)+' – '+idr(sub+50)+'</span>';
+  }
   async function createOrder(){
     var amt=parseInt($('amt').value,10); if(!amt||amt<=0) return msg('omsg','err','Nominal harus > 0');
     try{

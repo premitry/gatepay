@@ -73,7 +73,14 @@ export function renderAdmin() {
   .modal .val{width:100%;background:var(--term-bg);color:var(--term-ok);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);padding:12px;font-family:'Share Tech Mono',monospace;font-size:15px;word-break:break-all}
   .clipbtn{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);color:var(--text);font-size:17px;padding:0 12px;min-width:44px}
   .clipbtn:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
-  @media(max-width:820px){.stats{grid-template-columns:repeat(2,1fr)}table{font-size:12px}}
+  @media(max-width:820px){
+    .stats{grid-template-columns:repeat(2,1fr)}table{font-size:12px}
+    .wrap{padding:14px}
+    .sub-tabs{flex-wrap:wrap}
+    .sub-tabs div{flex:1;text-align:center}
+    #setgrid{grid-template-columns:1fr!important}
+    nav .in{padding:0 14px}
+  }
 </style></head><body>
 
 <div id="authview">
