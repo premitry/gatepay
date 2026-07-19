@@ -102,6 +102,7 @@ export function renderAdmin() {
 
   <div class="sub-tabs">
     <div id="t-merch" class="active" onclick="showTab('merch')">Merchant &amp; Device</div>
+    <div id="t-tiket" onclick="showTab('tiket')">Tiket</div>
     <div id="t-log" onclick="showTab('log')">Log Global</div>
     <div id="t-set" onclick="showTab('set')">Pengaturan Web</div>
   </div>
@@ -126,6 +127,20 @@ export function renderAdmin() {
       <h2>Events Global (100 terakhir)</h2>
       <div style="overflow-x:auto"><table><thead><tr><th>Event</th><th>User</th><th>Nominal</th><th>Status</th><th>Waktu</th></tr></thead>
       <tbody id="elogbody"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="view-tiket" class="hidden">
+    <div class="panel">
+      <h2>Tiket Support Masuk</h2>
+      <div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Subjek</th><th>Pesan</th><th>Update</th><th>Status</th><th>Aksi</th></tr></thead>
+      <tbody id="tktbody"><tr><td colspan=6 class=dim style="text-align:center;padding:20px">Loading…</td></tr></tbody></table></div>
+    </div>
+    <div class="panel" id="atk-detail" style="display:none">
+      <h2 id="atk-dtitle">THREAD</h2>
+      <div id="atk-thread" style="max-height:360px;overflow-y:auto;margin-bottom:12px"></div>
+      <textarea id="atk-reply" placeholder="balasan admin..." style="width:100%;min-height:60px;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);padding:9px;font-family:inherit;font-size:14px"></textarea>
+      <button onclick="replyAdminTicket()" style="width:auto;margin-top:8px">Kirim Balasan</button>
     </div>
   </div>
 
@@ -155,6 +170,24 @@ export function renderAdmin() {
         <label>Nama Pendek (icon)</label><input id="set-pwa_short_name" placeholder="GatePay">
         <button onclick="saveSet()">Simpan Pengaturan</button>
         <div class="msg" id="setmsg2"></div>
+      </div>
+
+      <div class="panel" style="grid-column:1/-1">
+        <h2>CHAT_SUPPORT.CFG</h2>
+        <div class="dim" style="margin-bottom:8px">Tombol chat melayang di pojok kanan bawah semua halaman. Aktifkan WhatsApp dan/atau Telegram.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none"><input type="checkbox" id="set-wa_enabled" style="width:auto"> Aktifkan WhatsApp</label>
+            <label>Nomor WA (62xxx)</label><input id="set-wa_number" placeholder="628123456789">
+            <label>Teks pembuka WA</label><input id="set-wa_text" placeholder="Halo, saya butuh bantuan">
+          </div>
+          <div>
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none"><input type="checkbox" id="set-tg_enabled" style="width:auto"> Aktifkan Telegram</label>
+            <label>Username Telegram (tanpa @)</label><input id="set-tg_username" placeholder="gatepaysupport">
+          </div>
+        </div>
+        <button onclick="saveSet()">Simpan Pengaturan</button>
+        <div class="msg" id="setmsg3"></div>
       </div>
     </div>
   </div>
@@ -207,15 +240,48 @@ export function renderAdmin() {
   }
   let tab='merch';
   function showTab(t){ tab=t;
-    $('t-merch').className=t==='merch'?'active':''; $('t-log').className=t==='log'?'active':''; $('t-set').className=t==='set'?'active':'';
-    $('view-merch').classList.toggle('hidden',t!=='merch'); $('view-log').classList.toggle('hidden',t!=='log'); $('view-set').classList.toggle('hidden',t!=='set');
-    if(t==='set') loadSet(); else load(); }
+    ['merch','tiket','log','set'].forEach(k=>{ $('t-'+k).className=t===k?'active':''; $('view-'+k).classList.toggle('hidden',t!==k); });
+    if(t==='set') loadSet(); else if(t==='tiket') loadAdminTickets(); else load(); }
 
-  const SET_KEYS=['site_name','description','theme_color','favicon','pwa_name','pwa_short_name'];
+  // ── tiket admin ──
+  let curTk=null;
+  const TKB={active:['#ffc266','#3a2a00'],proses:['#3f7fc4','#fff'],close:['#9aa0a8','#fff']};
+  function tkbadge(s){var b=TKB[s]||['#9aa0a8','#fff'];return '<span class="bd" style="background:'+b[0]+';color:'+b[1]+'">'+escj(s)+'</span>';}
+  async function loadAdminTickets(){
+    try{ var j=await (await fetch('/api/admin/tickets',{headers:hdr()})).json();
+      $('tktbody').innerHTML=(j.tickets||[]).map(t=>{
+        var opts=['active','proses','close'].map(s=>'<option value="'+s+'"'+(t.status===s?' selected':'')+'>'+s+'</option>').join('');
+        return '<tr><td><b>@'+escj(t.username||'-')+'</b></td><td>'+escj((t.subject||'').slice(0,40))+'</td><td class=dim>'+(t.msg_count||0)+' pesan</td><td class=dim>'+agoj(t.updated_at)+'</td>'+
+          '<td><select onchange="changeTicketStatus(\\''+t.id+'\\',this.value)" style="width:auto;padding:4px">'+opts+'</select></td>'+
+          '<td><button onclick="openAdminTicket(\\''+t.id+'\\')">Lihat</button></td></tr>';
+      }).join('')||'<tr><td colspan=6 class=dim style="text-align:center;padding:20px">Belum ada tiket</td></tr>';
+    }catch(e){}
+  }
+  async function changeTicketStatus(id,st){ await fetch('/api/admin/tickets/'+id+'/status',{method:'POST',headers:hdr(),body:JSON.stringify({status:st})}); loadAdminTickets(); if(curTk===id) openAdminTicket(id); }
+  async function openAdminTicket(id){
+    curTk=id;
+    try{ var j=await (await fetch('/api/tickets/'+id,{headers:hdr()})).json(); if(!j.ticket) return;
+      $('atk-detail').style.display='block';
+      $('atk-dtitle').innerHTML=escj(j.ticket.subject)+' &nbsp;'+tkbadge(j.ticket.status);
+      $('atk-thread').innerHTML=(j.messages||[]).map(mm=>{ var adm=mm.sender==='admin';
+        return '<div style="margin-bottom:8px;text-align:'+(adm?'right':'left')+'"><div style="display:inline-block;max-width:82%;padding:8px 10px;border:2px solid var(--edge);background:'+(adm?'#dbe7fb':'#fff6d9')+';text-align:left"><div class=dim style="font-size:10px;margin-bottom:2px">'+(adm?'👑 Admin':'User')+' · '+agoj(mm.created_at)+' lalu</div>'+escj(mm.body)+'</div></div>';
+      }).join('')||'<div class=dim>kosong</div>';
+      $('atk-thread').scrollTop=$('atk-thread').scrollHeight;
+      $('atk-detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+    }catch(e){}
+  }
+  async function replyAdminTicket(){
+    if(!curTk) return; var b=$('atk-reply').value.trim(); if(!b) return;
+    var r=await fetch('/api/tickets/'+curTk+'/reply',{method:'POST',headers:hdr(),body:JSON.stringify({body:b})});
+    if(r.ok){ $('atk-reply').value=''; openAdminTicket(curTk); loadAdminTickets(); }
+  }
+
+  const SET_KEYS=['site_name','description','theme_color','favicon','pwa_name','pwa_short_name','wa_number','wa_text','tg_username'];
+  const SET_BOOLS=['pwa_enabled','wa_enabled','tg_enabled'];
   async function loadSet(){
     try{ var j=await (await fetch('/api/admin/settings',{headers:hdr()})).json();
       SET_KEYS.forEach(k=>{ if($('set-'+k)) $('set-'+k).value=j[k]||''; });
-      $('set-pwa_enabled').checked = j.pwa_enabled==='1' || j.pwa_enabled===1;
+      SET_BOOLS.forEach(k=>{ if($('set-'+k)) $('set-'+k).checked = (j[k]==='1'||j[k]===1); });
       setPrev();
     }catch(e){}
   }
@@ -225,7 +291,8 @@ export function renderAdmin() {
     $('clr').style.background=$('set-theme_color').value.trim()||'#26379d';
   }
   async function saveSet(){
-    var payload={pwa_enabled:$('set-pwa_enabled').checked?1:0};
+    var payload={};
+    SET_BOOLS.forEach(k=>{ payload[k]=$('set-'+k).checked?1:0; });
     SET_KEYS.forEach(k=>{ payload[k]=$('set-'+k).value.trim(); });
     try{ var r=await fetch('/api/admin/settings',{method:'POST',headers:hdr(),body:JSON.stringify(payload)});
       var j=await r.json();

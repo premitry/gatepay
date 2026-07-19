@@ -77,6 +77,11 @@ const DEFAULT_SETTINGS = {
   pwa_enabled: '1',
   pwa_name: 'GatePay',
   pwa_short_name: 'GatePay',
+  wa_enabled: '0',
+  wa_number: '',
+  wa_text: 'Halo, saya butuh bantuan soal GatePay',
+  tg_enabled: '0',
+  tg_username: '',
 };
 const SETTINGS_KEYS = Object.keys(DEFAULT_SETTINGS);
 
@@ -95,6 +100,20 @@ async function ensureTtlColumn(DB) {
   _ttlReady = true;
 }
 const DEFAULT_TTL = 900; // 15 menit
+
+// Tabel tiket support (tiket + pesan thread) — lazy create
+let _ticketsReady = false;
+async function ensureTickets(DB) {
+  if (_ticketsReady) return;
+  await DB.prepare(
+    "CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, merchant_id TEXT, subject TEXT, status TEXT DEFAULT 'active', created_at INTEGER, updated_at INTEGER)",
+  ).run();
+  await DB.prepare(
+    'CREATE TABLE IF NOT EXISTS ticket_messages (id TEXT PRIMARY KEY, ticket_id TEXT, sender TEXT, body TEXT, created_at INTEGER)',
+  ).run();
+  _ticketsReady = true;
+}
+const TICKET_STATUS = ['active', 'proses', 'close'];
 
 async function getSettings(DB) {
   try {
@@ -128,10 +147,33 @@ function injectHead(html, s) {
   return html.includes('</head>') ? html.replace('</head>', tags + '</head>') : html;
 }
 
-// Bungkus render halaman biar dapet head settings
+// Floating chat support (pojok kanan bawah) — WA dan/atau Telegram, kalau diaktifkan admin
+function supportBtn(href, bg, icon, label) {
+  return `<a href="${href}" target="_blank" rel="noopener" title="${label}" ` +
+    `style="display:flex;align-items:center;gap:9px;background:${bg};color:#fff;padding:11px 16px;` +
+    `border:2px solid #fff;box-shadow:2px 2px 0 rgba(0,0,0,.35);border-radius:0;` +
+    `font-family:Verdana,Tahoma,sans-serif;font-weight:700;font-size:13px;text-decoration:none">` +
+    `<span style="font-size:17px">${icon}</span> ${label}</a>`;
+}
+function injectSupport(html, s) {
+  const btns = [];
+  if (s.wa_enabled === '1') {
+    const num = String(s.wa_number || '').replace(/[^0-9]/g, '');
+    if (num) btns.push(supportBtn(`https://wa.me/${num}?text=${encodeURIComponent(s.wa_text || '')}`, '#25d366', '💬', 'Chat WhatsApp'));
+  }
+  if (s.tg_enabled === '1') {
+    const u = String(s.tg_username || '').replace(/[^A-Za-z0-9_]/g, '');
+    if (u) btns.push(supportBtn(`https://t.me/${u}`, '#2aabee', '✈️', 'Chat Telegram'));
+  }
+  if (!btns.length) return html;
+  const widget = `<div style="position:fixed;right:18px;bottom:18px;z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:flex-end">${btns.join('')}</div>`;
+  return html.includes('</body>') ? html.replace('</body>', widget + '</body>') : html + widget;
+}
+
+// Bungkus render halaman biar dapet head settings + widget support
 async function page(c, htmlStr) {
   const s = await getSettings(c.env.DB);
-  return c.html(injectHead(htmlStr, s));
+  return c.html(injectSupport(injectHead(htmlStr, s), s));
 }
 
 // ─────────────────────────────────────────────────────────
@@ -470,6 +512,80 @@ app.post('/api/merchant/change-password', async (c) => {
   await c.env.DB.prepare('UPDATE merchants SET password_hash = ?, password_salt = ? WHERE id = ?')
     .bind(hash, salt, merchant.id).run();
   return json(c, { ok: true });
+});
+
+// ─────────────────────────────────────────────────────────
+// Tiket support — merchant bikin & balas, admin baca & ubah status
+// ─────────────────────────────────────────────────────────
+// List tiket milik merchant
+app.get('/api/tickets', async (c) => {
+  const m = await requireMerchant(c);
+  if (!m) return json(c, { error: 'invalid api key' }, 401);
+  await ensureTickets(c.env.DB);
+  const r = await c.env.DB.prepare(
+    'SELECT * FROM tickets WHERE merchant_id = ? ORDER BY updated_at DESC LIMIT 100',
+  ).bind(m.id).all();
+  return json(c, { tickets: r.results || [] });
+});
+
+// Bikin tiket baru
+app.post('/api/tickets', async (c) => {
+  const m = await requireMerchant(c);
+  if (!m) return json(c, { error: 'invalid api key' }, 401);
+  await ensureTickets(c.env.DB);
+  const b = await c.req.json().catch(() => ({}));
+  const subject = String(b.subject || '').trim().slice(0, 120);
+  const msg = String(b.message || '').trim().slice(0, 2000);
+  if (!subject || !msg) return json(c, { error: 'subject & pesan wajib diisi' }, 400);
+  const id = rid('tkt');
+  const t = now();
+  await c.env.DB.prepare(
+    "INSERT INTO tickets (id, merchant_id, subject, status, created_at, updated_at) VALUES (?, ?, ?, 'active', ?, ?)",
+  ).bind(id, m.id, subject, t, t).run();
+  await c.env.DB.prepare(
+    "INSERT INTO ticket_messages (id, ticket_id, sender, body, created_at) VALUES (?, ?, 'user', ?, ?)",
+  ).bind(rid('msg'), id, msg, t).run();
+  return json(c, { ok: true, id });
+});
+
+// Detail tiket + thread (pemilik atau admin)
+app.get('/api/tickets/:id', async (c) => {
+  const m = await requireMerchant(c);
+  if (!m) return json(c, { error: 'invalid api key' }, 401);
+  await ensureTickets(c.env.DB);
+  const id = c.req.param('id');
+  const tk = await c.env.DB.prepare('SELECT * FROM tickets WHERE id = ?').bind(id).first();
+  if (!tk) return json(c, { error: 'tiket tidak ditemukan' }, 404);
+  if (tk.merchant_id !== m.id && !m.is_admin) return json(c, { error: 'forbidden' }, 403);
+  const msgs = await c.env.DB.prepare(
+    'SELECT * FROM ticket_messages WHERE ticket_id = ? ORDER BY created_at ASC',
+  ).bind(id).all();
+  return json(c, { ticket: tk, messages: msgs.results || [] });
+});
+
+// Balas tiket (pemilik atau admin)
+app.post('/api/tickets/:id/reply', async (c) => {
+  const m = await requireMerchant(c);
+  if (!m) return json(c, { error: 'invalid api key' }, 401);
+  await ensureTickets(c.env.DB);
+  const id = c.req.param('id');
+  const tk = await c.env.DB.prepare('SELECT * FROM tickets WHERE id = ?').bind(id).first();
+  if (!tk) return json(c, { error: 'tiket tidak ditemukan' }, 404);
+  const isAdmin = !!m.is_admin;
+  if (tk.merchant_id !== m.id && !isAdmin) return json(c, { error: 'forbidden' }, 403);
+  const b = await c.req.json().catch(() => ({}));
+  const body = String(b.body || '').trim().slice(0, 2000);
+  if (!body) return json(c, { error: 'pesan kosong' }, 400);
+  const t = now();
+  await c.env.DB.prepare(
+    'INSERT INTO ticket_messages (id, ticket_id, sender, body, created_at) VALUES (?, ?, ?, ?, ?)',
+  ).bind(rid('msg'), id, isAdmin ? 'admin' : 'user', body, t).run();
+  // admin balas → jadi 'proses'; user balas tiket close → buka lagi jadi 'active'
+  let newStatus = tk.status;
+  if (isAdmin && tk.status === 'active') newStatus = 'proses';
+  if (!isAdmin && tk.status === 'close') newStatus = 'active';
+  await c.env.DB.prepare('UPDATE tickets SET updated_at = ?, status = ? WHERE id = ?').bind(t, newStatus, id).run();
+  return json(c, { ok: true, status: newStatus });
 });
 
 // ─────────────────────────────────────────────────────────
@@ -852,13 +968,36 @@ app.post('/api/admin/settings', async (c) => {
     if (body[k] === undefined) continue;
     let v = String(body[k]).slice(0, 300);
     if (k === 'theme_color' && !/^#[0-9a-fA-F]{3,8}$/.test(v)) continue; // abaikan warna invalid
-    if (k === 'pwa_enabled') v = body[k] ? '1' : '0';
+    if (['pwa_enabled', 'wa_enabled', 'tg_enabled'].includes(k)) v = body[k] ? '1' : '0';
     await c.env.DB.prepare(
       'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
     ).bind(k, v).run();
     saved[k] = v;
   }
   return json(c, { ok: true, ...(await getSettings(c.env.DB)) });
+});
+
+// Admin: list semua tiket + ubah status
+app.get('/api/admin/tickets', async (c) => {
+  if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
+  await ensureTickets(c.env.DB);
+  const r = await c.env.DB.prepare(
+    `SELECT t.*, m.username,
+            (SELECT COUNT(*) FROM ticket_messages tm WHERE tm.ticket_id = t.id) as msg_count
+     FROM tickets t LEFT JOIN merchants m ON m.id = t.merchant_id
+     ORDER BY t.updated_at DESC LIMIT 200`,
+  ).all();
+  return json(c, { tickets: r.results || [] });
+});
+app.post('/api/admin/tickets/:id/status', async (c) => {
+  if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
+  await ensureTickets(c.env.DB);
+  const b = await c.req.json().catch(() => ({}));
+  const st = String(b.status || '');
+  if (!TICKET_STATUS.includes(st)) return json(c, { error: 'status harus active/proses/close' }, 400);
+  await c.env.DB.prepare('UPDATE tickets SET status = ?, updated_at = ? WHERE id = ?')
+    .bind(st, now(), c.req.param('id')).run();
+  return json(c, { ok: true, status: st });
 });
 
 export default app;

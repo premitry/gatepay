@@ -197,6 +197,8 @@ export function renderDashboard() {
       <div class="grp">Integrasi</div>
       <div class="navi" data-view="apk" onclick="go('apk')"><span class="ic">🔑</span><span class="lbl">Kredensial &amp; APK</span></div>
       <div class="navi" data-view="hook" onclick="go('hook')"><span class="ic">📖</span><span class="lbl">Docs &amp; Webhook</span></div>
+      <div class="grp">Bantuan</div>
+      <div class="navi" data-view="tiket" onclick="go('tiket')"><span class="ic">🎫</span><span class="lbl">Tiket Support</span></div>
       <div class="grp hidden" id="grp-akun">Admin</div>
       <div class="navi hidden" id="nav-events" data-view="events" onclick="go('events')"><span class="ic">📡</span><span class="lbl">Events Device</span></div>
       <div class="navi hidden" id="nav-admin" data-view="admin" onclick="go('admin')"><span class="ic">👑</span><span class="lbl">Admin</span></div>
@@ -375,6 +377,32 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
         </div>
       </section>
 
+      <!-- TIKET SUPPORT -->
+      <section class="view" id="v-tiket">
+        <div class="grid2">
+          <div class="panel">
+            <h2>TIKET_BARU.MSG</h2>
+            <div class="dim" style="margin-bottom:8px">Ada kendala? Kirim tiket, nanti dibalas admin.</div>
+            <label>Subjek</label><input id="tk-subject" type="text" placeholder="mis. Pembayaran nggak kebaca">
+            <label>Pesan</label><textarea id="tk-msg" placeholder="jelasin masalahnya..."></textarea>
+            <button onclick="createTicket()">Kirim Tiket</button>
+            <div class="msg" id="tkmsg"></div>
+          </div>
+          <div class="panel">
+            <h2>TIKET_SAYA.LOG</h2>
+            <div id="tklist" class="dim">Loading…</div>
+          </div>
+        </div>
+        <div class="panel" id="tk-detail" style="display:none">
+          <h2 id="tk-dtitle">THREAD</h2>
+          <div id="tk-thread" style="max-height:340px;overflow-y:auto;margin-bottom:12px"></div>
+          <label>Balasan</label>
+          <textarea id="tk-reply" placeholder="tulis balasan..."></textarea>
+          <button onclick="replyTicket()">Kirim Balasan</button>
+          <div class="msg" id="tkrmsg"></div>
+        </div>
+      </section>
+
       <!-- PROFILE -->
       <section class="view" id="v-profile">
         <div class="grid2">
@@ -467,7 +495,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function logout(){ localStorage.removeItem('gp_sess'); location.reload(); }
 
   // ── shell / navigation ──
-  const TITLES={dash:'Dashboard',qris:'QRIS & Order',apk:'Kredensial & APK',hook:'Docs & Webhook',profile:'Profil',events:'Events Device',admin:'Admin'};
+  const TITLES={dash:'Dashboard',qris:'QRIS & Order',apk:'Kredensial & APK',hook:'Docs & Webhook',tiket:'Tiket Support',profile:'Profil',events:'Events Device',admin:'Admin'};
   function navTo(v){
     if(!TITLES[v]) v='dash';
     var s=sess(); if((v==='admin'||v==='events') && !(s&&s.is_admin)) v='dash';
@@ -475,6 +503,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     var el=$('v-'+v); if(el) el.classList.add('on');
     document.querySelectorAll('.navi').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
     $('ptitle').textContent=TITLES[v]||'';
+    if(v==='tiket') loadTickets();
     toggleMnav(false);
   }
   function go(v){ if(location.hash==='#'+v) navTo(v); else location.hash='#'+v; }
@@ -600,6 +629,44 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       else msg('omsg','err','Order dibuat tapi QRIS belum ada — upload QRIS dulu di menu QRIS & Fee.');
       setTimeout(tick,800);
     }catch(e){ msg('omsg','err',String(e)); }
+  }
+
+  // ── tiket support ──
+  let curTicket=null;
+  const TKB={active:['#ffc266','#3a2a00'],proses:['#3f7fc4','#fff'],close:['#9aa0a8','#fff']};
+  function tkbadge(s){var b=TKB[s]||['#9aa0a8','#fff'];return '<span class="bd" style="background:'+b[0]+';color:'+b[1]+'">'+escj(s)+'</span>';}
+  async function loadTickets(){
+    if(!key()) return;
+    try{ var j=await (await fetch('/api/tickets',{headers:{'x-api-key':key()}})).json();
+      var list=j.tickets||[];
+      $('tklist').innerHTML=list.length?list.map(t=>'<div onclick="openTicket(\\''+t.id+'\\')" style="padding:9px 10px;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:6px;cursor:pointer;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>'+escj(t.subject)+'</b>'+tkbadge(t.status)+'</div><div class=dim style="font-size:11px">update '+agoj(t.updated_at)+' lalu</div></div>').join(''):'<div class=dim>Belum ada tiket</div>';
+    }catch(e){}
+  }
+  async function createTicket(){
+    var s=$('tk-subject').value.trim(), m=$('tk-msg').value.trim();
+    if(!s||!m) return msg('tkmsg','err','Isi subjek & pesan');
+    try{ var r=await fetch('/api/tickets',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({subject:s,message:m})});
+      var j=await r.json(); if(r.ok){ msg('tkmsg','ok','Tiket terkirim ✓'); $('tk-subject').value=''; $('tk-msg').value=''; loadTickets(); openTicket(j.id); } else msg('tkmsg','err',j.error||'gagal');
+    }catch(e){ msg('tkmsg','err',String(e)); }
+  }
+  async function openTicket(id){
+    curTicket=id;
+    try{ var j=await (await fetch('/api/tickets/'+id,{headers:{'x-api-key':key()}})).json();
+      if(!j.ticket) return;
+      $('tk-detail').style.display='block';
+      $('tk-dtitle').innerHTML=escj(j.ticket.subject)+' &nbsp;'+tkbadge(j.ticket.status);
+      $('tk-thread').innerHTML=(j.messages||[]).map(mm=>{ var mine=mm.sender==='user';
+        return '<div style="margin-bottom:8px;text-align:'+(mine?'right':'left')+'"><div style="display:inline-block;max-width:82%;padding:8px 10px;border:2px solid var(--edge);background:'+(mine?'#dbe7fb':'#fff6d9')+';text-align:left"><div class=dim style="font-size:10px;margin-bottom:2px">'+(mine?'Kamu':'👑 Admin')+' · '+agoj(mm.created_at)+' lalu</div>'+escj(mm.body)+'</div></div>';
+      }).join('')||'<div class=dim>kosong</div>';
+      $('tk-thread').scrollTop=$('tk-thread').scrollHeight;
+      $('tk-detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+    }catch(e){}
+  }
+  async function replyTicket(){
+    if(!curTicket) return; var b=$('tk-reply').value.trim(); if(!b) return msg('tkrmsg','err','Balasan kosong');
+    try{ var r=await fetch('/api/tickets/'+curTicket+'/reply',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({body:b})});
+      if(r.ok){ $('tk-reply').value=''; openTicket(curTicket); loadTickets(); } else { var j=await r.json(); msg('tkrmsg','err',j.error||'gagal'); }
+    }catch(e){ msg('tkrmsg','err',String(e)); }
   }
 
   // ── real-time data + pagination ──
