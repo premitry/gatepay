@@ -156,9 +156,6 @@ export function renderDashboard() {
   .doc code{background:#fff;border:1px solid var(--edge);padding:1px 5px;font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--accent)}
   .doc .mth{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;margin-right:6px;font-family:'Share Tech Mono',monospace;border:1px solid rgba(0,0,0,.3);color:#fff}
   .doc .mth.p{background:var(--ok)} .doc .mth.g{background:var(--title-a)}
-  .qamt{width:auto;margin:0;padding:6px 12px;font-size:12px;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));color:var(--text);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
-  .qamt:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
-  .oest{margin-top:12px;padding:12px;background:var(--term-bg);color:var(--term-text);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);font-family:'Share Tech Mono',monospace;font-size:12px;line-height:1.7}
   .scrim{display:none}
   @media(max-width:820px){
     .stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}
@@ -307,24 +304,19 @@ export function renderDashboard() {
             <div id="noqris" class="dim" style="margin-bottom:10px;padding:8px;background:#fff6d9;border:2px solid var(--accent);color:#3a2a00;display:none">⚠ Set QRIS statis dulu di panel kiri sebelum buat order.</div>
             <label>Nominal (Rp)</label>
             <input id="amt" type="number" placeholder="10000" oninput="estOrder()">
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
-              <button class="qamt" onclick="setAmt(5000)">5rb</button>
-              <button class="qamt" onclick="setAmt(10000)">10rb</button>
-              <button class="qamt" onclick="setAmt(25000)">25rb</button>
-              <button class="qamt" onclick="setAmt(50000)">50rb</button>
-              <button class="qamt" onclick="setAmt(100000)">100rb</button>
-            </div>
             <label>Reference (opsional)</label>
             <input id="ref" type="text" placeholder="INV-001">
-            <div class="oest" id="oest">Isi nominal buat lihat estimasi total yang dibayar customer.</div>
             <button onclick="createOrder()">Buat Order + QR</button>
             <div class="msg" id="omsg"></div>
-            <div class="res" id="ores">
+            <div class="res show" id="ores">
               <div class="dim" id="rbreak" style="font-size:12px;margin-bottom:8px"></div>
               <div class="dim">Bayar persis</div>
-              <div class="amt" id="ramt"></div>
-              <canvas id="qrcanvas"></canvas>
-              <div style="margin-top:8px"><a class="lnk" id="rlink" target="_blank">Buka halaman checkout ↗</a></div>
+              <div class="amt" id="ramt">Rp 0</div>
+              <div style="margin-top:8px">
+                <div id="qrph" style="width:200px;max-width:100%;aspect-ratio:1;background:#fff;border:2px dashed var(--edge);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:12px;padding:12px">QR muncul otomatis<br>setelah klik "Buat Order + QR"</div>
+                <canvas id="qrcanvas" style="display:none"></canvas>
+              </div>
+              <div id="rlinkwrap" style="margin-top:8px;display:none"><a class="lnk" id="rlink" target="_blank">Buka halaman checkout ↗</a></div>
             </div>
           </div>
         </div>
@@ -622,6 +614,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     try{ var r=await fetch('/api/merchant/settings',{headers:{'x-api-key':key()}}); var j=await r.json();
       if(r.ok){ $('fee').value=j.fee_percent??0; $('digits').value=j.unique_digits??2; $('notify').value=j.notify_url||''; $('c-cbsec').textContent=j.callback_secret||'-';
         if($('ttlmin')) $('ttlmin').value=Math.round((j.order_ttl||900)/60);
+        estOrder();
         if(j.has_qris){ $('qstat').textContent='✓ QRIS aktif: '+(j.merchant_name||'-'); $('qstat').style.color='var(--ok)'; $('noqris').style.display='none'; $('clearqrisbtn').style.display='block'; }
         else { $('qstat').textContent='○ Belum ada QRIS statis (terputus)'; $('qstat').style.color='var(--bad,#b0362a)'; $('noqris').style.display='block'; $('clearqrisbtn').style.display='none'; }
         // profil
@@ -662,12 +655,13 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     }catch(e){ msg('hmsg','err',String(e)); }
   }
 
-  function setAmt(v){ $('amt').value=v; estOrder(); }
   function estOrder(){
+    // estimasi live selama belum dibuat; sekali order dibuat QR-nya yang tampil
     var base=parseInt($('amt').value,10)||0, fee=parseFloat($('fee').value)||0;
-    if(base<=0){ $('oest').innerHTML='Isi nominal buat lihat estimasi total yang dibayar customer.'; return; }
     var feeAmt=Math.round(base*fee/100), sub=base+feeAmt;
-    $('oest').innerHTML='ESTIMASI CUSTOMER BAYAR<br>base      : '+idr(base)+'<br>fee '+fee+'%   : '+idr(feeAmt)+'<br>kode unik : +1 s/d +50<br>─────────────<br><span style="color:#8fe3f7;font-weight:700">≈ '+idr(sub+1)+' – '+idr(sub+50)+'</span>';
+    if(base<=0){ $('rbreak').textContent='base      : Rp 0\\nfee '+fee+'%    : Rp 0\\nkode unik : -\\n─────────────────\\nTOTAL     : Rp 0'; $('ramt').textContent='Rp 0'; return; }
+    $('rbreak').textContent='base      : '+idr(base)+'\\nfee '+fee+'%    : '+idr(feeAmt)+'\\nkode unik : +1 s/d +50\\n─────────────────\\nTOTAL     : '+idr(sub+1)+' – '+idr(sub+50);
+    $('ramt').textContent='≈ '+idr(sub+1)+' – '+idr(sub+50);
   }
   async function createOrder(){
     var amt=parseInt($('amt').value,10); if(!amt||amt<=0) return msg('omsg','err','Nominal harus > 0');
@@ -676,9 +670,9 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       var j=await r.json(); if(!r.ok) return msg('omsg','err',j.error||'gagal');
       msg('omsg','ok','Order dibuat: '+j.id);
       $('rbreak').textContent='base      : '+idr(j.base_amount)+'\\nfee '+(j.fee_percent||0)+'%    : '+idr(j.fee_amount||0)+'\\nkode unik : '+(j.unique_code||0)+'\\n─────────────────\\nTOTAL     : '+idr(j.unique_amount);
-      $('ramt').textContent=idr(j.unique_amount); $('rlink').href=j.checkout_url; $('ores').classList.add('show');
-      if(j.qris){ new QRious({element:$('qrcanvas'),value:j.qris,size:400,level:'M'}); }
-      else msg('omsg','err','Order dibuat tapi QRIS belum ada — upload QRIS dulu di menu QRIS & Fee.');
+      $('ramt').textContent=idr(j.unique_amount); $('rlink').href=j.checkout_url; $('rlinkwrap').style.display='block';
+      if(j.qris){ new QRious({element:$('qrcanvas'),value:j.qris,size:400,level:'M'}); $('qrcanvas').style.display='block'; $('qrph').style.display='none'; }
+      else msg('omsg','err','Order dibuat tapi QRIS belum ada — upload QRIS dulu di menu QRIS & Order.');
       setTimeout(tick,800);
     }catch(e){ msg('omsg','err',String(e)); }
   }
