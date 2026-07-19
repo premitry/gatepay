@@ -67,6 +67,65 @@ function json(c, obj, status = 200) {
 }
 
 // ─────────────────────────────────────────────────────────
+// Site settings (favicon, nama app, theme, PWA) — key/value di D1
+// ─────────────────────────────────────────────────────────
+const DEFAULT_SETTINGS = {
+  site_name: 'GatePay',
+  favicon: '💳',
+  theme_color: '#26379d',
+  description: 'Payment gateway QRIS otomatis — bikin order, customer scan, langsung terkonfirmasi.',
+  pwa_enabled: '1',
+  pwa_name: 'GatePay',
+  pwa_short_name: 'GatePay',
+};
+const SETTINGS_KEYS = Object.keys(DEFAULT_SETTINGS);
+
+let _settingsReady = false;
+async function ensureSettings(DB) {
+  if (_settingsReady) return;
+  await DB.prepare('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)').run();
+  _settingsReady = true;
+}
+
+async function getSettings(DB) {
+  try {
+    await ensureSettings(DB);
+    const r = await DB.prepare('SELECT key, value FROM settings').all();
+    const s = { ...DEFAULT_SETTINGS };
+    for (const row of r.results || []) if (SETTINGS_KEYS.includes(row.key)) s[row.key] = row.value;
+    return s;
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// SVG favicon dari emoji (atau kalau favicon berupa URL, dipakai langsung di route)
+function faviconSvg(emoji) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="54" font-size="76" text-anchor="middle" dominant-baseline="central">${esc(emoji || '💳')}</text></svg>`;
+}
+
+// Sisipin favicon/theme/manifest ke <head> tiap halaman
+function injectHead(html, s) {
+  const tags =
+    `<link rel="icon" href="/favicon.svg" type="image/svg+xml">` +
+    `<link rel="apple-touch-icon" href="/favicon.svg">` +
+    `<meta name="theme-color" content="${esc(s.theme_color)}">` +
+    (s.pwa_enabled === '1' ? `<link rel="manifest" href="/manifest.webmanifest">` : '');
+  return html.includes('</head>') ? html.replace('</head>', tags + '</head>') : html;
+}
+
+// Bungkus render halaman biar dapet head settings
+async function page(c, htmlStr) {
+  const s = await getSettings(c.env.DB);
+  return c.html(injectHead(htmlStr, s));
+}
+
+// ─────────────────────────────────────────────────────────
 // Auth middleware
 // ─────────────────────────────────────────────────────────
 async function requireMerchant(c) {
@@ -392,7 +451,7 @@ app.get('/pay/:id', async (c) => {
       qris = makeDynamic(order.qris_static, order.unique_amount, order.reference || order.id);
     } catch {}
   }
-  return c.html(renderCheckout({ order, qris }));
+  return page(c, renderCheckout({ order, qris }));
 });
 
 // Status order buat polling checkout (publik, cuma status)
@@ -411,8 +470,34 @@ app.get('/pay/:id/status', async (c) => {
 // ─────────────────────────────────────────────────────────
 // Halaman publik: landing + docs
 // ─────────────────────────────────────────────────────────
-app.get('/', (c) => c.html(renderLanding()));
-app.get('/docs', (c) => c.html(renderDocs()));
+app.get('/', (c) => page(c, renderLanding()));
+app.get('/docs', (c) => page(c, renderDocs()));
+
+// Favicon (emoji → SVG, atau redirect kalau favicon berupa URL gambar)
+app.get('/favicon.svg', async (c) => {
+  const s = await getSettings(c.env.DB);
+  const fav = s.favicon || '💳';
+  if (/^https?:\/\//i.test(fav)) return c.redirect(fav, 302);
+  return c.body(faviconSvg(fav), 200, { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'public, max-age=300' });
+});
+app.get('/favicon.ico', (c) => c.redirect('/favicon.svg', 302));
+
+// PWA manifest
+app.get('/manifest.webmanifest', async (c) => {
+  const s = await getSettings(c.env.DB);
+  return c.json({
+    name: s.pwa_name || s.site_name,
+    short_name: s.pwa_short_name || s.site_name,
+    description: s.description,
+    start_url: '/dashboard',
+    display: 'standalone',
+    background_color: '#8ea8dc',
+    theme_color: s.theme_color,
+    icons: [
+      { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+    ],
+  }, 200, { 'content-type': 'application/manifest+json' });
+});
 
 // ─────────────────────────────────────────────────────────
 // Device ingest: notif / transaksi dari Redroid catcher
@@ -573,7 +658,7 @@ async function fireCallback(env, order, eventId) {
 // Dashboard (HTML)
 // ─────────────────────────────────────────────────────────
 // Dashboard shell (data di-load client-side via /dashboard/data + api key)
-app.get('/dashboard', (c) => c.html(renderDashboard()));
+app.get('/dashboard', (c) => page(c, renderDashboard()));
 
 // Data dashboard — WAJIB api key merchant. Scoped ke order milik merchant itu.
 app.get('/dashboard/data', async (c) => {
@@ -599,11 +684,21 @@ app.get('/dashboard/data', async (c) => {
        SUM(CASE WHEN status='paid' THEN base_amount ELSE 0 END) as revenue
      FROM orders WHERE merchant_id = ?`,
   ).bind(merchant.id).first();
+  // time-series 14 hari buat grafik (total/paid/pending per hari)
+  const series = await c.env.DB.prepare(
+    `SELECT strftime('%Y-%m-%d', created_at, 'unixepoch') as day,
+       COUNT(*) as total,
+       SUM(CASE WHEN status='paid' THEN 1 ELSE 0 END) as paid,
+       SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending
+     FROM orders WHERE merchant_id = ? AND created_at >= ?
+     GROUP BY day ORDER BY day`,
+  ).bind(merchant.id, now() - 14 * 86400).all();
   return json(c, {
     merchant_name: merchant.qris_merchant_name || merchant.name,
     orders: orders.results || [],
     events: events.results || [],
     stats,
+    series: series.results || [],
   });
 });
 
@@ -696,6 +791,29 @@ app.get('/api/admin/log', async (c) => {
 });
 
 // Halaman admin
-app.get('/admin', (c) => c.html(renderAdmin()));
+app.get('/admin', (c) => page(c, renderAdmin()));
+
+// Site settings — baca (admin) & simpan (admin)
+app.get('/api/admin/settings', async (c) => {
+  if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
+  return json(c, await getSettings(c.env.DB));
+});
+app.post('/api/admin/settings', async (c) => {
+  if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
+  const body = await c.req.json().catch(() => ({}));
+  await ensureSettings(c.env.DB);
+  const saved = {};
+  for (const k of SETTINGS_KEYS) {
+    if (body[k] === undefined) continue;
+    let v = String(body[k]).slice(0, 300);
+    if (k === 'theme_color' && !/^#[0-9a-fA-F]{3,8}$/.test(v)) continue; // abaikan warna invalid
+    if (k === 'pwa_enabled') v = body[k] ? '1' : '0';
+    await c.env.DB.prepare(
+      'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    ).bind(k, v).run();
+    saved[k] = v;
+  }
+  return json(c, { ok: true, ...(await getSettings(c.env.DB)) });
+});
 
 export default app;

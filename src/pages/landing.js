@@ -94,7 +94,7 @@ export function renderLanding() {
     <div class="stat"><div class="n">Real-time</div><div class="l">Konfirmasi</div></div>
     <div class="stat"><div class="n">API</div><div class="l">Integrasi mudah</div></div>
   </div>
-  <div class="warn">&gt; Dipakai internal/pribadi. Nominal unik dipakai buat matching otomatis dari notifikasi pembayaran.</div>
+  <div class="warn">&gt; Nominal unik dipakai buat matching otomatis dari notifikasi pembayaran.</div>
 </div></header>
 
 <section><div class="wrap">

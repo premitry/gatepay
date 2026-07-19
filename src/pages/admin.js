@@ -96,6 +96,7 @@ export function renderAdmin() {
   <div class="sub-tabs">
     <div id="t-merch" class="active" onclick="showTab('merch')">Merchant &amp; Device</div>
     <div id="t-log" onclick="showTab('log')">Log Global</div>
+    <div id="t-set" onclick="showTab('set')">Pengaturan Web</div>
   </div>
 
   <div id="view-merch">
@@ -118,6 +119,36 @@ export function renderAdmin() {
       <h2>Events Global (100 terakhir)</h2>
       <div style="overflow-x:auto"><table><thead><tr><th>Event</th><th>User</th><th>Nominal</th><th>Status</th><th>Waktu</th></tr></thead>
       <tbody id="elogbody"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="view-set" class="hidden">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px" id="setgrid">
+      <div class="panel">
+        <h2>IDENTITAS_WEB.CFG</h2>
+        <label>Nama Situs</label><input id="set-site_name" placeholder="GatePay">
+        <label>Deskripsi (meta)</label><input id="set-description" placeholder="Payment gateway QRIS otomatis">
+        <label>Warna Tema (hex)</label>
+        <div style="display:flex;gap:8px;align-items:center"><input id="set-theme_color" placeholder="#26379d" style="flex:1" oninput="setPrev()"><span id="clr" style="width:34px;height:34px;border:2px solid var(--edge-dark);display:inline-block"></span></div>
+        <button onclick="saveSet()">Simpan Pengaturan</button>
+        <div class="msg" id="setmsg"></div>
+      </div>
+      <div class="panel">
+        <h2>FAVICON.ICO</h2>
+        <div class="dim" style="margin-bottom:8px">Isi 1 emoji (mis. 💳 🟢 ⚡ 🏦) atau URL gambar (https://...). Kepakai jadi favicon + icon app.</div>
+        <label>Favicon (emoji / URL)</label>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input id="set-favicon" placeholder="💳" style="flex:1" oninput="setPrev()">
+          <span id="favprev" style="font-size:30px;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:2px solid var(--edge-dark)"></span>
+        </div>
+        <div style="border-top:1px solid var(--edge);margin:14px 0;padding-top:8px"></div>
+        <h2 style="margin-left:-16px;margin-right:-16px">WEB_APP.PWA</h2>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none"><input type="checkbox" id="set-pwa_enabled" style="width:auto"> Aktifkan Web App (PWA — bisa "Add to Home Screen")</label>
+        <label>Nama App</label><input id="set-pwa_name" placeholder="GatePay">
+        <label>Nama Pendek (icon)</label><input id="set-pwa_short_name" placeholder="GatePay">
+        <button onclick="saveSet()">Simpan Pengaturan</button>
+        <div class="msg" id="setmsg2"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -156,8 +187,33 @@ export function renderAdmin() {
     load(); setInterval(load, 5000);
   }
   let tab='merch';
-  function showTab(t){ tab=t; $('t-merch').className=t==='merch'?'active':''; $('t-log').className=t==='log'?'active':'';
-    $('view-merch').classList.toggle('hidden',t!=='merch'); $('view-log').classList.toggle('hidden',t!=='log'); load(); }
+  function showTab(t){ tab=t;
+    $('t-merch').className=t==='merch'?'active':''; $('t-log').className=t==='log'?'active':''; $('t-set').className=t==='set'?'active':'';
+    $('view-merch').classList.toggle('hidden',t!=='merch'); $('view-log').classList.toggle('hidden',t!=='log'); $('view-set').classList.toggle('hidden',t!=='set');
+    if(t==='set') loadSet(); else load(); }
+
+  const SET_KEYS=['site_name','description','theme_color','favicon','pwa_name','pwa_short_name'];
+  async function loadSet(){
+    try{ var j=await (await fetch('/api/admin/settings',{headers:hdr()})).json();
+      SET_KEYS.forEach(k=>{ if($('set-'+k)) $('set-'+k).value=j[k]||''; });
+      $('set-pwa_enabled').checked = j.pwa_enabled==='1' || j.pwa_enabled===1;
+      setPrev();
+    }catch(e){}
+  }
+  function setPrev(){
+    var f=$('set-favicon').value.trim();
+    $('favprev').textContent = /^https?:\\/\\//i.test(f) ? '🖼' : (f||'💳');
+    $('clr').style.background=$('set-theme_color').value.trim()||'#26379d';
+  }
+  async function saveSet(){
+    var payload={pwa_enabled:$('set-pwa_enabled').checked?1:0};
+    SET_KEYS.forEach(k=>{ payload[k]=$('set-'+k).value.trim(); });
+    try{ var r=await fetch('/api/admin/settings',{method:'POST',headers:hdr(),body:JSON.stringify(payload)});
+      var j=await r.json();
+      if(r.ok){ msg('setmsg','ok','Pengaturan tersimpan ✓ (refresh halaman buat lihat favicon baru)'); msg('setmsg2','ok','Tersimpan ✓'); setPrev(); }
+      else { msg('setmsg','err',j.error||'gagal'); }
+    }catch(e){ msg('setmsg','err',String(e)); }
+  }
 
   async function load(){
     if(!key()) return;

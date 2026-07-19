@@ -216,6 +216,10 @@ export function renderDashboard() {
           <div class="stat"><div class="k">Revenue</div><div class="v" id="s-rev">Rp 0</div></div>
         </div>
         <div class="panel">
+          <h2>STATISTIK.CHT · 14 hari</h2>
+          <div style="height:230px;position:relative"><canvas id="chart"></canvas></div>
+        </div>
+        <div class="panel">
           <h2>DELIVERY_RECORD.LOG</h2>
           <table><thead><tr><th>ID</th><th>Nominal</th><th>Status</th><th>Ref</th><th>Checkout</th><th>Waktu</th></tr></thead>
           <tbody id="otbody"><tr><td colspan=6 class=dim style="text-align:center;padding:20px">Belum ada order</td></tr></tbody></table>
@@ -341,6 +345,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret). Detail di <a hre
 
 <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
   const $ = id => document.getElementById(id);
   const idr = n => 'Rp '+(Number(n)||0).toLocaleString('id-ID');
@@ -497,6 +502,38 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret). Detail di <a hre
     $('eprev').disabled=ePage<=0; $('enext').disabled=ePage>=mx;
   }
 
+  // ── grafik garis (Chart.js) ──
+  let chart=null;
+  function renderChart(series){
+    if(typeof Chart==='undefined') return;
+    // zero-fill 14 hari terakhir
+    var days=[], map={};
+    (series||[]).forEach(s=>{ map[s.day]={t:s.total||0,p:s.paid||0,q:s.pending||0}; });
+    var base=Date.now();
+    for(var i=13;i>=0;i--){ var dt=new Date(base-i*86400000); var k=dt.toISOString().slice(0,10); days.push(k); }
+    var labels=days.map(k=>k.slice(5)); // MM-DD
+    var tot=days.map(k=>map[k]?map[k].t:0), paid=days.map(k=>map[k]?map[k].p:0), pend=days.map(k=>map[k]?map[k].q:0);
+    var ds=[
+      {label:'Total',data:tot,borderColor:'#26379d',backgroundColor:'#26379d'},
+      {label:'Paid',data:paid,borderColor:'#0e7c66',backgroundColor:'#0e7c66'},
+      {label:'Pending',data:pend,borderColor:'#c26107',backgroundColor:'#c26107'}
+    ].map(x=>Object.assign(x,{tension:0,borderWidth:2,pointRadius:2,pointStyle:'rect',pointHoverRadius:5}));
+    if(chart){ chart.data.labels=labels; chart.data.datasets.forEach((d,i)=>d.data=ds[i].data); chart.update('none'); return; }
+    var ctx=$('chart'); if(!ctx) return;
+    chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:ds},options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{labels:{color:'#23262e',font:{family:'Share Tech Mono',size:11},boxWidth:12,usePointStyle:true,pointStyle:'rect'}},
+        tooltip:{backgroundColor:'#141f5c',titleColor:'#8fe3f7',bodyColor:'#dfe6ff',borderColor:'#2b3a7a',borderWidth:1,cornerRadius:0,titleFont:{family:'Share Tech Mono'},bodyFont:{family:'Share Tech Mono'},padding:10,callbacks:{label:function(c){return ' '+c.dataset.label+': '+c.parsed.y+'x';}}}
+      },
+      scales:{
+        x:{grid:{color:'rgba(84,81,74,.15)'},ticks:{color:'#5b5f66',font:{family:'Share Tech Mono',size:10}}},
+        y:{beginAtZero:true,grid:{color:'rgba(84,81,74,.15)'},ticks:{color:'#5b5f66',precision:0,font:{family:'Share Tech Mono',size:10}}}
+      }
+    }});
+  }
+
   async function tick(){
     if(!key()) return;
     try{
@@ -506,7 +543,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret). Detail di <a hre
       $('s-total').textContent=d.stats?.total||0; $('s-paid').textContent=d.stats?.paid||0;
       $('s-pending').textContent=d.stats?.pending||0; $('s-rev').textContent=idr(d.stats?.revenue);
       allOrders=d.orders||[]; allEvents=d.events||[];
-      renderOrders(); renderEvents();
+      renderOrders(); renderEvents(); renderChart(d.series);
     }catch(e){}
   }
 
