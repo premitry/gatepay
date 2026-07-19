@@ -73,7 +73,8 @@ export function renderDashboard() {
   .logo .mark{background:var(--accent);color:#fff;width:24px;height:24px;min-width:24px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;border:1px solid rgba(0,0,0,.3)}
   .collapse{background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);color:var(--text);width:auto;margin:0;padding:2px 8px;font-size:13px;font-weight:700}
   .collapse:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
-  .snav{flex:1;overflow-y:auto;padding:8px}
+  .snav{flex:1;overflow-y:auto;padding:8px;scrollbar-width:none;-ms-overflow-style:none}
+  .snav::-webkit-scrollbar{width:0;height:0;display:none}
   .snav .grp{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);padding:12px 6px 4px;white-space:nowrap;overflow:hidden;font-weight:700}
   .navi{display:flex;align-items:center;gap:11px;padding:9px 10px;color:var(--text);cursor:pointer;font-size:13px;white-space:nowrap;overflow:hidden;margin-bottom:3px;border:2px solid transparent}
   .navi:hover{background:var(--chrome-2);border-color:var(--edge) var(--hi) var(--hi) var(--edge)}
