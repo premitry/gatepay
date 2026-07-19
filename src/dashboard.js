@@ -140,6 +140,9 @@ export function renderDashboard() {
   .expitem{padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--edge)}
   .expitem:last-child{border-bottom:0}
   .expitem:hover{background:#fff6d9}
+  .clipbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);color:var(--text);font-size:17px;padding:0 12px;min-width:44px;font-family:Verdana,sans-serif}
+  .clipbtn:hover{filter:brightness(1.04)}
+  .clipbtn:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
 
   /* kredensial = terminal navy */
   .cred{background:var(--term-bg);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);padding:9px 10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -401,10 +404,12 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <h2>TIKET_BARU.MSG</h2>
             <div class="dim" style="margin-bottom:8px">Ada kendala? Kirim tiket, nanti dibalas admin.</div>
             <label>Subjek</label><input id="tk-subject" type="text" placeholder="mis. Pembayaran nggak kebaca">
-            <label>Pesan</label><textarea id="tk-msg" placeholder="jelasin masalahnya..."></textarea>
-            <label>Lampiran gambar (opsional, maks 1.5MB)</label>
-            <input type="file" id="tk-file" accept="image/*" onchange="pickTkImg(this,'create')">
-            <img id="tk-prev" style="max-width:120px;margin-top:6px;display:none;border:2px solid var(--edge)">
+            <label>Pesan</label>
+            <div style="display:flex;gap:8px;align-items:stretch">
+              <textarea id="tk-msg" placeholder="jelasin masalahnya..." style="flex:1"></textarea>
+              <label class="clipbtn" title="Lampirkan gambar (maks 1.5MB)">📎<input type="file" id="tk-file" accept="image/*" onchange="pickTkImg(this,'create')" hidden></label>
+            </div>
+            <img id="tk-prev" style="max-width:100px;margin-top:6px;display:none;border:2px solid var(--edge)">
             <button onclick="createTicket()">Kirim Tiket</button>
             <div class="msg" id="tkmsg"></div>
           </div>
@@ -417,8 +422,11 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
           <h2 id="tk-dtitle">THREAD</h2>
           <div id="tk-thread" style="max-height:340px;overflow-y:auto;margin-bottom:12px"></div>
           <label>Balasan</label>
-          <textarea id="tk-reply" placeholder="tulis balasan..."></textarea>
-          <input type="file" id="tk-rfile" accept="image/*" onchange="pickTkImg(this,'reply')" style="margin-top:6px">
+          <div style="display:flex;gap:8px;align-items:stretch">
+            <textarea id="tk-reply" placeholder="tulis balasan..." style="flex:1"></textarea>
+            <label class="clipbtn" title="Lampirkan gambar (maks 1.5MB)">📎<input type="file" id="tk-rfile" accept="image/*" onchange="pickTkImg(this,'reply')" hidden></label>
+          </div>
+          <img id="tk-rprev" style="max-width:90px;margin-top:6px;display:none;border:2px solid var(--edge)">
           <button onclick="replyTicket()">Kirim Balasan</button>
           <div class="msg" id="tkrmsg"></div>
         </div>
@@ -659,7 +667,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function pickTkImg(input,slot){
     var f=input.files[0]; if(!f){tkImg[slot]=null;return;}
     if(f.size>1572864){ alert('Gambar maksimal 1.5MB'); input.value=''; tkImg[slot]=null; return; }
-    var im=new Image(); im.onload=function(){ var mx=1280,sc=Math.min(1,mx/Math.max(im.width,im.height)); var w=Math.round(im.width*sc),h=Math.round(im.height*sc); var cv=document.createElement('canvas'); cv.width=w;cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); tkImg[slot]=cv.toDataURL('image/jpeg',0.82); if(slot==='create'&&$('tk-prev')){$('tk-prev').src=tkImg[slot];$('tk-prev').style.display='block';} };
+    var im=new Image(); im.onload=function(){ var mx=1280,sc=Math.min(1,mx/Math.max(im.width,im.height)); var w=Math.round(im.width*sc),h=Math.round(im.height*sc); var cv=document.createElement('canvas'); cv.width=w;cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); tkImg[slot]=cv.toDataURL('image/jpeg',0.82); var pv=$(slot==='create'?'tk-prev':'tk-rprev'); if(pv){pv.src=tkImg[slot];pv.style.display='block';} };
     im.onerror=function(){ alert('File bukan gambar'); input.value=''; tkImg[slot]=null; }; im.src=URL.createObjectURL(f);
   }
   function msgLine(mm){
@@ -698,7 +706,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   async function replyTicket(){
     if(!curTicket) return; var b=$('tk-reply').value.trim(); if(!b&&!tkImg.reply) return msg('tkrmsg','err','Balasan/gambar kosong');
     try{ var r=await fetch('/api/tickets/'+curTicket+'/reply',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({body:b,image:tkImg.reply||undefined})});
-      if(r.ok){ $('tk-reply').value=''; if($('tk-rfile'))$('tk-rfile').value=''; tkImg.reply=null; openTicket(curTicket); loadTickets(); } else { var j=await r.json(); msg('tkrmsg','err',j.error||'gagal'); }
+      if(r.ok){ $('tk-reply').value=''; if($('tk-rfile'))$('tk-rfile').value=''; if($('tk-rprev'))$('tk-rprev').style.display='none'; tkImg.reply=null; openTicket(curTicket); loadTickets(); } else { var j=await r.json(); msg('tkrmsg','err',j.error||'gagal'); }
     }catch(e){ msg('tkrmsg','err',String(e)); }
   }
 

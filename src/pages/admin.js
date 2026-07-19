@@ -71,6 +71,8 @@ export function renderAdmin() {
   .modal .tt .x{cursor:pointer;font-family:Verdana,sans-serif}
   .modal .bd2{padding:18px}
   .modal .val{width:100%;background:var(--term-bg);color:var(--term-ok);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);padding:12px;font-family:'Share Tech Mono',monospace;font-size:15px;word-break:break-all}
+  .clipbtn{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);color:var(--text);font-size:17px;padding:0 12px;min-width:44px}
+  .clipbtn:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
   @media(max-width:820px){.stats{grid-template-columns:repeat(2,1fr)}table{font-size:12px}}
 </style></head><body>
 
@@ -139,8 +141,11 @@ export function renderAdmin() {
     <div class="panel" id="atk-detail" style="display:none">
       <h2 id="atk-dtitle">THREAD</h2>
       <div id="atk-thread" style="max-height:360px;overflow-y:auto;margin-bottom:12px"></div>
-      <textarea id="atk-reply" placeholder="balasan admin..." style="width:100%;min-height:60px;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);padding:9px;font-family:inherit;font-size:14px"></textarea>
-      <input type="file" id="atk-rfile" accept="image/*" onchange="pickAImg(this)" style="margin-top:6px">
+      <div style="display:flex;gap:8px;align-items:stretch">
+        <textarea id="atk-reply" placeholder="balasan admin..." style="flex:1;min-height:60px;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);padding:9px;font-family:inherit;font-size:14px"></textarea>
+        <label class="clipbtn" title="Lampirkan gambar (maks 1.5MB)">📎<input type="file" id="atk-rfile" accept="image/*" onchange="pickAImg(this)" hidden></label>
+      </div>
+      <img id="atk-rprev" style="max-width:90px;margin-top:6px;display:none;border:2px solid var(--edge)">
       <button onclick="replyAdminTicket()" style="width:auto;margin-top:8px;display:block">Kirim Balasan</button>
     </div>
   </div>
@@ -264,7 +269,7 @@ export function renderAdmin() {
   function pickAImg(input){
     var f=input.files[0]; if(!f){atkImg=null;return;}
     if(f.size>1572864){ alert('Gambar maksimal 1.5MB'); input.value=''; atkImg=null; return; }
-    var im=new Image(); im.onload=function(){ var mx=1280,sc=Math.min(1,mx/Math.max(im.width,im.height)); var w=Math.round(im.width*sc),h=Math.round(im.height*sc); var cv=document.createElement('canvas'); cv.width=w;cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); atkImg=cv.toDataURL('image/jpeg',0.82); };
+    var im=new Image(); im.onload=function(){ var mx=1280,sc=Math.min(1,mx/Math.max(im.width,im.height)); var w=Math.round(im.width*sc),h=Math.round(im.height*sc); var cv=document.createElement('canvas'); cv.width=w;cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); atkImg=cv.toDataURL('image/jpeg',0.82); if($('atk-rprev')){$('atk-rprev').src=atkImg;$('atk-rprev').style.display='block';} };
     im.onerror=function(){ alert('File bukan gambar'); input.value=''; atkImg=null; }; im.src=URL.createObjectURL(f);
   }
   async function openAdminTicket(id){
@@ -285,7 +290,7 @@ export function renderAdmin() {
   async function replyAdminTicket(){
     if(!curTk) return; var b=$('atk-reply').value.trim(); if(!b&&!atkImg) return;
     var r=await fetch('/api/tickets/'+curTk+'/reply',{method:'POST',headers:hdr(),body:JSON.stringify({body:b,image:atkImg||undefined})});
-    if(r.ok){ $('atk-reply').value=''; if($('atk-rfile'))$('atk-rfile').value=''; atkImg=null; openAdminTicket(curTk); loadAdminTickets(); }
+    if(r.ok){ $('atk-reply').value=''; if($('atk-rfile'))$('atk-rfile').value=''; if($('atk-rprev'))$('atk-rprev').style.display='none'; atkImg=null; openAdminTicket(curTk); loadAdminTickets(); }
   }
 
   const SET_KEYS=['site_name','description','theme_color','favicon','pwa_name','pwa_short_name','wa_number','wa_text','tg_username'];
