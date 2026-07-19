@@ -216,7 +216,7 @@ export function renderAdmin() {
   const $=id=>document.getElementById(id);
   const idr=n=>'Rp '+(Number(n)||0).toLocaleString('id-ID');
   const escj=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const agoj=ts=>{ if(!ts)return'-'; let d=Math.max(0,Math.floor(Date.now()/1000)-ts); if(d<60)return d+'s'; if(d<3600)return Math.floor(d/60)+'m'; if(d<86400)return Math.floor(d/3600)+'j'; return Math.floor(d/86400)+'h'; };
+  const agoj=ts=>{ if(!ts)return'-'; try{ var p={}; new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jakarta',day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date(ts*1000)).forEach(x=>p[x.type]=x.value); return p.day+'/'+p.month+'/'+p.year+' '+p.hour+':'+p.minute+' WIB'; }catch(e){ return '-'; } };
   const bmap={paid:['#0e7c66','#fff'],pending:['#ffc266','#3a2a00'],expired:['#9aa0a8','#fff'],cancelled:['#b0362a','#fff'],matched:['#0e7c66','#fff'],unmatched:['#9aa0a8','#fff'],duplicate:['#3843b8','#fff']};
   const bdg=s=>{const[bg,fg]=bmap[s]||['#6b7280','#0b0d11'];return '<span class="bd" style="background:'+bg+';color:'+fg+'">'+escj(s)+'</span>';};
   function msg(id,cls,t){ var e=$(id); e.className='msg '+cls; e.textContent=t; }
@@ -330,7 +330,7 @@ export function renderAdmin() {
         meIsOwner=!!d.me_is_owner;
         $('mtbody').innerHTML=(d.merchants||[]).map(m=>{
           var on = m.last_seen && (Math.floor(Date.now()/1000)-m.last_seen < 300);
-          var dev = m.device_id ? '<span class="'+(on?'online':'offline')+'"><span class="dot '+(on?'on':'off')+'"></span>'+(on?'online':(m.last_seen?agoj(m.last_seen)+' lalu':'belum pernah'))+'</span>' : '<span class=dim>-</span>';
+          var dev = m.device_id ? '<span class="'+(on?'online':'offline')+'"><span class="dot '+(on?'on':'off')+'"></span>'+(on?'online':(m.last_seen?agoj(m.last_seen):'belum pernah'))+'</span>' : '<span class=dim>-</span>';
           var st = m.active?'<span class="bd" style="background:#0e7c66;color:#fff">aktif</span>':'<span class="bd" style="background:#b0362a;color:#fff">suspend</span>';
           var role = m.is_owner?' <span class="bd" style="background:#c26107;color:#fff">👑 OWNER</span>':(m.is_admin?' <span class="bd" style="background:#26379d;color:#fff">🛡 ADMIN</span>':'');
           var roleBtn = (meIsOwner && !m.is_owner) ? (m.is_admin?'<button class="amber" onclick="setAdmin(\\''+m.id+'\\',0)">Cabut Admin</button>':'<button onclick="setAdmin(\\''+m.id+'\\',1)">Jadikan Admin</button>') : '';
