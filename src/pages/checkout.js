@@ -14,36 +14,43 @@ export function renderCheckout({ order, qris }) {
 <html lang="id"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bayar ${rupiah(order.unique_amount)} · GatePay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0f1115;--card:#171a21;--card2:#1e222b;--bd:#2b3038;--tx:#eef0f4;--dim:#9aa3b2;--brand:#3ddc97;--brandink:#04120b;--warn:#f6c445;--red:#ff5c5c}
+  :root{
+    --desk-a:#7fc6c9;--desk-b:#8ea8dc;--desk-c:#6f87c8;--grid:rgba(255,255,255,.34);
+    --chrome:#eceade;--chrome-2:#e0ded1;--hi:#ffffff;--edge:#8f8b7e;--edge-dark:#54514a;
+    --title-a:#26379d;--title-b:#3f7fc4;--text:#23262e;--dim:#5b5f66;
+    --accent:#c26107;--term-bg:#141f5c;--term-text:#dfe6ff;--ok:#0e7c66;--warn:#a05a00;--red:#b0362a;
+  }
   *{box-sizing:border-box;border-radius:0!important}
-  body{margin:0;font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px}
-  .card{width:100%;max-width:420px;background:var(--card);border:1px solid var(--bd)}
-  .top{background:var(--brand);color:var(--brandink);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;font-weight:800}
-  .top .logo{font-size:18px;letter-spacing:-.5px}
-  .top .amt{font-size:15px}
+  body{margin:0;font-family:Verdana,Tahoma,Geneva,sans-serif;color:var(--text);font-size:14px;
+    background:repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 44px),repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 44px),linear-gradient(135deg,var(--desk-a),var(--desk-b) 52%,var(--desk-c));background-attachment:fixed;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px}
+  .card{width:100%;max-width:420px;background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:3px 3px 0 var(--edge)}
+  .top{background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;font-weight:700;border-bottom:2px solid var(--edge-dark)}
+  .top .logo{font-size:14px;font-family:'Michroma',sans-serif}
+  .top .amt{font-size:11px;font-family:'Share Tech Mono',monospace;letter-spacing:.05em}
   .body{padding:22px 20px}
-  .merch{font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
+  .merch{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
   .mname{font-size:18px;font-weight:700;margin-bottom:18px}
-  .amount{font-size:34px;font-weight:800;letter-spacing:-1px;margin-bottom:2px}
-  .amount small{font-size:14px;color:var(--dim);font-weight:500}
-  .note{font-size:12px;color:var(--warn);margin:6px 0 18px;background:#2a2410;border:1px solid #43391a;padding:8px 10px}
-  .qrbox{background:#fff;padding:16px;display:flex;justify-content:center;margin-bottom:16px}
+  .amount{font-size:32px;font-weight:700;margin-bottom:2px;font-family:'Share Tech Mono',monospace;color:var(--accent)}
+  .amount small{font-size:13px;color:var(--dim);font-weight:400}
+  .note{font-size:12px;color:#3a2a00;margin:6px 0 18px;background:#fff6d9;border:2px solid var(--accent);padding:8px 10px}
+  .qrbox{background:#fff;padding:16px;display:flex;justify-content:center;margin-bottom:16px;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
   #qr{width:100%;max-width:280px;aspect-ratio:1}
   .steps{font-size:13px;color:var(--dim);line-height:1.9;margin-bottom:16px}
-  .steps b{color:var(--tx)}
-  .timer{text-align:center;font-size:13px;color:var(--dim);padding:10px;border:1px dashed var(--bd);margin-bottom:14px}
-  .timer span{color:var(--warn);font-weight:700;font-variant-numeric:tabular-nums}
-  .status{padding:16px;text-align:center;font-weight:700;font-size:16px}
-  .status.paid{background:var(--brand);color:var(--brandink)}
-  .status.wait{background:var(--card2);color:var(--dim);font-weight:500;font-size:13px}
-  .status.dead{background:#2a1416;color:var(--red)}
-  .spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(154,163,178,.35);border-top-color:var(--brand);animation:s .8s linear infinite;margin-right:8px;vertical-align:-1px}
+  .steps b{color:var(--text)}
+  .timer{text-align:center;font-size:12px;color:var(--dim);padding:10px;background:var(--term-bg);color:var(--term-text);margin-bottom:14px;font-family:'Share Tech Mono',monospace}
+  .timer span{color:#ffc266;font-weight:700;font-variant-numeric:tabular-nums}
+  .status{padding:14px;text-align:center;font-weight:700;font-size:15px;border:2px solid}
+  .status.paid{background:var(--ok);color:#fff;border-color:#0a5c4c}
+  .status.wait{background:var(--chrome-2);color:var(--dim);font-weight:400;font-size:13px;border-color:var(--edge)}
+  .status.dead{background:#f7dcd9;color:var(--red);border-color:var(--red)}
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(84,81,74,.35);border-top-color:var(--title-a);animation:s .8s linear infinite;margin-right:8px;vertical-align:-1px}
   @keyframes s{to{transform:rotate(360deg)}}
-  .dl{display:block;text-align:center;font-size:12px;color:var(--dim);text-decoration:none;padding:12px;border-top:1px solid var(--bd)}
-  .foot{text-align:center;font-size:11px;color:var(--dim);padding:10px}
+  .foot{text-align:center;font-size:11px;color:var(--dim);padding:10px;font-family:'Share Tech Mono',monospace}
   .checkwrap{text-align:center;padding:20px}
-  .bigcheck{width:64px;height:64px;background:var(--brand);color:var(--brandink);display:inline-flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;margin-bottom:10px}
+  .bigcheck{width:64px;height:64px;background:var(--ok);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;margin-bottom:10px;border:3px solid;border-color:var(--hi) #0a5c4c #0a5c4c var(--hi)}
 </style></head><body>
 <div class="card">
   <div class="top"><span class="logo">GatePay</span><span class="amt">QRIS</span></div>
