@@ -1,131 +1,175 @@
-// Dashboard merchant — layout sidebar (ala TemanQRIS), collapsible ke ikon.
-// Login/register, kelola QRIS+fee, buat order, kredensial APK, webhook. Gaya kotak siku.
+// Dashboard merchant — tema Y2K / retro-desktop (niru sendtestemail.com).
+// Layout sidebar collapsible. Login/register, QRIS+fee, order, kredensial APK, webhook. Kotak siku.
 
 export function renderDashboard() {
   return `<!DOCTYPE html>
 <html lang="id"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dashboard · GatePay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0f1115;--card:#171a21;--card2:#1e222b;--bd:#2b3038;--tx:#eef0f4;--dim:#9aa3b2;--brand:#3ddc97;--brandink:#04120b;--side:#12151b}
+  :root{
+    --desk-a:#7fc6c9;--desk-b:#8ea8dc;--desk-c:#6f87c8;--grid:rgba(255,255,255,.34);
+    --chrome:#eceade;--chrome-2:#e0ded1;--hi:#ffffff;--edge:#8f8b7e;--edge-dark:#54514a;
+    --title-a:#26379d;--title-b:#3f7fc4;--text:#23262e;--dim:#5b5f66;--link:#3843b8;
+    --accent:#c26107;--term-bg:#141f5c;--term-text:#dfe6ff;--term-ok:#8fe3f7;
+    --ok:#0e7c66;--warn:#a05a00;--bad:#b0362a;
+    /* alias biar inline style lama tetap jalan */
+    --card:#eceade;--card2:#e0ded1;--bd:#8f8b7e;--tx:#23262e;--brand:#26379d;--brandink:#fff;
+  }
   *{box-sizing:border-box;border-radius:0!important;margin:0;padding:0}
-  body{font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);line-height:1.5}
-  a{color:var(--brand);text-decoration:none}
+  body{
+    font-family:Verdana,Tahoma,Geneva,sans-serif;color:var(--text);font-size:13px;line-height:1.6;
+    background:
+      repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 44px),
+      repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 44px),
+      linear-gradient(135deg,var(--desk-a),var(--desk-b) 52%,var(--desk-c));
+    background-attachment:fixed;min-height:100vh;
+  }
+  a{color:var(--link);text-decoration:none}
+  a:hover{text-decoration:underline}
   .hidden{display:none!important}
-  input,textarea{width:100%;background:var(--card2);border:1px solid var(--bd);color:var(--tx);padding:9px 10px;font-family:inherit;font-size:13px}
-  textarea{resize:vertical;min-height:60px;font-family:'JetBrains Mono',Consolas,monospace}
-  label{display:block;font-size:12px;color:var(--dim);margin:8px 0 4px}
-  button{background:var(--brand);color:var(--brandink);border:0;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;margin-top:10px;width:100%}
-  button:hover{opacity:.9}
-  button.sec{background:var(--card2);color:var(--tx);border:1px solid var(--bd)}
-  .msg{font-size:12px;margin-top:8px;padding:8px;display:none}
-  .msg.ok{background:#123a2a;color:var(--brand);display:block}
-  .msg.err{background:#2a1416;color:#ff5c5c;display:block}
-  .mono{font-family:'JetBrains Mono',Consolas,monospace}
+  h1,h2,.logo,.ptitle,.mark,.av{font-family:'Michroma',sans-serif}
+  .mono,textarea,.cred .v,#rbreak{font-family:'Share Tech Mono',Consolas,monospace}
+
+  /* bevel helpers */
+  .out{border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge)}
+  .in{border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
+
+  input,textarea{width:100%;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);color:var(--text);padding:8px 9px;font-family:inherit;font-size:13px}
+  textarea{resize:vertical;min-height:60px}
+  label{display:block;font-size:11px;color:var(--dim);margin:9px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+
+  button{background:linear-gradient(180deg,#4a86c8,#26379d);color:#fff;border:2px solid;border-color:#7fb0e0 #141f5c #141f5c #7fb0e0;padding:9px 16px;font-weight:700;font-size:12px;cursor:pointer;margin-top:10px;width:100%;letter-spacing:.02em}
+  button:hover{filter:brightness(1.06)}
+  button:active{border-color:#141f5c #7fb0e0 #7fb0e0 #141f5c}
+  button.sec{background:linear-gradient(180deg,var(--chrome),var(--chrome-2));color:var(--text);border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
+  button.sec:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
+
+  .msg{font-size:12px;margin-top:8px;padding:8px;display:none;border:2px solid}
+  .msg.ok{background:#dff3ea;color:var(--ok);border-color:var(--ok);display:block}
+  .msg.err{background:#f7dcd9;color:var(--bad);border-color:var(--bad);display:block}
   .dim{color:var(--dim);font-size:12px}
   .lnk{font-size:12px}
 
   /* ── AUTH ── */
-  .authwrap{max-width:380px;margin:60px auto;padding:0 20px}
-  .authcard{background:var(--card);border:1px solid var(--bd);padding:28px}
-  .authcard h1{font-size:22px;font-weight:800;margin-bottom:4px}
-  .authcard .sub{color:var(--dim);font-size:13px;margin-bottom:20px}
-  .tabs{display:flex;margin-bottom:16px;border:1px solid var(--bd)}
-  .tabs div{flex:1;text-align:center;padding:10px;font-size:13px;cursor:pointer;color:var(--dim)}
-  .tabs div.active{background:var(--brand);color:var(--brandink);font-weight:700}
+  .authwrap{max-width:400px;margin:70px auto;padding:0 20px}
+  .authcard{background:var(--chrome);padding:0}
+  .authcard .tt{background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;font-family:'Michroma';font-size:12px;padding:8px 12px;display:flex;align-items:center;gap:8px}
+  .authcard .bd2{padding:22px}
+  .authcard h1{font-size:20px;font-weight:400;margin-bottom:4px}
+  .authcard .sub{color:var(--dim);font-size:12px;margin-bottom:18px}
+  .tabs{display:flex;margin-bottom:16px}
+  .tabs div{flex:1;text-align:center;padding:9px;font-size:12px;cursor:pointer;color:var(--text);background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
+  .tabs div.active{background:linear-gradient(180deg,#4a86c8,#26379d);color:#fff;font-weight:700;border-color:#141f5c #7fb0e0 #7fb0e0 #141f5c}
 
   /* ── SHELL ── */
   #appview{display:flex;min-height:100vh}
-  .sidebar{width:230px;flex-shrink:0;background:var(--side);border-right:1px solid var(--bd);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:40;transition:width .16s}
-  .side-top{display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 16px;border-bottom:1px solid var(--bd)}
-  .logo{font-weight:800;font-size:18px;color:var(--tx);display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden}
-  .logo .mark{background:var(--brand);color:var(--brandink);width:26px;height:26px;min-width:26px;display:inline-flex;align-items:center;justify-content:center}
-  .collapse{background:none;border:1px solid var(--bd);color:var(--dim);width:auto;margin:0;padding:4px 8px;font-size:14px}
-  .snav{flex:1;overflow-y:auto;padding:10px 0}
-  .snav .grp{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);padding:12px 18px 4px;white-space:nowrap;overflow:hidden}
-  .navi{display:flex;align-items:center;gap:12px;padding:11px 18px;color:var(--dim);cursor:pointer;font-size:14px;border-left:3px solid transparent;white-space:nowrap;overflow:hidden}
-  .navi:hover{color:var(--tx);background:var(--card)}
-  .navi.active{color:var(--tx);background:var(--card);border-left-color:var(--brand);font-weight:600}
-  .navi .ic{font-size:17px;width:20px;min-width:20px;text-align:center}
-  .side-bot{border-top:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap;overflow:hidden}
-  .side-bot .who{display:flex;align-items:center;gap:10px;overflow:hidden}
-  .side-bot .av{width:30px;height:30px;min-width:30px;background:var(--brand);color:var(--brandink);display:flex;align-items:center;justify-content:center;font-weight:800}
-  .side-bot .lo{color:#ff5c5c;cursor:pointer;font-size:16px}
+  .sidebar{width:232px;flex-shrink:0;background:var(--chrome);border-right:2px solid var(--edge-dark);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:40;transition:width .16s;box-shadow:2px 0 0 var(--edge)}
+  .side-top{display:flex;align-items:center;justify-content:space-between;height:52px;padding:0 12px;background:linear-gradient(90deg,var(--title-a),var(--title-b));border-bottom:2px solid var(--edge-dark)}
+  .logo{font-size:15px;color:#fff;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden}
+  .logo .mark{background:var(--accent);color:#fff;width:24px;height:24px;min-width:24px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;border:1px solid rgba(0,0,0,.3)}
+  .collapse{background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);color:var(--text);width:auto;margin:0;padding:2px 8px;font-size:13px;font-weight:700}
+  .collapse:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
+  .snav{flex:1;overflow-y:auto;padding:8px}
+  .snav .grp{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);padding:12px 6px 4px;white-space:nowrap;overflow:hidden;font-weight:700}
+  .navi{display:flex;align-items:center;gap:11px;padding:9px 10px;color:var(--text);cursor:pointer;font-size:13px;white-space:nowrap;overflow:hidden;margin-bottom:3px;border:2px solid transparent}
+  .navi:hover{background:var(--chrome-2);border-color:var(--edge) var(--hi) var(--hi) var(--edge)}
+  .navi.active{background:linear-gradient(90deg,#26379d,#3f7fc4);color:#fff;font-weight:700;border-color:#141f5c #7fb0e0 #7fb0e0 #141f5c}
+  .navi .ic{font-size:16px;width:20px;min-width:20px;text-align:center}
+  .side-bot{border-top:2px solid var(--edge);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap;overflow:hidden;background:var(--chrome-2)}
+  .side-bot .who{display:flex;align-items:center;gap:9px;overflow:hidden}
+  .side-bot .av{width:28px;height:28px;min-width:28px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
+  .side-bot .lo{color:var(--bad);cursor:pointer;font-size:16px;font-weight:700}
   /* collapsed */
-  body.col .sidebar{width:64px}
+  body.col .sidebar{width:60px}
   body.col .logo span:last-child,body.col .snav .grp,body.col .navi .lbl,body.col .side-bot .txt{display:none}
-  body.col .navi{justify-content:center;padding:11px 0;gap:0}
-  body.col .side-top{padding:0 8px;justify-content:center}
+  body.col .navi{justify-content:center;padding:9px 0;gap:0}
+  body.col .side-top{padding:0 6px;justify-content:center}
   body.col .side-top .logo{display:none}
-  body.col .side-bot{justify-content:center;padding:12px 8px}
+  body.col .side-bot{justify-content:center;padding:10px 6px}
   body.col .side-bot .who{gap:0}
 
-  .content{flex:1;margin-left:230px;min-width:0;transition:margin .16s}
-  body.col .content{margin-left:64px}
-  .topbar{height:60px;border-bottom:1px solid var(--bd);background:var(--card);display:flex;align-items:center;gap:14px;padding:0 22px;position:sticky;top:0;z-index:20}
-  .topbar .ptitle{font-size:16px;font-weight:700}
-  .topbar .burger{display:none;background:none;border:1px solid var(--bd);color:var(--tx);width:auto;margin:0;padding:5px 10px}
-  .live{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:6px;margin-left:auto}
-  .livedot{width:8px;height:8px;background:var(--brand);display:inline-block;box-shadow:0 0 6px var(--brand);animation:bl 1.5s infinite}
-  @keyframes bl{50%{opacity:.35}}
+  .content{flex:1;margin-left:232px;min-width:0;transition:margin .16s}
+  body.col .content{margin-left:60px}
+  .topbar{height:52px;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border-bottom:2px solid var(--edge-dark);display:flex;align-items:center;gap:14px;padding:0 18px;position:sticky;top:0;z-index:20;box-shadow:0 2px 0 var(--edge)}
+  .topbar .ptitle{font-size:13px;color:var(--text)}
+  .topbar .burger{display:none;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);color:var(--text);width:auto;margin:0;padding:4px 10px}
+  .live{font-size:11px;color:var(--ok);display:flex;align-items:center;gap:6px;margin-left:auto;font-family:'Share Tech Mono',monospace}
+  .livedot{width:9px;height:9px;background:var(--ok);display:inline-block;animation:bl 1.4s infinite;border:1px solid rgba(0,0,0,.3)}
+  @keyframes bl{50%{opacity:.3}}
   .page{padding:22px;max-width:1000px}
   .view{display:none}
   .view.on{display:block}
 
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
-  .stat{background:var(--card);border:1px solid var(--bd);padding:14px}
-  .stat .k{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
-  .stat .v{font-size:22px;font-weight:800;margin-top:2px}
-  .stat .v.g{color:var(--brand)}
+  .stat{background:var(--chrome);padding:12px 14px;border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge)}
+  .stat .k{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+  .stat .v{font-size:20px;font-weight:700;margin-top:3px;font-family:'Share Tech Mono',monospace}
+  .stat .v.g{color:var(--ok)}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .panel{background:var(--card);border:1px solid var(--bd);padding:18px;margin-bottom:16px}
-  .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:12px}
-  .res{margin-top:12px;padding:12px;background:var(--card2);border:1px solid var(--bd);display:none}
-  .res.show{display:block}
-  .res .amt{font-size:22px;font-weight:800}
-  #qrcanvas{background:#fff;padding:8px;margin-top:8px;max-width:200px}
-  #qrprev{max-width:120px;margin-top:8px;display:none;background:#fff;padding:4px}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th{text-align:left;color:var(--dim);font-weight:600;padding:8px;border-bottom:1px solid var(--bd);font-size:11px;text-transform:uppercase}
-  td{padding:8px;border-bottom:1px solid var(--card2);vertical-align:top}
-  tr:hover td{background:var(--card2)}
-  .bd{padding:2px 8px;font-size:11px;font-weight:700;text-transform:uppercase}
+
+  /* panel = window */
+  .panel{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:2px 2px 0 var(--edge);padding:0 16px 16px;margin-bottom:16px}
+  .panel h2{font-family:'Michroma';font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#fff;margin:0 -16px 14px;padding:7px 14px;background:linear-gradient(90deg,var(--title-a),var(--title-b));border-bottom:2px solid var(--edge-dark)}
+
+  .res{margin-top:12px;padding:12px;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
+  .res{display:none}.res.show{display:block}
+  .res .amt{font-size:22px;font-weight:700;font-family:'Share Tech Mono',monospace;color:var(--accent)}
+  #qrcanvas{background:#fff;padding:8px;margin-top:8px;max-width:210px;border:2px solid var(--edge-dark)}
+  #qrprev{max-width:120px;margin-top:8px;display:none;background:#fff;padding:4px;border:2px solid var(--edge-dark)}
+  #rbreak{white-space:pre-line}
+
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{text-align:left;color:#fff;font-weight:700;padding:7px 8px;font-size:10px;text-transform:uppercase;background:linear-gradient(180deg,#3f7fc4,#26379d)}
+  td{padding:7px 8px;border-bottom:1px solid var(--edge);vertical-align:top}
+  tr:nth-child(even) td{background:rgba(255,255,255,.4)}
+  tr:hover td{background:#fff6d9}
+  .bd{padding:2px 8px;font-size:10px;font-weight:700;text-transform:uppercase;border:1px solid rgba(0,0,0,.35)}
   .pager{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:12px}
-  .pager button{width:auto;margin:0;padding:6px 12px}
+  .pager button{width:auto;margin:0;padding:5px 12px}
   .pager button:disabled{opacity:.4;cursor:default}
-  .pager .pinfo{font-size:12px;color:var(--dim)}
-  .cred{background:var(--card2);border:1px solid var(--bd);padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
-  .cred .l{font-size:11px;color:var(--dim);text-transform:uppercase}
-  .cred .v{font-family:'JetBrains Mono',Consolas,monospace;font-size:12px;word-break:break-all}
-  .cred button{width:auto;margin:0;padding:6px 10px;font-size:11px}
+  .pager .pinfo{font-size:11px;color:var(--dim);font-family:'Share Tech Mono',monospace}
+
+  /* kredensial = terminal navy */
+  .cred{background:var(--term-bg);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);padding:9px 10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .cred .l{font-size:10px;color:#8fa0d8;text-transform:uppercase;letter-spacing:.04em}
+  .cred .v{font-size:12px;word-break:break-all;color:var(--term-ok)}
+  .cred button{width:auto;margin:0;padding:5px 10px;font-size:10px}
+
   .scrim{display:none}
   @media(max-width:820px){
     .stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}
-    .sidebar{transform:translateX(-100%);transition:transform .18s;width:230px}
-    body.col .sidebar{width:230px}
+    .sidebar{transform:translateX(-100%);transition:transform .18s;width:232px}
+    body.col .sidebar{width:232px}
     body.mnav .sidebar{transform:translateX(0)}
     .content{margin-left:0!important}
     .topbar .burger{display:block}
-    body.mnav .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:35}
+    body.mnav .scrim{display:block;position:fixed;inset:0;background:rgba(20,31,92,.45);z-index:35}
   }
 </style></head><body>
 
 <!-- ══ AUTH ══ -->
 <div id="authview">
-  <div class="authwrap"><div class="authcard">
-    <h1><span style="background:var(--brand);color:var(--brandink);padding:0 8px">G</span> GatePay</h1>
-    <div class="sub">Masuk atau daftar untuk kelola payment gateway kamu.</div>
-    <div class="tabs">
-      <div id="tab-login" class="active" onclick="switchTab('login')">Masuk</div>
-      <div id="tab-reg" onclick="switchTab('reg')">Daftar</div>
+  <div class="authwrap"><div class="authcard out">
+    <div class="tt"><span class="mark" style="background:var(--accent);color:#fff;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px">G</span> GATEPAY.EXE</div>
+    <div class="bd2">
+      <h1>GatePay</h1>
+      <div class="sub">Masuk atau daftar untuk kelola payment gateway kamu.</div>
+      <div class="tabs">
+        <div id="tab-login" class="active" onclick="switchTab('login')">Masuk</div>
+        <div id="tab-reg" onclick="switchTab('reg')">Daftar</div>
+      </div>
+      <label>Username</label>
+      <input id="u" type="text" placeholder="username" autocomplete="username">
+      <label>Password</label>
+      <input id="p" type="password" placeholder="password" autocomplete="current-password">
+      <button id="authbtn" onclick="doAuth()">Masuk</button>
+      <div class="msg" id="amsg"></div>
+      <div class="dim" style="font-size:11px;margin-top:14px" id="reghint"></div>
     </div>
-    <label>Username</label>
-    <input id="u" type="text" placeholder="username" autocomplete="username">
-    <label>Password</label>
-    <input id="p" type="password" placeholder="password" autocomplete="current-password">
-    <button id="authbtn" onclick="doAuth()">Masuk</button>
-    <div class="msg" id="amsg"></div>
-    <div class="dim" style="font-size:11px;margin-top:14px" id="reghint"></div>
   </div></div>
 </div>
 
@@ -151,7 +195,7 @@ export function renderDashboard() {
       <div class="navi hidden" id="nav-admin" data-view="admin" onclick="go('admin')"><span class="ic">👑</span><span class="lbl">Admin</span></div>
     </nav>
     <div class="side-bot">
-      <div class="who"><span class="av" id="avatar">?</span><span class="txt" id="whoami"></span></div>
+      <div class="who"><span class="av" id="avatar">?</span><span class="txt mono" id="whoami"></span></div>
       <span class="lo txt" onclick="logout()" title="Keluar">⎋</span>
     </div>
   </aside>
@@ -160,7 +204,7 @@ export function renderDashboard() {
     <div class="topbar">
       <button class="burger" onclick="toggleMnav(true)">☰</button>
       <div class="ptitle" id="ptitle">Dashboard</div>
-      <div class="live"><span class="livedot"></span>Live · 3s</div>
+      <div class="live"><span class="livedot"></span>LIVE · 3s</div>
     </div>
     <div class="page">
 
@@ -173,7 +217,7 @@ export function renderDashboard() {
           <div class="stat"><div class="k">Revenue</div><div class="v" id="s-rev">Rp 0</div></div>
         </div>
         <div class="panel">
-          <h2>Orders</h2>
+          <h2>DELIVERY_RECORD.LOG</h2>
           <table><thead><tr><th>ID</th><th>Nominal</th><th>Status</th><th>Ref</th><th>Checkout</th><th>Waktu</th></tr></thead>
           <tbody id="otbody"><tr><td colspan=6 class=dim style="text-align:center;padding:20px">Belum ada order</td></tr></tbody></table>
           <div class="pager">
@@ -187,7 +231,7 @@ export function renderDashboard() {
       <!-- BUAT ORDER -->
       <section class="view" id="v-order">
         <div class="panel" style="max-width:520px">
-          <h2>Buat Order + QR</h2>
+          <h2>NEW_ORDER.EXE</h2>
           <label>Nominal (Rp)</label>
           <input id="amt" type="number" placeholder="10000">
           <label>Reference (opsional)</label>
@@ -195,7 +239,7 @@ export function renderDashboard() {
           <button onclick="createOrder()">Buat Order + QR</button>
           <div class="msg" id="omsg"></div>
           <div class="res" id="ores">
-            <div class="dim" id="rbreak" style="font-size:12px;margin-bottom:8px;font-family:'JetBrains Mono',Consolas,monospace;white-space:pre-line"></div>
+            <div class="dim" id="rbreak" style="font-size:12px;margin-bottom:8px"></div>
             <div class="dim">Bayar persis</div>
             <div class="amt" id="ramt"></div>
             <canvas id="qrcanvas"></canvas>
@@ -207,7 +251,7 @@ export function renderDashboard() {
       <!-- QRIS & FEE -->
       <section class="view" id="v-qris">
         <div class="panel" style="max-width:560px">
-          <h2>Setup QRIS Statis</h2>
+          <h2>QRIS_STATIS.CFG</h2>
           <div class="dim" style="margin-bottom:8px">Upload foto QRIS statis DANA Bisnis kamu → Decode → Simpan.</div>
           <label>Upload QR (foto/gambar)</label>
           <input type="file" id="qrfile" accept="image/*">
@@ -219,7 +263,7 @@ export function renderDashboard() {
           <div class="msg" id="qmsg"></div>
         </div>
         <div class="panel" style="max-width:560px">
-          <h2>Fee &amp; Kode Unik</h2>
+          <h2>FEE_KODE.CFG</h2>
           <div class="dim" style="margin-bottom:8px">Fee ditambah di atas nominal, lalu kode unik disisipkan di digit terakhir buat matching otomatis.</div>
           <div style="display:flex;gap:10px">
             <div style="flex:1"><label>Fee (%)</label><input id="fee" type="number" step="0.1" placeholder="7"></div>
@@ -233,7 +277,7 @@ export function renderDashboard() {
       <!-- KREDENSIAL & APK -->
       <section class="view" id="v-apk">
         <div class="panel" style="max-width:640px">
-          <h2>Kredensial &amp; APK Penangkap Notif</h2>
+          <h2>CREDENTIALS.SYS</h2>
           <div class="dim" style="margin-bottom:10px">Buat integrasi API + setup HP penangkap notif pembayaran. Rahasiakan.</div>
           <div class="cred"><div><div class="l">API Key (sk_live)</div><div class="v" id="c-api">-</div></div><button class="sec" onclick="cp('c-api')">Copy</button></div>
           <div class="cred"><div><div class="l">Device ID (APK)</div><div class="v" id="c-devid">-</div></div><button class="sec" onclick="cp('c-devid')">Copy</button></div>
@@ -247,23 +291,23 @@ export function renderDashboard() {
       <!-- WEBHOOK -->
       <section class="view" id="v-hook">
         <div class="panel" style="max-width:640px">
-          <h2>Webhook (Callback)</h2>
+          <h2>WEBHOOK.CFG</h2>
           <div class="dim" style="margin-bottom:10px">Opsional. GatePay nembak POST ke URL ini tiap ada order <b>PAID</b>, jadi sistem kamu (toko/bot/invoice) tau otomatis tanpa polling. Kosongkan kalau cuma pakai dashboard.</div>
           <label>Notify URL</label>
           <input id="notify" type="url" placeholder="https://sistem-kamu.com/webhook/gatepay">
           <button onclick="saveHook()">Simpan Webhook</button>
           <div class="msg" id="hmsg"></div>
-          <div class="cred" style="margin-top:14px"><div><div class="l">Callback Secret (buat verifikasi HMAC)</div><div class="v" id="c-cbsec">-</div></div><button class="sec" onclick="cp('c-cbsec')">Copy</button></div>
+          <div class="cred" style="margin-top:14px"><div><div class="l">Callback Secret (verifikasi HMAC)</div><div class="v" id="c-cbsec">-</div></div><button class="sec" onclick="cp('c-cbsec')">Copy</button></div>
           <div class="dim" style="font-size:11px;margin-top:8px;white-space:pre-line">Payload contoh:
 {"event":"order.paid","order_id":"ord_xxx","reference":"INV-001","unique_amount":10237,"paid_at":1784...}
-Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret). Verifikasi di sisi kamu. Detail di <a href="/docs#callback">Docs</a>.</div>
+Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret). Detail di <a href="/docs#callback">Docs</a>.</div>
         </div>
       </section>
 
       <!-- GANTI PASSWORD -->
       <section class="view" id="v-pw">
         <div class="panel" style="max-width:420px">
-          <h2>Ganti Password</h2>
+          <h2>PASSWORD.SYS</h2>
           <label>Password Lama</label><input id="oldpw" type="password" placeholder="password sekarang">
           <label>Password Baru</label><input id="newpw" type="password" placeholder="minimal 6 karakter">
           <button onclick="changePw()">Ganti Password</button>
@@ -274,7 +318,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret). Verifikasi di si
       <!-- EVENTS (admin only) -->
       <section class="view" id="v-events">
         <div class="panel">
-          <h2>Events dari Device</h2>
+          <h2>DEVICE_EVENTS.LOG</h2>
           <table><thead><tr><th>Event</th><th>Nominal</th><th>Status</th><th>Raw</th><th>Waktu</th></tr></thead>
           <tbody id="etbody"><tr><td colspan=5 class=dim style="text-align:center;padding:20px">Belum ada event</td></tr></tbody></table>
           <div class="pager">
@@ -288,7 +332,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret). Verifikasi di si
       <!-- ADMIN -->
       <section class="view" id="v-admin">
         <div class="panel" style="max-width:420px">
-          <h2>Panel Admin</h2>
+          <h2>ADMIN.EXE</h2>
           <div class="dim" style="margin-bottom:8px">Kamu punya akses admin — kelola semua merchant, statistik global, & monitoring device.</div>
           <a href="/admin"><button>Buka Dashboard Admin →</button></a>
         </div>
@@ -431,9 +475,8 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret). Verifikasi di si
   const escj=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const nows=()=>Math.floor(Date.now()/1000);
   const agoj=ts=>{ if(!ts)return'-'; let d=Math.max(0,nows()-ts); if(d<60)return d+'s'; if(d<3600)return Math.floor(d/60)+'m'; if(d<86400)return Math.floor(d/3600)+'j'; return Math.floor(d/86400)+'h'; };
-  const bmap={paid:['#3ddc97','#04120b'],pending:['#f6c445','#241d02'],expired:['#6b7280','#0b0d11'],cancelled:['#ff5c5c','#1c0808'],matched:['#3ddc97','#04120b'],unmatched:['#6b7280','#0b0d11'],duplicate:['#7c6cff','#0b0b1c']};
-  const bdg=s=>{const[bg,fg]=bmap[s]||['#6b7280','#0b0d11'];return '<span class="bd" style="background:'+bg+';color:'+fg+'">'+escj(s)+'</span>';};
-  // status tampilan: order pending yg udah lewat expires_at ditampilin expired (jaga2 kalau server telat)
+  const bmap={paid:['#0e7c66','#fff'],pending:['#ffc266','#3a2a00'],expired:['#9aa0a8','#fff'],cancelled:['#b0362a','#fff'],matched:['#0e7c66','#fff'],unmatched:['#9aa0a8','#fff'],duplicate:['#3843b8','#fff']};
+  const bdg=s=>{const[bg,fg]=bmap[s]||['#9aa0a8','#fff'];return '<span class="bd" style="background:'+bg+';color:'+fg+'">'+escj(s)+'</span>';};
   const dispStatus=o=>(o.status==='pending'&&o.expires_at&&o.expires_at<=nows())?'expired':o.status;
 
   function pageOrders(d){ var mx=Math.max(0,Math.ceil(allOrders.length/PER)-1); oPage=Math.min(mx,Math.max(0,oPage+d)); renderOrders(); }
