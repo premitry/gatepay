@@ -378,7 +378,25 @@ app.get('/api/merchant/settings', async (c) => {
     merchant_name: merchant.qris_merchant_name || merchant.name,
     notify_url: merchant.notify_url || '',
     callback_secret: merchant.callback_secret || '',
+    // profil
+    username: merchant.username || '',
+    name: merchant.name || '',
+    qris_name: merchant.qris_merchant_name || '',
+    is_admin: !!merchant.is_admin,
+    active: merchant.active == null ? true : !!merchant.active,
+    created_at: merchant.created_at || null,
   });
+});
+
+// Update profil (nama tampilan)
+app.post('/api/merchant/profile', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  const body = await c.req.json().catch(() => ({}));
+  const name = String(body.name || '').trim().slice(0, 60);
+  if (!name) return json(c, { error: 'nama tidak boleh kosong' }, 400);
+  await c.env.DB.prepare('UPDATE merchants SET name = ? WHERE id = ?').bind(name, merchant.id).run();
+  return json(c, { ok: true, name });
 });
 
 app.post('/api/merchant/settings', async (c) => {

@@ -87,8 +87,8 @@ export function renderDashboard() {
   body.col .sidebar{width:60px}
   body.col .logo span:last-child,body.col .snav .grp,body.col .navi .lbl,body.col .side-bot .txt{display:none}
   body.col .snav{padding:8px 0}
-  body.col .navi{justify-content:center;padding:9px 0;gap:0;margin-left:0;margin-right:0}
-  body.col .navi .ic{width:auto}
+  body.col .snav .navi{justify-content:center;padding:9px 0;gap:0;margin:0 0 3px;width:100%;text-align:center}
+  body.col .snav .navi .ic{width:auto;margin:0}
   body.col .side-top{padding:0 6px;justify-content:center}
   body.col .side-top .logo{display:none}
   body.col .side-bot{justify-content:center;padding:10px 6px}
@@ -199,13 +199,12 @@ export function renderDashboard() {
       <div class="grp">Integrasi</div>
       <div class="navi" data-view="apk" onclick="go('apk')"><span class="ic">🔑</span><span class="lbl">Kredensial &amp; APK</span></div>
       <div class="navi" data-view="hook" onclick="go('hook')"><span class="ic">📖</span><span class="lbl">Docs &amp; Webhook</span></div>
-      <div class="grp">Akun</div>
-      <div class="navi" data-view="pw" onclick="go('pw')"><span class="ic">🔒</span><span class="lbl">Ganti Password</span></div>
+      <div class="grp hidden" id="grp-akun">Admin</div>
       <div class="navi hidden" id="nav-events" data-view="events" onclick="go('events')"><span class="ic">📡</span><span class="lbl">Events Device</span></div>
       <div class="navi hidden" id="nav-admin" data-view="admin" onclick="go('admin')"><span class="ic">👑</span><span class="lbl">Admin</span></div>
     </nav>
     <div class="side-bot">
-      <div class="who"><span class="av" id="avatar">?</span><span class="txt mono" id="whoami"></span></div>
+      <div class="who" onclick="go('profile')" style="cursor:pointer" title="Profil"><span class="av" id="avatar">?</span><span class="txt mono" id="whoami"></span></div>
       <span class="lo txt" onclick="logout()" title="Keluar">⎋</span>
     </div>
   </aside>
@@ -374,14 +373,36 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
         </div>
       </section>
 
-      <!-- GANTI PASSWORD -->
-      <section class="view" id="v-pw">
-        <div class="panel" style="max-width:420px">
-          <h2>PASSWORD.SYS</h2>
-          <label>Password Lama</label><input id="oldpw" type="password" placeholder="password sekarang">
-          <label>Password Baru</label><input id="newpw" type="password" placeholder="minimal 6 karakter">
-          <button onclick="changePw()">Ganti Password</button>
-          <div class="msg" id="pwmsg"></div>
+      <!-- PROFILE -->
+      <section class="view" id="v-profile">
+        <div class="grid2">
+          <div class="panel">
+            <h2>PROFILE.SYS</h2>
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+              <span class="av" id="p-avatar" style="width:52px;height:52px;min-width:52px;font-size:22px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)">?</span>
+              <div>
+                <div style="font-size:16px;font-weight:700" id="p-username" class="mono">@-</div>
+                <div id="p-role"><span class="bd" style="background:var(--title-a);color:#fff">MERCHANT</span></div>
+              </div>
+            </div>
+            <div class="cred"><div><div class="l">Nama QRIS / Merchant</div><div class="v" id="p-qris">-</div></div></div>
+            <div class="cred"><div><div class="l">Status Akun</div><div class="v" id="p-status">-</div></div></div>
+            <div class="cred"><div><div class="l">Tanggal Gabung</div><div class="v" id="p-joined">-</div></div></div>
+            <label style="margin-top:12px">Nama Tampilan</label>
+            <input id="p-name" type="text" placeholder="nama toko / usaha kamu">
+            <button onclick="saveProfile()">Simpan Nama</button>
+            <div class="msg" id="promsg"></div>
+            <button class="sec" onclick="logout()" style="margin-top:14px">⎋ Keluar dari Akun</button>
+          </div>
+
+          <div class="panel">
+            <h2>PASSWORD.SYS</h2>
+            <div class="dim" style="margin-bottom:8px">Ganti password login kamu.</div>
+            <label>Password Lama</label><input id="oldpw" type="password" placeholder="password sekarang">
+            <label>Password Baru</label><input id="newpw" type="password" placeholder="minimal 6 karakter">
+            <button onclick="changePw()">Ganti Password</button>
+            <div class="msg" id="pwmsg"></div>
+          </div>
         </div>
       </section>
 
@@ -444,7 +465,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function logout(){ localStorage.removeItem('gp_sess'); location.reload(); }
 
   // ── shell / navigation ──
-  const TITLES={dash:'Dashboard',qris:'QRIS & Order',apk:'Kredensial & APK',hook:'Docs & Webhook',pw:'Ganti Password',events:'Events Device',admin:'Admin'};
+  const TITLES={dash:'Dashboard',qris:'QRIS & Order',apk:'Kredensial & APK',hook:'Docs & Webhook',profile:'Profil',events:'Events Device',admin:'Admin'};
   function go(v){
     document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
     $('v-'+v).classList.add('on');
@@ -461,14 +482,16 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     if(localStorage.getItem('gp_col')) document.body.classList.add('col');
     setColArrow();
     $('authview').classList.add('hidden'); $('appview').classList.remove('hidden');
-    $('whoami').textContent='@'+(s.username||'');
+    $('whoami').textContent=(s.username||'');
     $('avatar').textContent=(s.username||'?').slice(0,1).toUpperCase();
+    $('p-avatar').textContent=(s.username||'?').slice(0,1).toUpperCase();
+    $('p-username').textContent=(s.username||'-');
     $('c-api').textContent=s.api_key||'-';
     $('c-devid').textContent=s.device_id||'-';
     $('c-devsec').textContent=s.device_secret||'-';
     if(s.fee_percent!=null) $('fee').value=s.fee_percent;
     if(s.unique_digits!=null) $('digits').value=s.unique_digits;
-    if(s.is_admin){ $('nav-admin').classList.remove('hidden'); $('nav-events').classList.remove('hidden'); }
+    if(s.is_admin){ $('nav-admin').classList.remove('hidden'); $('nav-events').classList.remove('hidden'); $('grp-akun').classList.remove('hidden'); $('p-role').innerHTML='<span class="bd" style="background:var(--accent);color:#fff">ADMIN 👑</span>'; }
     loadSettings();
     tick(); setInterval(tick,3000);
   }
@@ -513,12 +536,24 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     }catch(e){ msg('qmsg','err',String(e)); }
   }
 
+  const fmtDate=ts=>{ if(!ts) return '-'; var d=new Date(ts*1000); return d.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}); };
   async function loadSettings(){
     try{ var r=await fetch('/api/merchant/settings',{headers:{'x-api-key':key()}}); var j=await r.json();
       if(r.ok){ $('fee').value=j.fee_percent??0; $('digits').value=j.unique_digits??2; $('notify').value=j.notify_url||''; $('c-cbsec').textContent=j.callback_secret||'-';
         if(j.has_qris){ $('qstat').textContent='✓ QRIS aktif: '+(j.merchant_name||'-'); $('qstat').style.color='var(--ok)'; $('noqris').style.display='none'; }
         else { $('qstat').textContent='○ Belum ada QRIS statis'; $('qstat').style.color='var(--bad,#b0362a)'; $('noqris').style.display='block'; }
+        // profil
+        $('p-qris').textContent=j.qris_name||'(belum set QRIS)';
+        $('p-status').innerHTML=j.active?'<span style="color:var(--ok)">● Aktif</span>':'<span style="color:var(--bad,#b0362a)">○ Suspend</span>';
+        $('p-joined').textContent=fmtDate(j.created_at);
+        if($('p-name')&&!$('p-name').value) $('p-name').value=j.name||'';
       } }catch(e){}
+  }
+  async function saveProfile(){
+    var n=$('p-name').value.trim(); if(!n) return msg('promsg','err','Nama nggak boleh kosong');
+    try{ var r=await fetch('/api/merchant/profile',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({name:n})});
+      var j=await r.json(); if(r.ok) msg('promsg','ok','Nama tampilan tersimpan ✓'); else msg('promsg','err',j.error||'gagal');
+    }catch(e){ msg('promsg','err',String(e)); }
   }
   async function saveSettings(){
     try{ var r=await fetch('/api/merchant/settings',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({fee_percent:parseFloat($('fee').value)||0,unique_digits:parseInt($('digits').value,10)||2})});
