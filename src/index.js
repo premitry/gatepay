@@ -359,6 +359,15 @@ app.post('/api/merchant/qris', async (c) => {
   return json(c, { ok: true, merchant_name: info.merchantName, city: info.merchantCity });
 });
 
+// Hapus QRIS statis tersimpan (biar tau udah terputus, nggak ketimpa diam-diam)
+app.post('/api/merchant/qris/clear', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  await c.env.DB.prepare('UPDATE merchants SET qris_static = NULL, qris_merchant_name = NULL WHERE id = ?')
+    .bind(merchant.id).run();
+  return json(c, { ok: true });
+});
+
 // Info QRIS merchant saat ini
 app.get('/api/merchant/qris', async (c) => {
   const merchant = await requireMerchant(c);

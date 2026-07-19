@@ -259,6 +259,7 @@ export function renderDashboard() {
             <label>Hasil QRIS String</label>
             <textarea id="qris" placeholder="hasil decode (atau paste manual)"></textarea>
             <button onclick="uploadQris()">Simpan QRIS</button>
+            <button class="sec" id="clearqrisbtn" onclick="clearQris()" style="display:none">🗑 Hapus QRIS Tersimpan</button>
             <div class="msg" id="qmsg"></div>
             <div id="qstat" class="dim" style="margin-top:10px;font-family:'Share Tech Mono',monospace"></div>
             <div style="display:flex;gap:10px;margin-top:12px;border-top:1px solid var(--edge);padding-top:12px">
@@ -312,6 +313,7 @@ export function renderDashboard() {
           <label>Notify URL</label>
           <input id="notify" type="url" placeholder="https://sistem-kamu.com/webhook/gatepay">
           <button onclick="saveHook()">Simpan Webhook</button>
+          <button class="sec" onclick="clearHook()">🗑 Hapus Webhook</button>
           <div class="msg" id="hmsg"></div>
           <div class="cred" style="margin-top:14px"><div><div class="l">Callback Secret (verifikasi HMAC)</div><div class="v" id="c-cbsec">-</div></div><button class="sec" onclick="cp('c-cbsec')">Copy</button></div>
           <div class="dim" style="font-size:11px;margin-top:8px;white-space:pre-line">Payload contoh:
@@ -464,13 +466,17 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
 
   // ── shell / navigation ──
   const TITLES={dash:'Dashboard',qris:'QRIS & Order',apk:'Kredensial & APK',hook:'Docs & Webhook',profile:'Profil',events:'Events Device',admin:'Admin'};
-  function go(v){
+  function navTo(v){
+    if(!TITLES[v]) v='dash';
+    var s=sess(); if((v==='admin'||v==='events') && !(s&&s.is_admin)) v='dash';
     document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
-    $('v-'+v).classList.add('on');
-    document.querySelectorAll('.navi').forEach(el=>el.classList.toggle('active',el.dataset.view===v));
+    var el=$('v-'+v); if(el) el.classList.add('on');
+    document.querySelectorAll('.navi').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
     $('ptitle').textContent=TITLES[v]||'';
     toggleMnav(false);
   }
+  function go(v){ if(location.hash==='#'+v) navTo(v); else location.hash='#'+v; }
+  window.addEventListener('hashchange',function(){ navTo((location.hash||'').replace('#','')); });
   function setColArrow(){ var b=document.querySelector('.collapse'); if(b) b.textContent=document.body.classList.contains('col')?'›':'‹'; }
   function toggleCollapse(){ document.body.classList.toggle('col'); localStorage.setItem('gp_col',document.body.classList.contains('col')?'1':''); setColArrow(); }
   function toggleMnav(on){ document.body.classList.toggle('mnav',on); }
@@ -492,6 +498,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     if(s.is_admin){ $('nav-admin').classList.remove('hidden'); $('nav-events').classList.remove('hidden'); $('grp-akun').classList.remove('hidden'); $('p-role').innerHTML='<span class="bd" style="background:var(--accent);color:#fff">ADMIN 👑</span>'; }
     loadSettings();
     tick(); setInterval(tick,3000);
+    navTo((location.hash||'').replace('#','')||'dash');
   }
 
   async function changePw(){
@@ -538,8 +545,8 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   async function loadSettings(){
     try{ var r=await fetch('/api/merchant/settings',{headers:{'x-api-key':key()}}); var j=await r.json();
       if(r.ok){ $('fee').value=j.fee_percent??0; $('digits').value=j.unique_digits??2; $('notify').value=j.notify_url||''; $('c-cbsec').textContent=j.callback_secret||'-';
-        if(j.has_qris){ $('qstat').textContent='✓ QRIS aktif: '+(j.merchant_name||'-'); $('qstat').style.color='var(--ok)'; $('noqris').style.display='none'; }
-        else { $('qstat').textContent='○ Belum ada QRIS statis'; $('qstat').style.color='var(--bad,#b0362a)'; $('noqris').style.display='block'; }
+        if(j.has_qris){ $('qstat').textContent='✓ QRIS aktif: '+(j.merchant_name||'-'); $('qstat').style.color='var(--ok)'; $('noqris').style.display='none'; $('clearqrisbtn').style.display='block'; }
+        else { $('qstat').textContent='○ Belum ada QRIS statis (terputus)'; $('qstat').style.color='var(--bad,#b0362a)'; $('noqris').style.display='block'; $('clearqrisbtn').style.display='none'; }
         // profil
         $('p-qris').textContent=j.qris_name||'(belum set QRIS)';
         $('p-status').innerHTML=j.active?'<span style="color:var(--ok)">● Aktif</span>':'<span style="color:var(--bad,#b0362a)">○ Suspend</span>';
@@ -557,6 +564,19 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     try{ var r=await fetch('/api/merchant/settings',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({fee_percent:parseFloat($('fee').value)||0,unique_digits:parseInt($('digits').value,10)||2})});
       var j=await r.json(); if(r.ok) msg('smsg','ok','Fee '+j.fee_percent+'% · kode '+j.unique_digits+' digit tersimpan'); else msg('smsg','err',j.error||'gagal');
     }catch(e){ msg('smsg','err',String(e)); }
+  }
+  async function clearQris(){
+    if(!confirm('Hapus QRIS tersimpan? Order nggak bisa dibuat sampai upload QRIS lagi.')) return;
+    try{ var r=await fetch('/api/merchant/qris/clear',{method:'POST',headers:{'x-api-key':key()}});
+      if(r.ok){ $('qris').value=''; $('qrprev').style.display='none'; msg('qmsg','ok','QRIS dihapus — status terputus, aman dari ketimpa'); loadSettings(); }
+      else msg('qmsg','err','gagal hapus');
+    }catch(e){ msg('qmsg','err',String(e)); }
+  }
+  async function clearHook(){
+    if(!confirm('Hapus webhook tersimpan?')) return;
+    try{ var r=await fetch('/api/merchant/settings',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({notify_url:''})});
+      var j=await r.json(); if(r.ok){ $('notify').value=''; msg('hmsg','ok','Webhook dihapus'); } else msg('hmsg','err',j.error||'gagal');
+    }catch(e){ msg('hmsg','err',String(e)); }
   }
   async function saveHook(){
     try{ var r=await fetch('/api/merchant/settings',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({notify_url:$('notify').value.trim()})});
