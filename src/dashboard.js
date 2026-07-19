@@ -203,7 +203,7 @@ export function renderDashboard() {
       <div class="navi" data-view="apk" onclick="go('apk')"><span class="ic">🔑</span><span class="lbl">Kredensial &amp; APK</span></div>
       <div class="navi" data-view="hook" onclick="go('hook')"><span class="ic">📖</span><span class="lbl">Docs &amp; Webhook</span></div>
       <div class="grp">Bantuan</div>
-      <div class="navi" data-view="tiket" onclick="go('tiket')"><span class="ic">🎫</span><span class="lbl">Tiket Support</span></div>
+      <div class="navi" data-view="tiket" onclick="go('tiket')" style="position:relative"><span class="ic">🎫</span><span class="lbl">Tiket Support</span><span id="tk-dot" style="display:none;position:absolute;top:6px;right:8px;width:9px;height:9px;background:#b0362a;border:1px solid #fff"></span></div>
       <div class="grp hidden" id="grp-akun">Admin</div>
       <div class="navi hidden" id="nav-events" data-view="events" onclick="go('events')"><span class="ic">📡</span><span class="lbl">Events Device</span></div>
       <div class="navi hidden" id="nav-admin" data-view="admin" onclick="go('admin')"><span class="ic">👑</span><span class="lbl">Admin</span></div>
@@ -402,6 +402,9 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <div class="dim" style="margin-bottom:8px">Ada kendala? Kirim tiket, nanti dibalas admin.</div>
             <label>Subjek</label><input id="tk-subject" type="text" placeholder="mis. Pembayaran nggak kebaca">
             <label>Pesan</label><textarea id="tk-msg" placeholder="jelasin masalahnya..."></textarea>
+            <label>Lampiran gambar (opsional, maks 1.5MB)</label>
+            <input type="file" id="tk-file" accept="image/*" onchange="pickTkImg(this,'create')">
+            <img id="tk-prev" style="max-width:120px;margin-top:6px;display:none;border:2px solid var(--edge)">
             <button onclick="createTicket()">Kirim Tiket</button>
             <div class="msg" id="tkmsg"></div>
           </div>
@@ -415,6 +418,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
           <div id="tk-thread" style="max-height:340px;overflow-y:auto;margin-bottom:12px"></div>
           <label>Balasan</label>
           <textarea id="tk-reply" placeholder="tulis balasan..."></textarea>
+          <input type="file" id="tk-rfile" accept="image/*" onchange="pickTkImg(this,'reply')" style="margin-top:6px">
           <button onclick="replyTicket()">Kirim Balasan</button>
           <div class="msg" id="tkrmsg"></div>
         </div>
@@ -649,21 +653,34 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   }
 
   // ── tiket support ──
-  let curTicket=null;
+  let curTicket=null; var tkImg={};
   const TKB={active:['#ffc266','#3a2a00'],proses:['#3f7fc4','#fff'],close:['#9aa0a8','#fff']};
   function tkbadge(s){var b=TKB[s]||['#9aa0a8','#fff'];return '<span class="bd" style="background:'+b[0]+';color:'+b[1]+'">'+escj(s)+'</span>';}
+  function pickTkImg(input,slot){
+    var f=input.files[0]; if(!f){tkImg[slot]=null;return;}
+    if(f.size>1572864){ alert('Gambar maksimal 1.5MB'); input.value=''; tkImg[slot]=null; return; }
+    var im=new Image(); im.onload=function(){ var mx=1280,sc=Math.min(1,mx/Math.max(im.width,im.height)); var w=Math.round(im.width*sc),h=Math.round(im.height*sc); var cv=document.createElement('canvas'); cv.width=w;cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); tkImg[slot]=cv.toDataURL('image/jpeg',0.82); if(slot==='create'&&$('tk-prev')){$('tk-prev').src=tkImg[slot];$('tk-prev').style.display='block';} };
+    im.onerror=function(){ alert('File bukan gambar'); input.value=''; tkImg[slot]=null; }; im.src=URL.createObjectURL(f);
+  }
+  function msgLine(mm){
+    var role=mm.sender_role||(mm.sender==='admin'?'admin':'user'); var mine=role==='user'; var name=mm.sender_name||'';
+    var lbl=mine?'Kamu':(role.charAt(0).toUpperCase()+role.slice(1)+(name?' ('+name+')':''));
+    var img=mm.image?'<img src="'+mm.image+'" style="max-width:200px;display:block;margin-top:6px;border:2px solid var(--edge);cursor:pointer" onclick="window.open(this.src)">':'';
+    return '<div style="margin-bottom:8px;text-align:'+(mine?'right':'left')+'"><div style="display:inline-block;max-width:82%;padding:8px 10px;border:2px solid var(--edge);background:'+(mine?'#dbe7fb':'#fff6d9')+';text-align:left"><div class=dim style="font-size:10px;margin-bottom:2px">'+escj(lbl)+' · '+agoj(mm.created_at)+' lalu</div>'+escj(mm.body)+img+'</div></div>';
+  }
   async function loadTickets(){
     if(!key()) return;
     try{ var j=await (await fetch('/api/tickets',{headers:{'x-api-key':key()}})).json();
       var list=j.tickets||[];
-      $('tklist').innerHTML=list.length?list.map(t=>'<div onclick="openTicket(\\''+t.id+'\\')" style="padding:9px 10px;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:6px;cursor:pointer;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>'+escj(t.subject)+'</b>'+tkbadge(t.status)+'</div><div class=dim style="font-size:11px">update '+agoj(t.updated_at)+' lalu</div></div>').join(''):'<div class=dim>Belum ada tiket</div>';
+      $('tklist').innerHTML=list.length?list.map(t=>{ var dot=t.user_unread?' <span title="balasan baru" style="display:inline-block;width:9px;height:9px;background:#b0362a;border:1px solid #fff;vertical-align:middle"></span>':'';
+        return '<div onclick="openTicket(\\''+t.id+'\\')" style="padding:9px 10px;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:6px;cursor:pointer;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>'+escj(t.subject)+dot+'</b>'+tkbadge(t.status)+'</div><div class=dim style="font-size:11px">update '+agoj(t.updated_at)+' lalu</div></div>';}).join(''):'<div class=dim>Belum ada tiket</div>';
     }catch(e){}
   }
   async function createTicket(){
     var s=$('tk-subject').value.trim(), m=$('tk-msg').value.trim();
-    if(!s||!m) return msg('tkmsg','err','Isi subjek & pesan');
-    try{ var r=await fetch('/api/tickets',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({subject:s,message:m})});
-      var j=await r.json(); if(r.ok){ msg('tkmsg','ok','Tiket terkirim ✓'); $('tk-subject').value=''; $('tk-msg').value=''; loadTickets(); openTicket(j.id); } else msg('tkmsg','err',j.error||'gagal');
+    if(!s||(!m&&!tkImg.create)) return msg('tkmsg','err','Isi subjek & pesan/gambar');
+    try{ var r=await fetch('/api/tickets',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({subject:s,message:m,image:tkImg.create||undefined})});
+      var j=await r.json(); if(r.ok){ msg('tkmsg','ok','Tiket terkirim ✓'); $('tk-subject').value=''; $('tk-msg').value=''; $('tk-file').value=''; $('tk-prev').style.display='none'; tkImg.create=null; loadTickets(); openTicket(j.id); } else msg('tkmsg','err',j.error||'gagal');
     }catch(e){ msg('tkmsg','err',String(e)); }
   }
   async function openTicket(id){
@@ -672,17 +689,16 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       if(!j.ticket) return;
       $('tk-detail').style.display='block';
       $('tk-dtitle').innerHTML=escj(j.ticket.subject)+' &nbsp;'+tkbadge(j.ticket.status);
-      $('tk-thread').innerHTML=(j.messages||[]).map(mm=>{ var mine=mm.sender==='user';
-        return '<div style="margin-bottom:8px;text-align:'+(mine?'right':'left')+'"><div style="display:inline-block;max-width:82%;padding:8px 10px;border:2px solid var(--edge);background:'+(mine?'#dbe7fb':'#fff6d9')+';text-align:left"><div class=dim style="font-size:10px;margin-bottom:2px">'+(mine?'Kamu':'👑 Admin')+' · '+agoj(mm.created_at)+' lalu</div>'+escj(mm.body)+'</div></div>';
-      }).join('')||'<div class=dim>kosong</div>';
+      $('tk-thread').innerHTML=(j.messages||[]).map(msgLine).join('')||'<div class=dim>kosong</div>';
       $('tk-thread').scrollTop=$('tk-thread').scrollHeight;
       $('tk-detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+      loadTickets(); tick();
     }catch(e){}
   }
   async function replyTicket(){
-    if(!curTicket) return; var b=$('tk-reply').value.trim(); if(!b) return msg('tkrmsg','err','Balasan kosong');
-    try{ var r=await fetch('/api/tickets/'+curTicket+'/reply',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({body:b})});
-      if(r.ok){ $('tk-reply').value=''; openTicket(curTicket); loadTickets(); } else { var j=await r.json(); msg('tkrmsg','err',j.error||'gagal'); }
+    if(!curTicket) return; var b=$('tk-reply').value.trim(); if(!b&&!tkImg.reply) return msg('tkrmsg','err','Balasan/gambar kosong');
+    try{ var r=await fetch('/api/tickets/'+curTicket+'/reply',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({body:b,image:tkImg.reply||undefined})});
+      if(r.ok){ $('tk-reply').value=''; if($('tk-rfile'))$('tk-rfile').value=''; tkImg.reply=null; openTicket(curTicket); loadTickets(); } else { var j=await r.json(); msg('tkrmsg','err',j.error||'gagal'); }
     }catch(e){ msg('tkrmsg','err',String(e)); }
   }
 
@@ -788,6 +804,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       $('s-pending').textContent=d.stats?.pending||0; $('s-rev').textContent=idr(d.stats?.revenue);
       allOrders=d.orders||[]; allEvents=d.events||[];
       renderOrders(); renderEvents(); renderChart(d.series);
+      if($('tk-dot')) $('tk-dot').style.display=(d.tickets_unread>0)?'block':'none';
     }catch(e){}
   }
 

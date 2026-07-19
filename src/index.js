@@ -106,12 +106,34 @@ let _ticketsReady = false;
 async function ensureTickets(DB) {
   if (_ticketsReady) return;
   await DB.prepare(
-    "CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, merchant_id TEXT, subject TEXT, status TEXT DEFAULT 'active', created_at INTEGER, updated_at INTEGER)",
+    "CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, merchant_id TEXT, subject TEXT, status TEXT DEFAULT 'active', user_unread INTEGER DEFAULT 0, created_at INTEGER, updated_at INTEGER)",
   ).run();
   await DB.prepare(
-    'CREATE TABLE IF NOT EXISTS ticket_messages (id TEXT PRIMARY KEY, ticket_id TEXT, sender TEXT, body TEXT, created_at INTEGER)',
+    'CREATE TABLE IF NOT EXISTS ticket_messages (id TEXT PRIMARY KEY, ticket_id TEXT, sender TEXT, sender_role TEXT, sender_name TEXT, body TEXT, image TEXT, created_at INTEGER)',
   ).run();
+  // untuk DB yang tabelnya udah ada tanpa kolom baru
+  try { await DB.prepare('ALTER TABLE tickets ADD COLUMN user_unread INTEGER DEFAULT 0').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE ticket_messages ADD COLUMN image TEXT').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE ticket_messages ADD COLUMN sender_role TEXT').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE ticket_messages ADD COLUMN sender_name TEXT').run(); } catch {}
   _ticketsReady = true;
+}
+
+// Role staff: owner > admin > user
+let _ownerReady = false;
+async function ensureOwner(DB) {
+  if (_ownerReady) return;
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN is_owner INTEGER DEFAULT 0').run(); } catch {}
+  try { await DB.prepare("UPDATE merchants SET is_owner = 1, is_admin = 1 WHERE username = 'ahmad'").run(); } catch {}
+  _ownerReady = true;
+}
+function roleOf(m) { return m.is_owner ? 'owner' : m.is_admin ? 'admin' : 'user'; }
+// Validasi + batasi data URI gambar (maks ~2.2MB base64 ≈ 1.5MB file)
+function cleanImage(v) {
+  const s = String(v || '');
+  if (!/^data:image\/(png|jpe?g|webp|gif);base64,/.test(s)) return null;
+  if (s.length > 2_300_000) return null;
+  return s;
 }
 const TICKET_STATUS = ['active', 'proses', 'close'];
 
@@ -182,6 +204,7 @@ async function page(c, htmlStr) {
 async function requireMerchant(c) {
   const key = c.req.header('x-api-key') || '';
   if (!key) return null;
+  await ensureOwner(c.env.DB);
   return await c.env.DB.prepare('SELECT * FROM merchants WHERE api_key = ?').bind(key).first();
 }
 
@@ -536,15 +559,16 @@ app.post('/api/tickets', async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const subject = String(b.subject || '').trim().slice(0, 120);
   const msg = String(b.message || '').trim().slice(0, 2000);
-  if (!subject || !msg) return json(c, { error: 'subject & pesan wajib diisi' }, 400);
+  const image = cleanImage(b.image);
+  if (!subject || (!msg && !image)) return json(c, { error: 'subject & pesan/gambar wajib diisi' }, 400);
   const id = rid('tkt');
   const t = now();
   await c.env.DB.prepare(
-    "INSERT INTO tickets (id, merchant_id, subject, status, created_at, updated_at) VALUES (?, ?, ?, 'active', ?, ?)",
+    "INSERT INTO tickets (id, merchant_id, subject, status, user_unread, created_at, updated_at) VALUES (?, ?, ?, 'active', 0, ?, ?)",
   ).bind(id, m.id, subject, t, t).run();
   await c.env.DB.prepare(
-    "INSERT INTO ticket_messages (id, ticket_id, sender, body, created_at) VALUES (?, ?, 'user', ?, ?)",
-  ).bind(rid('msg'), id, msg, t).run();
+    "INSERT INTO ticket_messages (id, ticket_id, sender, sender_role, sender_name, body, image, created_at) VALUES (?, ?, 'user', ?, ?, ?, ?, ?)",
+  ).bind(rid('msg'), id, roleOf(m), m.username || '', msg, image, t).run();
   return json(c, { ok: true, id });
 });
 
@@ -557,6 +581,11 @@ app.get('/api/tickets/:id', async (c) => {
   const tk = await c.env.DB.prepare('SELECT * FROM tickets WHERE id = ?').bind(id).first();
   if (!tk) return json(c, { error: 'tiket tidak ditemukan' }, 404);
   if (tk.merchant_id !== m.id && !m.is_admin) return json(c, { error: 'forbidden' }, 403);
+  // owner buka → tandai udah dibaca (hilangin dot)
+  if (tk.merchant_id === m.id && !m.is_admin && tk.user_unread) {
+    await c.env.DB.prepare('UPDATE tickets SET user_unread = 0 WHERE id = ?').bind(id).run();
+    tk.user_unread = 0;
+  }
   const msgs = await c.env.DB.prepare(
     'SELECT * FROM ticket_messages WHERE ticket_id = ? ORDER BY created_at ASC',
   ).bind(id).all();
@@ -571,20 +600,23 @@ app.post('/api/tickets/:id/reply', async (c) => {
   const id = c.req.param('id');
   const tk = await c.env.DB.prepare('SELECT * FROM tickets WHERE id = ?').bind(id).first();
   if (!tk) return json(c, { error: 'tiket tidak ditemukan' }, 404);
-  const isAdmin = !!m.is_admin;
+  const isAdmin = !!(m.is_admin || m.is_owner);
   if (tk.merchant_id !== m.id && !isAdmin) return json(c, { error: 'forbidden' }, 403);
   const b = await c.req.json().catch(() => ({}));
   const body = String(b.body || '').trim().slice(0, 2000);
-  if (!body) return json(c, { error: 'pesan kosong' }, 400);
+  const image = cleanImage(b.image);
+  if (!body && !image) return json(c, { error: 'pesan/gambar kosong' }, 400);
   const t = now();
   await c.env.DB.prepare(
-    'INSERT INTO ticket_messages (id, ticket_id, sender, body, created_at) VALUES (?, ?, ?, ?, ?)',
-  ).bind(rid('msg'), id, isAdmin ? 'admin' : 'user', body, t).run();
-  // admin balas → jadi 'proses'; user balas tiket close → buka lagi jadi 'active'
+    'INSERT INTO ticket_messages (id, ticket_id, sender, sender_role, sender_name, body, image, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+  ).bind(rid('msg'), id, isAdmin ? 'admin' : 'user', roleOf(m), m.username || '', body, image, t).run();
+  // admin balas → jadi 'proses' + tandai unread buat user; user balas tiket close → buka lagi
   let newStatus = tk.status;
   if (isAdmin && tk.status === 'active') newStatus = 'proses';
   if (!isAdmin && tk.status === 'close') newStatus = 'active';
-  await c.env.DB.prepare('UPDATE tickets SET updated_at = ?, status = ? WHERE id = ?').bind(t, newStatus, id).run();
+  const unread = isAdmin ? 1 : tk.user_unread;
+  await c.env.DB.prepare('UPDATE tickets SET updated_at = ?, status = ?, user_unread = ? WHERE id = ?')
+    .bind(t, newStatus, unread, id).run();
   return json(c, { ok: true, status: newStatus });
 });
 
@@ -854,12 +886,22 @@ app.get('/dashboard/data', async (c) => {
      FROM orders WHERE merchant_id = ? AND created_at >= ?
      GROUP BY day ORDER BY day`,
   ).bind(merchant.id, now() - 14 * 86400).all();
+  // jumlah tiket yang ada balasan admin belum dibaca
+  let ticketsUnread = 0;
+  try {
+    await ensureTickets(c.env.DB);
+    const tu = await c.env.DB.prepare(
+      'SELECT COUNT(*) as n FROM tickets WHERE merchant_id = ? AND user_unread = 1',
+    ).bind(merchant.id).first();
+    ticketsUnread = (tu && tu.n) || 0;
+  } catch {}
   return json(c, {
     merchant_name: merchant.qris_merchant_name || merchant.name,
     orders: orders.results || [],
     events: events.results || [],
     stats,
     series: series.results || [],
+    tickets_unread: ticketsUnread,
   });
 });
 
@@ -868,7 +910,11 @@ app.get('/dashboard/data', async (c) => {
 // ─────────────────────────────────────────────────────────
 async function requireAdmin(c) {
   const m = await requireMerchant(c);
-  return m && m.is_admin ? m : null;
+  return m && (m.is_admin || m.is_owner) ? m : null;
+}
+async function requireOwner(c) {
+  const m = await requireMerchant(c);
+  return m && m.is_owner ? m : null;
 }
 
 // List merchant + statistik ringkas per merchant
@@ -876,14 +922,29 @@ app.get('/api/admin/merchants', async (c) => {
   if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
   const r = await c.env.DB.prepare(
     `SELECT m.id, m.name, m.username, m.api_key, m.device_id, m.fee_percent, m.unique_digits,
-            m.active, m.is_admin, m.last_seen, m.created_at,
+            m.active, m.is_admin, m.is_owner, m.last_seen, m.created_at,
             (m.qris_static IS NOT NULL) as has_qris,
             (SELECT COUNT(*) FROM orders o WHERE o.merchant_id = m.id) as total_orders,
             (SELECT COUNT(*) FROM orders o WHERE o.merchant_id = m.id AND o.status='paid') as paid_orders,
             (SELECT COALESCE(SUM(base_amount),0) FROM orders o WHERE o.merchant_id = m.id AND o.status='paid') as revenue
      FROM merchants m ORDER BY m.created_at DESC`,
   ).all();
-  return json(c, { merchants: r.results || [] });
+  const me = await requireMerchant(c);
+  return json(c, { merchants: r.results || [], me_is_owner: !!(me && me.is_owner) });
+});
+
+// Owner: jadikan / cabut admin (owner only)
+app.post('/api/admin/merchants/:id/set-admin', async (c) => {
+  const owner = await requireOwner(c);
+  if (!owner) return json(c, { error: 'hanya owner yang bisa atur admin' }, 403);
+  const id = c.req.param('id');
+  const body = await c.req.json().catch(() => ({}));
+  const target = await c.env.DB.prepare('SELECT id, is_owner FROM merchants WHERE id = ?').bind(id).first();
+  if (!target) return json(c, { error: 'merchant tidak ditemukan' }, 404);
+  if (target.is_owner) return json(c, { error: 'tidak bisa ubah role owner' }, 400);
+  const makeAdmin = body.admin ? 1 : 0;
+  await c.env.DB.prepare('UPDATE merchants SET is_admin = ? WHERE id = ?').bind(makeAdmin, id).run();
+  return json(c, { ok: true, is_admin: makeAdmin });
 });
 
 // Suspend / aktifkan

@@ -140,7 +140,8 @@ export function renderAdmin() {
       <h2 id="atk-dtitle">THREAD</h2>
       <div id="atk-thread" style="max-height:360px;overflow-y:auto;margin-bottom:12px"></div>
       <textarea id="atk-reply" placeholder="balasan admin..." style="width:100%;min-height:60px;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);padding:9px;font-family:inherit;font-size:14px"></textarea>
-      <button onclick="replyAdminTicket()" style="width:auto;margin-top:8px">Kirim Balasan</button>
+      <input type="file" id="atk-rfile" accept="image/*" onchange="pickAImg(this)" style="margin-top:6px">
+      <button onclick="replyAdminTicket()" style="width:auto;margin-top:8px;display:block">Kirim Balasan</button>
     </div>
   </div>
 
@@ -215,6 +216,7 @@ export function renderAdmin() {
   const bdg=s=>{const[bg,fg]=bmap[s]||['#6b7280','#0b0d11'];return '<span class="bd" style="background:'+bg+';color:'+fg+'">'+escj(s)+'</span>';};
   function msg(id,cls,t){ var e=$(id); e.className='msg '+cls; e.textContent=t; }
 
+  let meIsOwner=false;
   function sess(){ try{ return JSON.parse(localStorage.getItem('gp_admin')||'null'); }catch(e){ return null; } }
   function key(){ var s=sess(); return s?s.api_key:''; }
   function hdr(){ return {'x-api-key':key(),'content-type':'application/json'}; }
@@ -258,22 +260,32 @@ export function renderAdmin() {
     }catch(e){}
   }
   async function changeTicketStatus(id,st){ await fetch('/api/admin/tickets/'+id+'/status',{method:'POST',headers:hdr(),body:JSON.stringify({status:st})}); loadAdminTickets(); if(curTk===id) openAdminTicket(id); }
+  var atkImg=null;
+  function pickAImg(input){
+    var f=input.files[0]; if(!f){atkImg=null;return;}
+    if(f.size>1572864){ alert('Gambar maksimal 1.5MB'); input.value=''; atkImg=null; return; }
+    var im=new Image(); im.onload=function(){ var mx=1280,sc=Math.min(1,mx/Math.max(im.width,im.height)); var w=Math.round(im.width*sc),h=Math.round(im.height*sc); var cv=document.createElement('canvas'); cv.width=w;cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); atkImg=cv.toDataURL('image/jpeg',0.82); };
+    im.onerror=function(){ alert('File bukan gambar'); input.value=''; atkImg=null; }; im.src=URL.createObjectURL(f);
+  }
   async function openAdminTicket(id){
     curTk=id;
     try{ var j=await (await fetch('/api/tickets/'+id,{headers:hdr()})).json(); if(!j.ticket) return;
       $('atk-detail').style.display='block';
       $('atk-dtitle').innerHTML=escj(j.ticket.subject)+' &nbsp;'+tkbadge(j.ticket.status);
-      $('atk-thread').innerHTML=(j.messages||[]).map(mm=>{ var adm=mm.sender==='admin';
-        return '<div style="margin-bottom:8px;text-align:'+(adm?'right':'left')+'"><div style="display:inline-block;max-width:82%;padding:8px 10px;border:2px solid var(--edge);background:'+(adm?'#dbe7fb':'#fff6d9')+';text-align:left"><div class=dim style="font-size:10px;margin-bottom:2px">'+(adm?'👑 Admin':'User')+' · '+agoj(mm.created_at)+' lalu</div>'+escj(mm.body)+'</div></div>';
+      $('atk-thread').innerHTML=(j.messages||[]).map(mm=>{
+        var role=mm.sender_role||(mm.sender==='admin'?'admin':'user'); var staff=role!=='user'; var name=mm.sender_name||'';
+        var lbl=role==='user'?('User'+(name?' ('+name+')':'')):(role.charAt(0).toUpperCase()+role.slice(1)+(name?' ('+name+')':''));
+        var img=mm.image?'<img src="'+mm.image+'" style="max-width:200px;display:block;margin-top:6px;border:2px solid var(--edge);cursor:pointer" onclick="window.open(this.src)">':'';
+        return '<div style="margin-bottom:8px;text-align:'+(staff?'right':'left')+'"><div style="display:inline-block;max-width:82%;padding:8px 10px;border:2px solid var(--edge);background:'+(staff?'#dbe7fb':'#fff6d9')+';text-align:left"><div class=dim style="font-size:10px;margin-bottom:2px">'+escj(lbl)+' · '+agoj(mm.created_at)+' lalu</div>'+escj(mm.body)+img+'</div></div>';
       }).join('')||'<div class=dim>kosong</div>';
       $('atk-thread').scrollTop=$('atk-thread').scrollHeight;
       $('atk-detail').scrollIntoView({behavior:'smooth',block:'nearest'});
     }catch(e){}
   }
   async function replyAdminTicket(){
-    if(!curTk) return; var b=$('atk-reply').value.trim(); if(!b) return;
-    var r=await fetch('/api/tickets/'+curTk+'/reply',{method:'POST',headers:hdr(),body:JSON.stringify({body:b})});
-    if(r.ok){ $('atk-reply').value=''; openAdminTicket(curTk); loadAdminTickets(); }
+    if(!curTk) return; var b=$('atk-reply').value.trim(); if(!b&&!atkImg) return;
+    var r=await fetch('/api/tickets/'+curTk+'/reply',{method:'POST',headers:hdr(),body:JSON.stringify({body:b,image:atkImg||undefined})});
+    if(r.ok){ $('atk-reply').value=''; if($('atk-rfile'))$('atk-rfile').value=''; atkImg=null; openAdminTicket(curTk); loadAdminTickets(); }
   }
 
   const SET_KEYS=['site_name','description','theme_color','favicon','pwa_name','pwa_short_name','wa_number','wa_text','tg_username'];
@@ -310,12 +322,14 @@ export function renderAdmin() {
       $('s-rev').textContent=idr(st.orders?.revenue);
       if(tab==='merch'){
         var d=await (await fetch('/api/admin/merchants',{headers:hdr()})).json();
+        meIsOwner=!!d.me_is_owner;
         $('mtbody').innerHTML=(d.merchants||[]).map(m=>{
           var on = m.last_seen && (Math.floor(Date.now()/1000)-m.last_seen < 300);
           var dev = m.device_id ? '<span class="'+(on?'online':'offline')+'"><span class="dot '+(on?'on':'off')+'"></span>'+(on?'online':(m.last_seen?agoj(m.last_seen)+' lalu':'belum pernah'))+'</span>' : '<span class=dim>-</span>';
           var st = m.active?'<span class="bd" style="background:#0e7c66;color:#fff">aktif</span>':'<span class="bd" style="background:#b0362a;color:#fff">suspend</span>';
-          var adm = m.is_admin?' 👑':'';
-          return '<tr><td><b>@'+escj(m.username||'-')+'</b>'+adm+'<br><span class=dim>'+escj((m.name||'').slice(0,18))+'</span></td>'+
+          var role = m.is_owner?' <span class="bd" style="background:#c26107;color:#fff">👑 OWNER</span>':(m.is_admin?' <span class="bd" style="background:#26379d;color:#fff">🛡 ADMIN</span>':'');
+          var roleBtn = (meIsOwner && !m.is_owner) ? (m.is_admin?'<button class="amber" onclick="setAdmin(\\''+m.id+'\\',0)">Cabut Admin</button>':'<button onclick="setAdmin(\\''+m.id+'\\',1)">Jadikan Admin</button>') : '';
+          return '<tr><td><b>@'+escj(m.username||'-')+'</b>'+role+'<br><span class=dim>'+escj((m.name||'').slice(0,18))+'</span></td>'+
             '<td class=dim>'+dev+'</td>'+
             '<td>'+(m.has_qris?'✓':'<span class=dim>-</span>')+'</td>'+
             '<td class=dim>'+(m.fee_percent||0)+'%</td>'+
@@ -326,7 +340,8 @@ export function renderAdmin() {
               (m.active?'<button class="amber" onclick="setActive(\\''+m.id+'\\',0)">Suspend</button>':'<button onclick="setActive(\\''+m.id+'\\',1)">Aktifkan</button>')+
               '<button onclick="resetPw(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">Reset PW</button>'+
               '<button onclick="regenKey(\\''+m.id+'\\')">New Key</button>'+
-              (m.is_admin?'':'<button class="red" onclick="delMerch(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">Hapus</button>')+
+              roleBtn+
+              (m.is_owner?'':'<button class="red" onclick="delMerch(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">Hapus</button>')+
             '</td></tr>';
         }).join('')||'<tr><td colspan=8 class=dim style="text-align:center;padding:20px">Belum ada merchant</td></tr>';
       } else {
@@ -343,6 +358,7 @@ export function renderAdmin() {
   function copyResult(){ var v=$('mval').value; if(navigator.clipboard){ navigator.clipboard.writeText(v).then(function(){ $('mcopy').textContent='✓ Tersalin'; }); } $('mval').select(); }
   document.addEventListener('keydown',function(e){ if(e.key==='Escape')closeModal(); });
 
+  async function setAdmin(id,v){ if(!confirm(v?'Jadikan user ini admin?':'Cabut akses admin user ini?'))return; var r=await fetch('/api/admin/merchants/'+id+'/set-admin',{method:'POST',headers:hdr(),body:JSON.stringify({admin:v})}); var j=await r.json(); if(!r.ok)alert(j.error||'gagal'); load(); }
   async function setActive(id,a){ await fetch('/api/admin/merchants/'+id+'/active',{method:'POST',headers:hdr(),body:JSON.stringify({active:a})}); load(); }
   async function delMerch(id,u){ if(!confirm('Hapus merchant @'+u+'? Semua ordernya ikut hilang.'))return; await fetch('/api/admin/merchants/'+id+'/delete',{method:'POST',headers:hdr()}); load(); }
   async function resetPw(id,u){ var r=await (await fetch('/api/admin/merchants/'+id+'/reset-password',{method:'POST',headers:hdr()})).json(); if(r.new_password) showResult('PASSWORD_BARU.KEY','Password baru untuk @'+u+':',r.new_password); }
