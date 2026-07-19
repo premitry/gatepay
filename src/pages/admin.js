@@ -64,6 +64,13 @@ export function renderAdmin() {
   .sub-tabs{display:flex;gap:0;margin-bottom:16px}
   .sub-tabs div{padding:9px 16px;font-size:12px;cursor:pointer;color:var(--text);background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
   .sub-tabs div.active{background:linear-gradient(180deg,#d97a2a,#c26107);color:#fff;font-weight:700;border-color:#7a3d04 #e8a869 #e8a869 #7a3d04}
+  .modal{display:none;position:fixed;inset:0;background:rgba(20,31,92,.5);z-index:100;align-items:center;justify-content:center;padding:16px}
+  .modal.on{display:flex}
+  .modal .box{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:3px 3px 0 var(--edge);width:100%;max-width:440px}
+  .modal .tt{background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;font-family:'Michroma';font-size:11px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
+  .modal .tt .x{cursor:pointer;font-family:Verdana,sans-serif}
+  .modal .bd2{padding:18px}
+  .modal .val{width:100%;background:var(--term-bg);color:var(--term-ok);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);padding:12px;font-family:'Share Tech Mono',monospace;font-size:15px;word-break:break-all}
   @media(max-width:820px){.stats{grid-template-columns:repeat(2,1fr)}table{font-size:12px}}
 </style></head><body>
 
@@ -152,6 +159,18 @@ export function renderAdmin() {
     </div>
   </div>
 </div>
+</div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="box">
+    <div class="tt"><span id="mtt">RESULT</span><span class="x" onclick="closeModal()">✕</span></div>
+    <div class="bd2">
+      <div class="dim" id="msub" style="margin-bottom:8px"></div>
+      <input class="val" id="mval" readonly onclick="this.select()">
+      <button onclick="copyResult()" id="mcopy">📋 Copy</button>
+      <div class="dim" style="font-size:11px;margin-top:8px">Klik field buat select semua, atau tekan Copy. Simpan sebelum tutup — nggak ditampilkan lagi.</div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -251,10 +270,16 @@ export function renderAdmin() {
     }catch(e){}
   }
 
+  // ── modal hasil (bisa di-copy) ──
+  function showResult(title,sub,val){ $('mtt').textContent=title; $('msub').textContent=sub; $('mval').value=val; $('mcopy').textContent='📋 Copy'; $('modal').classList.add('on'); setTimeout(function(){ $('mval').focus(); $('mval').select(); },50); }
+  function closeModal(){ $('modal').classList.remove('on'); }
+  function copyResult(){ var v=$('mval').value; if(navigator.clipboard){ navigator.clipboard.writeText(v).then(function(){ $('mcopy').textContent='✓ Tersalin'; }); } $('mval').select(); }
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape')closeModal(); });
+
   async function setActive(id,a){ await fetch('/api/admin/merchants/'+id+'/active',{method:'POST',headers:hdr(),body:JSON.stringify({active:a})}); load(); }
   async function delMerch(id,u){ if(!confirm('Hapus merchant @'+u+'? Semua ordernya ikut hilang.'))return; await fetch('/api/admin/merchants/'+id+'/delete',{method:'POST',headers:hdr()}); load(); }
-  async function resetPw(id,u){ var r=await (await fetch('/api/admin/merchants/'+id+'/reset-password',{method:'POST',headers:hdr()})).json(); if(r.new_password) alert('Password baru @'+u+':\\n'+r.new_password); }
-  async function regenKey(id){ var r=await (await fetch('/api/admin/merchants/'+id+'/regenerate-key',{method:'POST',headers:hdr()})).json(); if(r.api_key) alert('API Key baru:\\n'+r.api_key); }
+  async function resetPw(id,u){ var r=await (await fetch('/api/admin/merchants/'+id+'/reset-password',{method:'POST',headers:hdr()})).json(); if(r.new_password) showResult('PASSWORD_BARU.KEY','Password baru untuk @'+u+':',r.new_password); }
+  async function regenKey(id){ var r=await (await fetch('/api/admin/merchants/'+id+'/regenerate-key',{method:'POST',headers:hdr()})).json(); if(r.api_key) showResult('API_KEY_BARU.KEY','API Key baru (sk_live):',r.api_key); }
 
   if(sess()) showApp();
 </script>
