@@ -124,7 +124,7 @@ export function renderDashboard() {
 
   table{width:100%;border-collapse:collapse;font-size:12px}
   th{text-align:left;color:#fff;font-weight:700;padding:7px 8px;font-size:10px;text-transform:uppercase;background:linear-gradient(180deg,#3f7fc4,#26379d)}
-  td{padding:7px 8px;border-bottom:1px solid var(--edge);vertical-align:top}
+  td{padding:7px 8px;border-bottom:1px solid var(--edge);vertical-align:middle}
   tr:nth-child(even) td{background:rgba(255,255,255,.4)}
   tr:hover td{background:#fff6d9}
   .bd{padding:2px 8px;font-size:10px;font-weight:700;text-transform:uppercase;border:1px solid rgba(0,0,0,.35)}
@@ -715,7 +715,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   let allOrders=[], allEvents=[], oPage=0, ePage=0, oFilter='all', oSearch='';
   const escj=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const nows=()=>Math.floor(Date.now()/1000);
-  const agoj=ts=>{ if(!ts)return'-'; try{ var p={}; new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jakarta',day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date(ts*1000)).forEach(x=>p[x.type]=x.value); return p.day+'/'+p.month+'/'+p.year+' '+p.hour+':'+p.minute+' WIB'; }catch(e){ return '-'; } };
+  const agoj=ts=>{ if(!ts)return'-'; try{ var p={}; new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jakarta',day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date(ts*1000)).forEach(x=>p[x.type]=x.value); return p.day+'/'+p.month+'/'+p.year+' '+p.hour+':'+p.minute; }catch(e){ return '-'; } };
   const bmap={paid:['#0e7c66','#fff'],pending:['#ffc266','#3a2a00'],expired:['#9aa0a8','#fff'],cancelled:['#b0362a','#fff'],matched:['#0e7c66','#fff'],unmatched:['#9aa0a8','#fff'],duplicate:['#3843b8','#fff']};
   const bdg=s=>{const[bg,fg]=bmap[s]||['#9aa0a8','#fff'];return '<span class="bd" style="background:'+bg+';color:'+fg+'">'+escj(s)+'</span>';};
   const dispStatus=o=>(o.status==='pending'&&o.expires_at&&o.expires_at<=nows())?'expired':o.status;
