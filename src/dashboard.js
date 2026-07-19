@@ -86,10 +86,9 @@ export function renderDashboard() {
   /* collapsed */
   body.col .sidebar{width:60px}
   body.col .logo span:last-child,body.col .snav .grp,body.col .navi .lbl,body.col .side-bot .txt{display:none}
-  body.col .snav{padding:8px 0;scrollbar-width:none;-ms-overflow-style:none}
-  body.col .snav::-webkit-scrollbar{width:0;height:0;display:none}
+  body.col .snav{padding:8px 0}
   body.col .snav .navi{justify-content:center;padding:9px 0;gap:0;margin:0 0 3px;width:100%;text-align:center}
-  body.col .snav .navi .ic{width:auto;min-width:0;margin:0}
+  body.col .snav .navi .ic{width:auto;margin:0}
   body.col .side-top{padding:0 6px;justify-content:center}
   body.col .side-top .logo{display:none}
   body.col .side-bot{justify-content:center;padding:10px 6px}
