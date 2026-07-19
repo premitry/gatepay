@@ -135,6 +135,11 @@ export function renderDashboard() {
   .fchip{width:auto;margin:0;padding:5px 12px;font-size:11px;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));color:var(--text);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
   .fchip.active{background:linear-gradient(180deg,#4a86c8,#26379d);color:#fff;border-color:#141f5c #7fb0e0 #7fb0e0 #141f5c}
   .btncancel{width:auto;margin:0;padding:4px 10px;font-size:10px;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));color:var(--bad,#b0362a);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
+  .expmenu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:2px 2px 0 var(--edge);z-index:30;min-width:160px}
+  .expmenu.on{display:block}
+  .expitem{padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--edge)}
+  .expitem:last-child{border-bottom:0}
+  .expitem:hover{background:#fff6d9}
 
   /* kredensial = terminal navy */
   .cred{background:var(--term-bg);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);padding:9px 10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -231,6 +236,18 @@ export function renderDashboard() {
         </div>
         <div class="panel">
           <h2>DELIVERY_RECORD.LOG</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+            <input id="osearch" type="text" placeholder="🔍 Cari kode / order id / ref / nominal..." style="flex:1;min-width:180px;width:auto" oninput="setSearch(this.value)">
+            <div style="position:relative">
+              <button class="sec" onclick="toggleExport(event)" style="width:auto;margin:0">⬇ Export ▼</button>
+              <div class="expmenu" id="expmenu">
+                <div class="expitem" onclick="exportOrders('csv')">📄 Export CSV</div>
+                <div class="expitem" onclick="exportOrders('json')">🗂 Export JSON</div>
+                <div class="expitem" onclick="exportOrders('html')">🌐 Export HTML</div>
+                <div class="expitem" onclick="exportOrders('pdf')">🖨 Export PDF</div>
+              </div>
+            </div>
+          </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="ofilter">
             <button class="fchip active" data-f="all" onclick="setFilter('all')">Semua</button>
             <button class="fchip" data-f="pending" onclick="setFilter('pending')">Pending</button>
@@ -671,7 +688,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
 
   // ── real-time data + pagination ──
   const PER=10;
-  let allOrders=[], allEvents=[], oPage=0, ePage=0, oFilter='all';
+  let allOrders=[], allEvents=[], oPage=0, ePage=0, oFilter='all', oSearch='';
   const escj=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const nows=()=>Math.floor(Date.now()/1000);
   const agoj=ts=>{ if(!ts)return'-'; let d=Math.max(0,nows()-ts); if(d<60)return d+'s'; if(d<3600)return Math.floor(d/60)+'m'; if(d<86400)return Math.floor(d/3600)+'j'; return Math.floor(d/86400)+'h'; };
@@ -683,12 +700,36 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function pageEvents(d){ var mx=Math.max(0,Math.ceil(allEvents.length/PER)-1); ePage=Math.min(mx,Math.max(0,ePage+d)); renderEvents(); }
 
   function setFilter(f){ oFilter=f; oPage=0; document.querySelectorAll('#ofilter .fchip').forEach(b=>b.classList.toggle('active',b.dataset.f===f)); renderOrders(); }
+  function setSearch(v){ oSearch=String(v||'').trim().toLowerCase(); oPage=0; renderOrders(); }
+  function filteredOrders(){
+    var list=oFilter==='all'?allOrders:allOrders.filter(o=>dispStatus(o)===oFilter);
+    if(oSearch) list=list.filter(o=>((o.id||'')+' '+(o.reference||'')+' '+(o.unique_amount||'')+' '+(o.base_amount||'')).toLowerCase().includes(oSearch));
+    return list;
+  }
+  function toggleExport(e){ if(e)e.stopPropagation(); $('expmenu').classList.toggle('on'); }
+  document.addEventListener('click',function(){ var m=$('expmenu'); if(m)m.classList.remove('on'); });
+  function dl(name,text,mime){ var b=new Blob([text],{type:mime}); var u=URL.createObjectURL(b); var a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},2000); }
+  function ordersRows(){ return filteredOrders().map(o=>({id:o.id,reference:o.reference||'',amount:o.unique_amount,base:o.base_amount,status:dispStatus(o),created_at:new Date((o.created_at||0)*1000).toLocaleString('id-ID')})); }
+  function exportOrders(fmt){
+    $('expmenu').classList.remove('on');
+    var rows=ordersRows(); if(!rows.length){ alert('Nggak ada data buat di-export'); return; }
+    var keys=['id','reference','amount','base','status','created_at'];
+    if(fmt==='json'){ dl('gatepay-orders.json',JSON.stringify(rows,null,2),'application/json'); return; }
+    if(fmt==='csv'){ var ec=v=>'"'+String(v).replace(/"/g,'""')+'"';
+      var csv=[keys.join(',')].concat(rows.map(r=>keys.map(k=>ec(r[k])).join(','))).join('\\n');
+      dl('gatepay-orders.csv',csv,'text/csv'); return; }
+    var th=keys.map(k=>'<th>'+k+'</th>').join('');
+    var tr=rows.map(r=>'<tr>'+keys.map(k=>'<td>'+escj(r[k])+'</td>').join('')+'</tr>').join('');
+    var doc='<!DOCTYPE html><html><head><meta charset=utf-8><title>GatePay Orders</title><style>body{font-family:Verdana,sans-serif;padding:20px;color:#23262e}h2{font-family:sans-serif}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:6px 8px;text-align:left}th{background:#26379d;color:#fff}</style></head><body><h2>GatePay — Orders ('+rows.length+')</h2><table><thead><tr>'+th+'</tr></thead><tbody>'+tr+'</tbody></table></body></html>';
+    if(fmt==='html'){ dl('gatepay-orders.html',doc,'text/html'); return; }
+    if(fmt==='pdf'){ var w=window.open('','_blank'); if(w){ w.document.write(doc); w.document.close(); setTimeout(function(){ w.focus(); w.print(); },350); } else alert('Popup diblokir — izinkan popup buat export PDF'); }
+  }
   async function cancelOrder(id){
     if(!confirm('Batalin order ini? Nominal uniknya jadi bebas dipakai order lain.')) return;
     try{ await fetch('/api/orders/'+id+'/cancel',{method:'POST',headers:{'x-api-key':key()}}); tick(); }catch(e){}
   }
   function renderOrders(){
-    var list=oFilter==='all'?allOrders:allOrders.filter(o=>dispStatus(o)===oFilter);
+    var list=filteredOrders();
     var tot=list.length, mx=Math.max(0,Math.ceil(tot/PER)-1); if(oPage>mx)oPage=mx;
     var slice=list.slice(oPage*PER,oPage*PER+PER);
     $('otbody').innerHTML=slice.map(o=>{var st=dispStatus(o);

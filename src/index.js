@@ -278,9 +278,9 @@ app.post('/api/orders', async (c) => {
   const feeAmount = Math.round((base * feePct) / 100);
   const subtotal = base + feeAmount;
 
-  // Kode unik: panjang digit dari setting merchant (default 2 → kode 1..99)
+  // Kode unik: 1..50 (dibatasi 50), tetap hormati digit setting kalau lebih kecil
   const digits = merchant.unique_digits || 2;
-  const codeMax = Math.pow(10, digits) - 1; // 2 digit → 99
+  const codeMax = Math.min(Math.pow(10, digits) - 1, 50); // maks 50
 
   // unique_amount = subtotal + kode unik (kode ditambah di belakang).
   // Pastikan unique_amount belum dipakai order pending aktif lain (global).
