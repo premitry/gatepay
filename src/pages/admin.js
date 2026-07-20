@@ -288,7 +288,7 @@ export function renderAdmin() {
   const TKB={active:['#ffc266','#3a2a00'],proses:['#3f7fc4','#fff'],close:['#9aa0a8','#fff']};
   function tkbadge(s){var b=TKB[s]||['#9aa0a8','#fff'];return '<span class="bd" style="background:'+b[0]+';color:'+b[1]+'">'+escj(s)+'</span>';}
   async function loadAdminTickets(){
-    try{ var j=await (await fetch('/api/admin/tickets',{headers:hdr()})).json();
+    try{ var j=await (await fetch('/api/admin/tickets',{headers:hdr(),cache:'no-store'})).json();
       var unc=(j.tickets||[]).filter(t=>t.admin_unread).length; if($('tk-tabdot')) $('tk-tabdot').style.display=unc>0?'block':'none';
       $('tktbody').innerHTML=(j.tickets||[]).map(t=>{
         var opts=['active','proses','close'].map(s=>'<option value="'+s+'"'+(t.status===s?' selected':'')+'>'+s+'</option>').join('');
@@ -310,7 +310,7 @@ export function renderAdmin() {
   function closeAdminTicket(){ $('atk-detail').style.display='none'; curTk=null; }
   async function openAdminTicket(id){
     curTk=id;
-    try{ var j=await (await fetch('/api/tickets/'+id,{headers:hdr()})).json(); if(!j.ticket) return;
+    try{ var j=await (await fetch('/api/tickets/'+id,{headers:hdr(),cache:'no-store'})).json(); if(!j.ticket) return;
       $('atk-detail').style.display='block';
       $('atk-dtitle').innerHTML=escj(j.ticket.subject)+' &nbsp;'+tkbadge(j.ticket.status);
       $('atk-thread').innerHTML=(j.messages||[]).map(mm=>{

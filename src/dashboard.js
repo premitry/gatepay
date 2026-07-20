@@ -741,7 +741,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   }
   async function loadTickets(){
     if(!key()) return;
-    try{ var j=await (await fetch('/api/tickets',{headers:{'x-api-key':key()}})).json();
+    try{ var j=await (await fetch('/api/tickets',{headers:{'x-api-key':key()},cache:'no-store'})).json();
       var list=j.tickets||[];
       $('tklist').innerHTML=list.length?list.map(t=>{ var dot=t.user_unread?' <span title="balasan baru" style="display:inline-block;width:9px;height:9px;background:#b0362a;border:1px solid #fff;vertical-align:middle"></span>':'';
         return '<div onclick="openTicket(\\''+t.id+'\\')" style="padding:9px 10px;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:6px;cursor:pointer;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>'+escj(t.subject)+dot+'</b>'+tkbadge(t.status)+'</div><div class=dim style="font-size:11px">update '+agoj(t.updated_at)+' lalu</div></div>';}).join(''):'<div class=dim>Belum ada tiket</div>';
@@ -757,7 +757,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function closeTicket(){ $('tk-detail').style.display='none'; curTicket=null; }
   async function openTicket(id){
     curTicket=id;
-    try{ var j=await (await fetch('/api/tickets/'+id,{headers:{'x-api-key':key()}})).json();
+    try{ var j=await (await fetch('/api/tickets/'+id,{headers:{'x-api-key':key()},cache:'no-store'})).json();
       if(!j.ticket) return;
       $('tk-detail').style.display='block';
       $('tk-dtitle').innerHTML=escj(j.ticket.subject)+' &nbsp;'+tkbadge(j.ticket.status);
