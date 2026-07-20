@@ -136,6 +136,7 @@ async function ensure2fa(DB) {
   if (_2faReady) return;
   try { await DB.prepare('ALTER TABLE merchants ADD COLUMN totp_secret TEXT').run(); } catch {}
   try { await DB.prepare('ALTER TABLE merchants ADD COLUMN totp_enabled INTEGER DEFAULT 0').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN must_change_pw INTEGER DEFAULT 0').run(); } catch {}
   _2faReady = true;
 }
 const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -316,6 +317,7 @@ app.post('/api/login', async (c) => {
     fee_percent: m.fee_percent || 0,
     unique_digits: m.unique_digits || 2,
     is_admin: !!m.is_admin,
+    must_change_pw: !!m.must_change_pw,
   });
 });
 
@@ -577,10 +579,14 @@ app.post('/api/merchant/change-password', async (c) => {
   const newP = String(body.new_password || '');
   if (newP.length < 6) return json(c, { error: 'password baru minimal 6 karakter' }, 400);
   if (!merchant.password_hash) return json(c, { error: 'akun tidak punya password' }, 400);
-  const ok = await verifyPassword(oldP, merchant.password_salt, merchant.password_hash);
-  if (!ok) return json(c, { error: 'password lama salah' }, 401);
+  // Kalau lagi dipaksa ganti PW (habis di-reset admin), user udah login pakai PW temp
+  // & terautentikasi via api_key → boleh set PW baru tanpa verif PW lama.
+  if (!merchant.must_change_pw) {
+    const ok = await verifyPassword(oldP, merchant.password_salt, merchant.password_hash);
+    if (!ok) return json(c, { error: 'password lama salah' }, 401);
+  }
   const { salt, hash } = await hashPassword(newP);
-  await c.env.DB.prepare('UPDATE merchants SET password_hash = ?, password_salt = ? WHERE id = ?')
+  await c.env.DB.prepare('UPDATE merchants SET password_hash = ?, password_salt = ?, must_change_pw = 0 WHERE id = ?')
     .bind(hash, salt, merchant.id).run();
   return json(c, { ok: true });
 });
@@ -1206,9 +1212,11 @@ app.post('/api/admin/merchants/:id/delete', async (c) => {
 // Reset password → password baru random
 app.post('/api/admin/merchants/:id/reset-password', async (c) => {
   if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
+  await ensure2fa(c.env.DB);
   const newPass = hex(6);
   const { salt, hash } = await hashPassword(newPass);
-  await c.env.DB.prepare('UPDATE merchants SET password_hash = ?, password_salt = ? WHERE id = ?')
+  // set flag must_change_pw → user dipaksa ganti PW pas login berikutnya
+  await c.env.DB.prepare('UPDATE merchants SET password_hash = ?, password_salt = ?, must_change_pw = 1 WHERE id = ?')
     .bind(hash, salt, c.req.param('id')).run();
   return json(c, { ok: true, new_password: newPass });
 });

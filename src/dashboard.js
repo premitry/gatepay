@@ -198,6 +198,18 @@ export function renderDashboard() {
 
 <!-- ══ APP ══ -->
 <div id="appview" class="hidden">
+  <div id="fpw-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(20,31,92,.55);align-items:center;justify-content:center;padding:16px">
+    <div class="panel" style="max-width:400px;width:100%;margin:0">
+      <div style="font-family:'Michroma',sans-serif;color:#12235c;font-size:15px;margin-bottom:4px">🔒 GANTI PASSWORD</div>
+      <div class="dim" style="font-size:12px;margin-bottom:14px">Password akunmu baru saja di-reset admin. Demi keamanan, wajib bikin password baru sekarang sebelum lanjut.</div>
+      <label class="dim" style="font-size:11px">Password baru (min. 6)</label>
+      <input id="fpw-new" type="password" placeholder="password baru" style="margin-bottom:8px">
+      <label class="dim" style="font-size:11px">Ulangi password baru</label>
+      <input id="fpw-conf" type="password" placeholder="ulangi password" style="margin-bottom:10px">
+      <div id="fpw-msg" style="font-size:12px;margin-bottom:8px"></div>
+      <button onclick="submitForcedPw()" style="width:100%">Simpan & Lanjut</button>
+    </div>
+  </div>
   <div class="scrim" onclick="toggleMnav(false)"></div>
   <aside class="sidebar">
     <div class="side-top">
@@ -605,6 +617,21 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     loadSettings();
     tick(); setInterval(tick,3000);
     navTo((location.hash||'').replace('#','')||'dash');
+    if(s.must_change_pw) $('fpw-modal').style.display='flex'; // paksa ganti PW habis reset admin
+  }
+  async function submitForcedPw(){
+    var n=$('fpw-new').value, c2=$('fpw-conf').value;
+    if(!n||n.length<6) return msg('fpw-msg','err','Password baru minimal 6 karakter');
+    if(n!==c2) return msg('fpw-msg','err','Password nggak sama');
+    try{
+      var r=await fetch('/api/merchant/change-password',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({new_password:n})});
+      var j=await r.json();
+      if(r.ok){
+        var s=sess()||{}; delete s.must_change_pw; localStorage.setItem('gp_sess',JSON.stringify(s));
+        $('fpw-modal').style.display='none'; $('fpw-new').value=''; $('fpw-conf').value='';
+        alert('Password berhasil diganti ✓');
+      } else msg('fpw-msg','err',j.error||'gagal');
+    }catch(e){ msg('fpw-msg','err',String(e)); }
   }
 
   async function regenApiKey(){
