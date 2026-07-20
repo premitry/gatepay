@@ -3,6 +3,7 @@ import { renderDashboard } from './dashboard.js';
 import { makeDynamic, isValidQris, qrisInfo } from './qris.js';
 import { renderLanding } from './pages/landing.js';
 import { renderDocs } from './pages/docs.js';
+import { renderPrivacy } from './pages/privacy.js';
 import { renderCheckout } from './pages/checkout.js';
 import { renderAdmin } from './pages/admin.js';
 
@@ -783,6 +784,8 @@ app.get('/pay/:id/status', async (c) => {
 // ─────────────────────────────────────────────────────────
 app.get('/', (c) => page(c, renderLanding()));
 app.get('/docs', (c) => page(c, renderDocs()));
+app.get('/privasi', (c) => page(c, renderPrivacy()));
+app.get('/privacy', (c) => c.redirect('/privasi', 302));
 
 // Favicon (emoji → SVG, atau redirect kalau favicon berupa URL gambar)
 app.get('/favicon.svg', async (c) => {
