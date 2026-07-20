@@ -46,6 +46,10 @@ export function renderDocs() {
   th,td{text-align:left;padding:8px 10px;border:1px solid var(--edge)}
   th{background:linear-gradient(180deg,#3f7fc4,#26379d);color:#fff;font-size:11px;text-transform:uppercase}
   .tip{background:#fff6d9;border:2px solid var(--accent);padding:12px 14px;margin:14px 0;font-size:13px}
+  .demobox{background:var(--term-bg);color:var(--term-text);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);padding:16px 18px;margin:16px 0;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .demobox .t{font-size:13px}.demobox .t b{color:#8fe3f7}
+  .demobox a.dbtn{padding:10px 18px;font-weight:700;font-size:13px;background:linear-gradient(180deg,#4a86c8,#26379d);color:#fff;border:2px solid;border-color:#7fb0e0 #141f5c #141f5c #7fb0e0;white-space:nowrap}
+  .demobox a.dbtn:hover{text-decoration:none;filter:brightness(1.08)}
   @media(max-width:760px){.layout{grid-template-columns:1fr}.side{position:static}}
 </style></head><body>
 <nav><div class="in">
@@ -167,6 +171,11 @@ app.post('/webhook/gatepay', (req, res) =&gt; {
 
     <h2 id="popup">Popup Pembayaran (Snap)</h2>
     <p>Kalau nggak mau redirect customer keluar dari web kamu, pakai <b>popup pembayaran</b> — mirip Snap-nya Midtrans. QRIS muncul sebagai modal melayang di atas halaman kamu, dan kamu dapat notifikasi lewat callback tanpa pindah halaman.</p>
+
+    <div class="demobox">
+      <div class="t">Mau lihat langsung bentuknya? <b>Coba demo live</b> — isi API key &amp; nominal, popup-nya muncul persis kayak di produksi.</div>
+      <a class="dbtn" href="/snap-demo" target="_blank">🪟 Buka Demo</a>
+    </div>
 
     <h3>1. Pasang loader</h3>
     <p>Taruh sekali di halaman kamu (biasanya sebelum <code>&lt;/body&gt;</code>):</p>

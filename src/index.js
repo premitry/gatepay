@@ -834,6 +834,83 @@ app.get('/snap.js', (c) => {
   return c.body(js, 200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'public, max-age=300' });
 });
 
+// Halaman demo popup Snap — buat nyoba live tanpa nulis kode
+app.get('/snap-demo', (c) => {
+  const html = `<!DOCTYPE html><html lang="id"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo Popup · GatePay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{--desk-a:#7fc6c9;--desk-b:#8ea8dc;--desk-c:#6f87c8;--grid:rgba(255,255,255,.34);
+    --chrome:#eceade;--chrome-2:#e0ded1;--hi:#fff;--edge:#8f8b7e;--edge-dark:#54514a;
+    --title-a:#26379d;--title-b:#3f7fc4;--text:#23262e;--dim:#5b5f66;--accent:#c26107;
+    --term-bg:#141f5c;--term-text:#dfe6ff;--ok:#0e7c66;--red:#b0362a;}
+  *{box-sizing:border-box;border-radius:0!important}
+  body{margin:0;font-family:Verdana,Tahoma,sans-serif;color:var(--text);font-size:14px;
+    background:repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 44px),repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 44px),linear-gradient(135deg,var(--desk-a),var(--desk-b) 52%,var(--desk-c));background-attachment:fixed;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+  .card{width:100%;max-width:460px;background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:3px 3px 0 var(--edge)}
+  .top{background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;font-weight:700;border-bottom:2px solid var(--edge-dark)}
+  .top .logo{font-family:'Michroma',sans-serif;font-size:14px}
+  .top .amt{font-family:'Share Tech Mono',monospace;font-size:11px}
+  .body{padding:22px 20px}
+  h1{font-size:18px;margin:0 0 4px}
+  .lead{color:var(--dim);font-size:13px;margin-bottom:18px}
+  label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin:14px 0 4px;font-weight:700}
+  input{width:100%;padding:10px;font-size:14px;font-family:'Share Tech Mono',monospace;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);color:var(--text)}
+  .btn{width:100%;margin-top:20px;padding:13px;font-weight:700;font-size:15px;background:linear-gradient(180deg,#4a86c8,#26379d);color:#fff;border:2px solid;border-color:#7fb0e0 #141f5c #141f5c #7fb0e0;cursor:pointer;font-family:'Michroma',sans-serif}
+  .btn:active{border-color:#141f5c #7fb0e0 #7fb0e0 #141f5c}
+  .btn:disabled{opacity:.6;cursor:wait}
+  .log{margin-top:18px;background:var(--term-bg);color:var(--term-text);padding:12px;font-family:'Share Tech Mono',monospace;font-size:12px;min-height:70px;line-height:1.7;border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);white-space:pre-wrap;word-break:break-word}
+  .log .ok{color:#8fe3f7}.log .bad{color:#ff9b8f}.log .win{color:#7dffb0;font-weight:700}
+  .tip{background:#fff6d9;border:2px solid var(--accent);padding:10px 12px;margin-top:14px;font-size:12px;color:#3a2a00}
+  a{color:#3843b8}
+</style></head><body>
+<div class="card">
+  <div class="top"><span class="logo">GatePay</span><span class="amt">SNAP_DEMO</span></div>
+  <div class="body">
+    <h1>Demo Popup Pembayaran</h1>
+    <p class="lead">Isi API key & nominal, klik tombol — order dibuat lalu popup QRIS langsung muncul. Ini simulasi persis <code>GatePay.pay()</code>.</p>
+    <label>API Key (sk_live_…)</label>
+    <input id="key" placeholder="sk_live_xxxxxxxx" autocomplete="off">
+    <label>Nominal (Rp)</label>
+    <input id="amt" type="number" value="10000" min="1">
+    <button class="btn" id="go" onclick="mulai()">🪟 Buka Popup Bayar</button>
+    <div class="log" id="log">Siap. Masukin API key kamu dulu…</div>
+    <div class="tip">💡 API key cuma dipakai di browser kamu buat demo ini. Di produksi, <b>bikin order dari server</b> — jangan pernah taruh API key di frontend.</div>
+  </div>
+</div>
+<script src="/snap.js"></script>
+<script>
+  var L=document.getElementById('log');
+  function log(m,cls){ L.innerHTML += '\\n'+(cls?'<span class="'+cls+'">'+m+'</span>':m); L.scrollTop=L.scrollHeight; }
+  async function mulai(){
+    var key=document.getElementById('key').value.trim();
+    var amt=parseInt(document.getElementById('amt').value,10);
+    if(!key){ log('✗ API key kosong','bad'); return; }
+    if(!(amt>0)){ log('✗ Nominal harus > 0','bad'); return; }
+    var b=document.getElementById('go'); b.disabled=true;
+    L.textContent='> POST /api/orders …';
+    try{
+      var r=await fetch('/api/orders',{method:'POST',headers:{'x-api-key':key,'content-type':'application/json'},body:JSON.stringify({base_amount:amt,reference:'SNAP-DEMO'})});
+      var j=await r.json();
+      if(!r.ok){ log('✗ '+(j.error||r.status),'bad'); b.disabled=false; return; }
+      log('✓ order '+j.id,'ok');
+      log('  nominal unik: Rp '+Number(j.unique_amount).toLocaleString('id-ID'),'ok');
+      log('> GatePay.pay() → buka popup…');
+      GatePay.pay(j.id,{
+        onSuccess:function(o){ log('✔ PAID! Rp '+Number(o.unique_amount).toLocaleString('id-ID'),'win'); b.disabled=false; },
+        onPending:function(o){ log('  popup kebuka, nunggu bayar…'); },
+        onError:function(o){ log('✗ order '+(o.status||'gagal'),'bad'); b.disabled=false; },
+        onClose:function(){ log('  popup ditutup.'); b.disabled=false; }
+      });
+    }catch(e){ log('✗ '+e.message,'bad'); b.disabled=false; }
+  }
+</script>
+</body></html>`;
+  return c.html(html);
+});
+
 // PWA manifest
 app.get('/manifest.webmanifest', async (c) => {
   const s = await getSettings(c.env.DB);
