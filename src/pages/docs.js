@@ -65,6 +65,7 @@ export function renderDocs() {
     <a href="#callback">Webhook</a>
     <div class="h">Lain</div>
     <a href="#checkout">Halaman Checkout</a>
+    <a href="#popup">Popup Pembayaran</a>
     <a href="#flow">Alur Lengkap</a>
   </aside>
   <main>
@@ -163,6 +164,51 @@ app.post('/webhook/gatepay', (req, res) =&gt; {
 
     <h2 id="checkout">Halaman Checkout</h2>
     <p>Tiap order otomatis punya halaman bayar di <code>/pay/:id</code> — nampilin QR, nominal, countdown, dan auto-update jadi "Berhasil" pas dibayar. Tinggal redirect customer ke situ.</p>
+
+    <h2 id="popup">Popup Pembayaran (Snap)</h2>
+    <p>Kalau nggak mau redirect customer keluar dari web kamu, pakai <b>popup pembayaran</b> — mirip Snap-nya Midtrans. QRIS muncul sebagai modal melayang di atas halaman kamu, dan kamu dapat notifikasi lewat callback tanpa pindah halaman.</p>
+
+    <h3>1. Pasang loader</h3>
+    <p>Taruh sekali di halaman kamu (biasanya sebelum <code>&lt;/body&gt;</code>):</p>
+    <pre><code>&lt;script src="https://gatepay.biz.id/snap.js"&gt;&lt;/script&gt;</code></pre>
+    <p>Ini bikin object global <code>GatePay</code> di browser.</p>
+
+    <h3>2. Bikin order di backend</h3>
+    <p>Sama kayak biasa — <code>POST /api/orders</code> dari server kamu (jangan taruh <code>x-api-key</code> di frontend!). Ambil <code>id</code> order-nya, kirim ke halaman.</p>
+
+    <h3>3. Buka popup di frontend</h3>
+    <p>Panggil <code>GatePay.pay(orderId, callbacks)</code> — misalnya pas tombol "Bayar" diklik:</p>
+    <pre><code>&lt;button onclick="bayar()"&gt;Bayar Sekarang&lt;/button&gt;
+&lt;script&gt;
+async function bayar(){
+  // ambil order id dari backend kamu (yang manggil POST /api/orders)
+  const r = await fetch('/checkout/mulai', { method:'POST' });
+  const { order_id } = await r.json();
+
+  GatePay.pay(order_id, {
+    onSuccess: (o) =&gt; {
+      // ✓ QRIS kebayar — nominal terkunci di o.unique_amount
+      window.location = '/terima-kasih';
+    },
+    onPending: (o) =&gt; { console.log('nunggu bayar', o.id); },
+    onError:   (o) =&gt; { alert('Order kadaluarsa / batal'); },
+    onClose:   ()  =&gt; { console.log('popup ditutup user'); }
+  });
+}
+&lt;/script&gt;</code></pre>
+
+    <h3>Callback</h3>
+    <table>
+      <tr><th>Callback</th><th>Kapan dipanggil</th></tr>
+      <tr><td><code>onSuccess(order)</code></td><td>Order jadi <code>paid</code>. Popup nutup sendiri ~1.5 dtk kemudian.</td></tr>
+      <tr><td><code>onPending(order)</code></td><td>Popup kebuka, order masih <code>pending</code>.</td></tr>
+      <tr><td><code>onError(order)</code></td><td>Order <code>expired</code> / <code>cancelled</code>.</td></tr>
+      <tr><td><code>onClose()</code></td><td>User nutup popup (tombol ✕, klik luar, atau Esc) sebelum bayar.</td></tr>
+    </table>
+    <p><code>order</code> yang dikirim ke callback isinya <code>{ id, unique_amount, status }</code>. <code>GatePay.pay()</code> balikin <code>{ close() }</code> kalau mau nutup popup secara manual dari kode kamu.</p>
+
+    <div class="tip">💡 Popup cuma soal tampilan. <b>Sumber kebenaran</b> pembayaran tetap status order di server + <a href="#callback">webhook</a>. Jangan kasih barang/akses cuma karena <code>onSuccess</code> jalan di browser — verifikasi ulang via webhook atau <code>GET /api/orders/:id</code> di backend.</div>
+    <div class="tip">⚠️ Syarat: QRIS statis kamu <b>wajib udah ke-setup</b> (lihat <a href="#qris">Setup QRIS</a>), karena popup nge-load QRIS dinamis dari situ.</div>
 
     <h2 id="flow">Alur Lengkap</h2>
     <pre><code>1. (sekali) Upload QRIS statis  → POST /api/merchant/qris

@@ -755,7 +755,8 @@ app.get('/pay/:id', async (c) => {
       qris = makeDynamic(order.qris_static, order.unique_amount, order.reference || order.id);
     } catch {}
   }
-  return page(c, renderCheckout({ order, qris }));
+  const embed = c.req.query('embed') === '1';
+  return page(c, renderCheckout({ order, qris, embed }));
 });
 
 // Status order buat polling checkout (publik, cuma status)
@@ -785,6 +786,53 @@ app.get('/favicon.svg', async (c) => {
   return c.body(faviconSvg(fav), 200, { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'public, max-age=300' });
 });
 app.get('/favicon.ico', (c) => c.redirect('/favicon.svg', 302));
+
+// ─────────────────────────────────────────────────────────
+// snap.js — loader popup pembayaran (embed iframe, gaya Midtrans Snap)
+// Pemakaian di web merchant:
+//   <script src="https://gatepay.biz.id/snap.js"></script>
+//   GatePay.pay(orderId, { onSuccess, onPending, onError, onClose })
+// ─────────────────────────────────────────────────────────
+app.get('/snap.js', (c) => {
+  const origin = new URL(c.req.url).origin;
+  const js = `(function(){
+  var ORIGIN=${JSON.stringify(origin)};
+  var G=window.GatePay=window.GatePay||{};
+  G.pay=function(orderId,opts){
+    opts=opts||{};
+    if(!orderId){ if(opts.onError)opts.onError({error:'orderId kosong'}); return; }
+    var done=false, closed=false;
+    var ov=document.createElement('div');
+    ov.setAttribute('data-gatepay','overlay');
+    ov.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(20,31,92,.55);display:flex;align-items:center;justify-content:center;padding:16px;font-family:Verdana,Tahoma,sans-serif';
+    var fr=document.createElement('iframe');
+    fr.src=ORIGIN+'/pay/'+encodeURIComponent(orderId)+'?embed=1';
+    fr.setAttribute('allow','clipboard-write');
+    fr.style.cssText='width:100%;max-width:440px;height:660px;max-height:94vh;border:0;background:#eceade;box-shadow:4px 4px 0 rgba(0,0,0,.4)';
+    ov.appendChild(fr);
+    function cleanup(){ if(ov.parentNode)ov.parentNode.removeChild(ov); window.removeEventListener('message',onMsg); document.removeEventListener('keydown',onKey); }
+    function close(){ if(closed)return; closed=true; cleanup(); if(!done&&opts.onClose)opts.onClose(); }
+    function onKey(e){ if(e.key==='Escape')close(); }
+    function onMsg(e){
+      if(e.origin!==ORIGIN)return;
+      var d=e.data||{}; if(d.gatepay!==1)return;
+      if(d.type==='close'){ close(); return; }
+      if(d.type==='status'){
+        var o=d.order||{};
+        if(d.status==='paid'){ if(!done){done=true; if(opts.onSuccess)opts.onSuccess(o);} setTimeout(cleanup,1600); }
+        else if(d.status==='expired'||d.status==='cancelled'){ if(!done){done=true; if(opts.onError)opts.onError(o);} }
+        else if(d.status==='pending'){ if(opts.onPending)opts.onPending(o); }
+      }
+    }
+    ov.addEventListener('click',function(e){ if(e.target===ov)close(); });
+    window.addEventListener('message',onMsg);
+    document.addEventListener('keydown',onKey);
+    document.body.appendChild(ov);
+    return { close:close };
+  };
+})();`;
+  return c.body(js, 200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'public, max-age=300' });
+});
 
 // PWA manifest
 app.get('/manifest.webmanifest', async (c) => {

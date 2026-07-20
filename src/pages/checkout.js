@@ -5,7 +5,7 @@ const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export function renderCheckout({ order, qris }) {
+export function renderCheckout({ order, qris, embed }) {
   const paid = order.status === 'paid';
   const expired = order.status === 'expired' || order.status === 'cancelled';
   const merchant = esc(order.qris_merchant_name || order.merchant_name || 'Merchant');
@@ -51,9 +51,13 @@ export function renderCheckout({ order, qris }) {
   .foot{text-align:center;font-size:11px;color:var(--dim);padding:10px;font-family:'Share Tech Mono',monospace}
   .checkwrap{text-align:center;padding:20px}
   .bigcheck{width:64px;height:64px;background:var(--ok);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;margin-bottom:10px;border:3px solid;border-color:var(--hi) #0a5c4c #0a5c4c var(--hi)}
-</style></head><body>
+  body.embed{background:var(--chrome);padding:0;display:block}
+  body.embed .card{max-width:none;width:100%;min-height:100vh;box-shadow:none;border:0}
+  .xbtn{background:transparent;border:0;color:#fff;font-family:'Share Tech Mono',monospace;font-size:15px;font-weight:700;cursor:pointer;line-height:1;padding:2px 4px}
+  .xbtn:hover{background:rgba(255,255,255,.2)}
+</style></head><body${embed ? ' class="embed"' : ''}>
 <div class="card">
-  <div class="top"><span class="logo">GatePay</span><span class="amt">QRIS</span></div>
+  <div class="top"><span class="logo">GatePay</span>${embed ? `<button class="xbtn" onclick="parent.postMessage({gatepay:1,type:'close'},'*')" title="Tutup">✕</button>` : `<span class="amt">QRIS</span>`}</div>
   <div class="body">
     ${paid ? `
       <div class="checkwrap">
@@ -83,6 +87,16 @@ export function renderCheckout({ order, qris }) {
   </div>
   <div class="foot">Diproses aman oleh GatePay</div>
 </div>
+${embed ? `<script>
+  (function(){
+    function send(status){
+      try{ parent.postMessage({ gatepay:1, type:'status', status:status,
+        order:{ id:${JSON.stringify(order.id)}, unique_amount:${order.unique_amount}, status:status } }, '*'); }catch(e){}
+    }
+    window.__gpSend = send;
+    send(${JSON.stringify(order.status)});
+  })();
+</script>` : ''}
 ${!paid && !expired && qris ? `
 <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 <script>
@@ -101,8 +115,8 @@ ${!paid && !expired && qris ? `
     try{
       var r = await fetch('/pay/${esc(order.id)}/status?_='+Date.now(),{cache:'no-store'});
       var j = await r.json();
-      if(j.status === 'paid'){ clearInterval(poll); location.reload(); }
-      if(j.status === 'expired' || j.status === 'cancelled'){ clearInterval(poll); location.reload(); }
+      if(j.status === 'paid'){ clearInterval(poll); if(window.__gpSend) window.__gpSend('paid'); location.reload(); }
+      if(j.status === 'expired' || j.status === 'cancelled'){ clearInterval(poll); if(window.__gpSend) window.__gpSend(j.status); location.reload(); }
     }catch(e){}
   }, 3000);
 </script>` : ''}
