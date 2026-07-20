@@ -73,6 +73,17 @@ export function renderAdmin() {
   .modal .val{width:100%;background:var(--term-bg);color:var(--term-ok);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);padding:12px;font-family:'Share Tech Mono',monospace;font-size:15px;word-break:break-all}
   .clipbtn{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);color:var(--text);font-size:17px;padding:0 12px;min-width:44px}
   .clipbtn:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
+  .mm-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .mm-av{width:46px;height:46px;min-width:46px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-family:'Michroma';border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
+  .mm-name{font-size:17px;font-weight:700}
+  .mm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .mm-stat{background:var(--term-bg);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);padding:9px 6px;text-align:center}
+  .mm-stat .k{font-size:9px;color:#8fa0d8;text-transform:uppercase;letter-spacing:.04em}
+  .mm-stat .v{font-size:15px;font-weight:700;color:var(--term-ok);font-family:'Share Tech Mono',monospace;margin-top:3px;word-break:break-word}
+  .mm-tbl{width:100%;border-collapse:collapse;font-size:13px}
+  .mm-tbl td{padding:8px 10px;border:1px solid var(--edge)}
+  .mm-tbl td:first-child{color:var(--dim);background:rgba(255,255,255,.45);width:36%;text-transform:uppercase;font-size:11px;letter-spacing:.03em}
+  .mm-tbl td:last-child{font-weight:600;text-align:right}
   @media(max-width:820px){
     .stats{grid-template-columns:repeat(2,1fr)}table{font-size:12px}
     .wrap{padding:14px}
@@ -384,25 +395,32 @@ export function renderAdmin() {
 
   async function setAdmin(id,v){ if(!confirm(v?'Jadikan user ini admin?':'Cabut akses admin user ini?'))return; var r=await fetch('/api/admin/merchants/'+id+'/set-admin',{method:'POST',headers:hdr(),body:JSON.stringify({admin:v})}); var j=await r.json(); if(!r.ok)alert(j.error||'gagal'); reopenAfter(id); }
   // ── popup rekap merchant + aksi (text) ──
-  function mmRow(k,v){ return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--edge)"><span class=dim>'+k+'</span><span style="font-weight:600;text-align:right">'+v+'</span></div>'; }
+  function mmTr(k,v){ return '<tr><td>'+k+'</td><td>'+v+'</td></tr>'; }
   function mmBtn(cls,label,onc){ return '<button class="'+cls+'" onclick="'+onc+'">'+label+'</button>'; }
   function openMerchant(id){
     var m=allMerchants.find(x=>x.id===id); if(!m) return;
     var on=m.last_seen && (Math.floor(Date.now()/1000)-m.last_seen<300);
-    var role=m.is_owner?'👑 Owner':(m.is_admin?'🛡 Admin':'Merchant');
     var u=escj(m.username||'');
+    var roleBadge=m.is_owner?'<span class="bd" style="background:#c26107;color:#fff">👑 OWNER</span>':(m.is_admin?'<span class="bd" style="background:#26379d;color:#fff">🛡 ADMIN</span>':'<span class="bd" style="background:#5b5f66;color:#fff">MERCHANT</span>');
+    var stBadge=m.active?'<span class="bd" style="background:#0e7c66;color:#fff">AKTIF</span>':'<span class="bd" style="background:#b0362a;color:#fff">SUSPEND</span>';
+    var dev=m.device_id?(on?'<span style="color:var(--ok)">● online</span>':(m.last_seen?agoj(m.last_seen):'belum pernah')):'-';
     $('mm-title').textContent='@'+(m.username||'-');
     $('mm-recap').innerHTML=
-      mmRow('Nama', escj(m.name||'-'))+
-      mmRow('Role', role)+
-      mmRow('Status', m.active?'<span style="color:var(--ok)">Aktif</span>':'<span style="color:var(--red)">Suspend</span>')+
-      mmRow('Device', m.device_id?(on?'<span style="color:var(--ok)">online</span>':(m.last_seen?agoj(m.last_seen):'belum pernah')):'-')+
-      mmRow('QRIS', m.has_qris?'✓ ada':'belum ada')+
-      mmRow('Fee', (m.fee_percent||0)+'% · kode '+(m.unique_digits||2)+' digit')+
-      mmRow('Order', m.paid_orders+' / '+m.total_orders+' paid')+
-      mmRow('Revenue', idr(m.revenue))+
-      mmRow('2FA', m.totp_enabled?'<span style="color:var(--ok)">aktif</span>':'nonaktif')+
-      mmRow('Gabung', agoj(m.created_at));
+      '<div class="mm-head"><span class="mm-av">'+(m.username||'?').slice(0,1).toUpperCase()+'</span>'+
+        '<div><div class="mm-name">@'+escj(m.username||'-')+'</div><div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap">'+roleBadge+stBadge+'</div></div></div>'+
+      '<div class="mm-stats">'+
+        '<div class="mm-stat"><div class="k">Order Paid</div><div class="v">'+m.paid_orders+'/'+m.total_orders+'</div></div>'+
+        '<div class="mm-stat"><div class="k">Revenue</div><div class="v" style="font-size:13px">'+idr(m.revenue)+'</div></div>'+
+        '<div class="mm-stat"><div class="k">Fee</div><div class="v">'+(m.fee_percent||0)+'%</div></div>'+
+      '</div>'+
+      '<table class="mm-tbl">'+
+        mmTr('Nama', escj(m.name||'-'))+
+        mmTr('Device', dev)+
+        mmTr('QRIS', m.has_qris?'<span style="color:var(--ok)">✓ ada</span>':'belum ada')+
+        mmTr('Kode unik', (m.unique_digits||2)+' digit')+
+        mmTr('2FA', m.totp_enabled?'<span style="color:var(--ok)">aktif</span>':'nonaktif')+
+        mmTr('Gabung', agoj(m.created_at))+
+      '</table>';
     var a=[];
     a.push(m.active?mmBtn('amber','Suspend',"setActive('"+m.id+"',0)"):mmBtn('','Aktifkan',"setActive('"+m.id+"',1)"));
     a.push(mmBtn('','Reset Password',"resetPw('"+m.id+"','"+u+"')"));
