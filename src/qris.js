@@ -77,7 +77,13 @@ export function makeDynamic(staticPayload, amount, reference) {
   const map = new Map();
   for (const { tag, value } of tlv) map.set(tag, value);
 
-  map.set('01', '12'); // point of initiation = dynamic
+  // PENTING: JANGAN ubah POI ke '12' (dynamic).
+  // QR dinamis (POI 12) itu harusnya digenerate sistem acquirer sendiri dgn transaksi
+  // terdaftar di backend mereka. Kalau kita paksa 12, app bayar (GoPay/SeaBank/dll) kirim
+  // ke acquirer, acquirer nyari transaksi yg match → gak ketemu → DITOLAK
+  // ("service not available" / "QR gak bisa dipakai"). Cukup pertahanin POI statis '11'
+  // lalu suntik nominal (tag 54) → jadi "statis + nominal preset", diterima semua e-wallet.
+  if (!map.has('01')) map.set('01', '11');
   map.set('54', String(Math.round(amount))); // transaction amount (tanpa desimal)
 
   if (reference) {
