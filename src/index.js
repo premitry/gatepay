@@ -213,25 +213,47 @@ function injectHead(html, s) {
 }
 
 // Floating chat support (pojok kanan bawah) — WA dan/atau Telegram, kalau diaktifkan admin
-function supportBtn(href, bg, icon, label) {
-  return `<a href="${href}" target="_blank" rel="noopener" title="${label}" ` +
-    `style="display:flex;align-items:center;gap:9px;background:${bg};color:#fff;padding:11px 16px;` +
-    `border:2px solid #fff;box-shadow:2px 2px 0 rgba(0,0,0,.35);border-radius:0;` +
-    `font-family:Verdana,Tahoma,sans-serif;font-weight:700;font-size:13px;text-decoration:none">` +
-    `<span style="font-size:17px">${icon}</span> ${label}</a>`;
+const SVG_WA = `<svg viewBox="0 0 32 32" width="24" height="24" fill="#fff"><path d="M16 3C9 3 3.5 8.5 3.5 15.5c0 2.3.6 4.4 1.7 6.3L3 29l7.4-2.1c1.8 1 3.9 1.6 6.1 1.6 7 0 12.5-5.5 12.5-12.5S23 3 16 3zm0 22.8c-1.9 0-3.7-.5-5.3-1.5l-.4-.2-4.4 1.2 1.2-4.3-.3-.4c-1-1.6-1.6-3.5-1.6-5.4C5.4 9.6 10.1 5 16 5s10.6 4.6 10.6 10.5S21.9 25.8 16 25.8zm5.8-7.9c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.3-.2-.3 0-.5.1-.7.1-.1.3-.4.5-.6.1-.2.2-.3.3-.5.1-.2 0-.4 0-.6 0-.2-.7-1.7-1-2.3-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1.1 1-1.1 2.5s1.1 2.9 1.3 3.1c.2.2 2.2 3.4 5.3 4.7.7.3 1.3.5 1.8.7.7.2 1.4.2 1.9.1.6-.1 1.9-.8 2.1-1.5.3-.7.3-1.4.2-1.5-.1-.1-.3-.2-.6-.4z"/></svg>`;
+const SVG_TG = `<svg viewBox="0 0 24 24" width="23" height="23" fill="#fff"><path d="M21.9 4.3l-3.1 14.6c-.2 1-.8 1.3-1.7.8l-4.6-3.4-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.7 8.6-7.8c.4-.3-.1-.5-.6-.2L7.3 12.6 2.7 11.2c-1-.3-1-1 .2-1.5l17.7-6.8c.8-.3 1.5.2 1.3 1.4z"/></svg>`;
+
+// Tombol bulat (icon saja) — dipakai kalau cuma 1 channel, atau sebagai toggle
+function fabBtn(inner, bg, label, extra) {
+  return `<a href="${extra.href || 'javascript:void(0)'}"${extra.href ? ' target="_blank" rel="noopener"' : ''}${extra.onclick ? ` onclick="${extra.onclick}"` : ''} title="${label}" ` +
+    `style="display:flex;align-items:center;justify-content:center;width:56px;height:56px;background:${bg};color:#fff;` +
+    `border:2px solid #fff;box-shadow:2px 2px 0 rgba(0,0,0,.35);text-decoration:none;cursor:pointer;font-size:27px;line-height:1">${inner}</a>`;
+}
+// Pil (icon + teks) — dipakai di menu popup kalau 2 channel
+function supportPill(href, bg, icon, label) {
+  return `<a href="${href}" target="_blank" rel="noopener" ` +
+    `style="display:flex;align-items:center;gap:9px;background:${bg};color:#fff;padding:10px 15px;` +
+    `border:2px solid #fff;box-shadow:2px 2px 0 rgba(0,0,0,.35);` +
+    `font-family:Verdana,Tahoma,sans-serif;font-weight:700;font-size:13px;text-decoration:none">${icon}<span>${label}</span></a>`;
 }
 function injectSupport(html, s) {
-  const btns = [];
+  const ch = [];
   if (s.wa_enabled === '1') {
     const num = String(s.wa_number || '').replace(/[^0-9]/g, '');
-    if (num) btns.push(supportBtn(`https://wa.me/${num}?text=${encodeURIComponent(s.wa_text || '')}`, '#25d366', '💬', 'Chat WhatsApp'));
+    if (num) ch.push({ href: `https://wa.me/${num}?text=${encodeURIComponent(s.wa_text || '')}`, bg: '#25d366', logo: SVG_WA, label: 'WhatsApp' });
   }
   if (s.tg_enabled === '1') {
     const u = String(s.tg_username || '').replace(/[^A-Za-z0-9_]/g, '');
-    if (u) btns.push(supportBtn(`https://t.me/${u}`, '#2aabee', '✈️', 'Chat Telegram'));
+    if (u) ch.push({ href: `https://t.me/${u}`, bg: '#2aabee', logo: SVG_TG, label: 'Telegram' });
   }
-  if (!btns.length) return html;
-  const widget = `<div style="position:fixed;right:18px;bottom:18px;z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:flex-end">${btns.join('')}</div>`;
+  if (!ch.length) return html;
+
+  let widget;
+  if (ch.length === 1) {
+    // cuma 1 channel → tombol langsung dengan ikon channel itu (logo WA / pesawat kertas)
+    const c = ch[0];
+    widget = `<div style="position:fixed;right:18px;bottom:18px;z-index:9999">${fabBtn(c.logo, c.bg, 'Chat ' + c.label, { href: c.href })}</div>`;
+  } else {
+    // 2 channel → tombol emoji orang, klik muncul pilihan ke atas
+    const menu = ch.map((c) => supportPill(c.href, c.bg, c.logo, c.label)).join('');
+    widget = `<div style="position:fixed;right:18px;bottom:18px;z-index:9999;display:flex;flex-direction:column;gap:10px;align-items:flex-end">` +
+      `<div id="gpsm" style="display:none;flex-direction:column;gap:8px;align-items:flex-end">${menu}</div>` +
+      fabBtn('🧑‍💼', '#26379d', 'Bantuan', { onclick: "var m=document.getElementById('gpsm');m.style.display=m.style.display==='flex'?'none':'flex';return false;" }) +
+      `</div>`;
+  }
   return html.includes('</body>') ? html.replace('</body>', widget + '</body>') : html + widget;
 }
 
