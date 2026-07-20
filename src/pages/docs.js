@@ -174,12 +174,12 @@ app.post('/webhook/gatepay', (req, res) =&gt; {
 
     <div class="demobox">
       <div class="t">Mau lihat langsung bentuknya? <b>Coba demo live</b> — isi API key &amp; nominal, popup-nya muncul persis kayak di produksi.</div>
-      <a class="dbtn" href="/kilat-demo" target="_blank">🪟 Buka Demo</a>
+      <a class="dbtn" href="/snap-demo" target="_blank">🪟 Buka Demo</a>
     </div>
 
     <h3>1. Pasang loader</h3>
     <p>Taruh sekali di halaman kamu (biasanya sebelum <code>&lt;/body&gt;</code>):</p>
-    <pre><code>&lt;script src="https://gatepay.biz.id/kilat.js"&gt;&lt;/script&gt;</code></pre>
+    <pre><code>&lt;script src="https://gatepay.biz.id/snap.js"&gt;&lt;/script&gt;</code></pre>
     <p>Ini bikin object global <code>GatePay</code> di browser.</p>
 
     <h3>2. Bikin order di backend</h3>

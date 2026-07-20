@@ -788,12 +788,12 @@ app.get('/favicon.svg', async (c) => {
 app.get('/favicon.ico', (c) => c.redirect('/favicon.svg', 302));
 
 // ─────────────────────────────────────────────────────────
-// kilat.js — loader popup pembayaran (embed iframe)
+// snap.js — loader popup pembayaran (embed iframe)
 // Pemakaian di web merchant:
-//   <script src="https://gatepay.biz.id/kilat.js"></script>
+//   <script src="https://gatepay.biz.id/snap.js"></script>
 //   GatePay.pay(orderId, { onSuccess, onPending, onError, onClose })
 // ─────────────────────────────────────────────────────────
-app.get('/kilat.js', (c) => {
+app.get('/snap.js', (c) => {
   const origin = new URL(c.req.url).origin;
   const js = `(function(){
   var ORIGIN=${JSON.stringify(origin)};
@@ -835,7 +835,7 @@ app.get('/kilat.js', (c) => {
 });
 
 // Halaman demo popup Snap — buat nyoba live tanpa nulis kode
-app.get('/kilat-demo', (c) => {
+app.get('/snap-demo', (c) => {
   const html = `<!DOCTYPE html><html lang="id"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Demo Popup · GatePay</title>
@@ -867,7 +867,7 @@ app.get('/kilat-demo', (c) => {
   a{color:#3843b8}
 </style></head><body>
 <div class="card">
-  <div class="top"><span class="logo">GatePay</span><span class="amt">KILAT_DEMO</span></div>
+  <div class="top"><span class="logo">GatePay</span><span class="amt">SNAP_DEMO</span></div>
   <div class="body">
     <h1>Demo Popup Pembayaran</h1>
     <p class="lead">Isi API key & nominal, klik tombol — order dibuat lalu popup QRIS langsung muncul. Ini simulasi persis <code>GatePay.pay()</code>.</p>
@@ -880,7 +880,7 @@ app.get('/kilat-demo', (c) => {
     <div class="tip">💡 API key cuma dipakai di browser kamu buat demo ini. Di produksi, <b>bikin order dari server</b> — jangan pernah taruh API key di frontend.</div>
   </div>
 </div>
-<script src="/kilat.js"></script>
+<script src="/snap.js"></script>
 <script>
   var L=document.getElementById('log');
   function log(m,cls){ L.innerHTML += '\\n'+(cls?'<span class="'+cls+'">'+m+'</span>':m); L.scrollTop=L.scrollHeight; }
@@ -892,7 +892,7 @@ app.get('/kilat-demo', (c) => {
     var b=document.getElementById('go'); b.disabled=true;
     L.textContent='> POST /api/orders …';
     try{
-      var r=await fetch('/api/orders',{method:'POST',headers:{'x-api-key':key,'content-type':'application/json'},body:JSON.stringify({base_amount:amt,reference:'KILAT-DEMO'})});
+      var r=await fetch('/api/orders',{method:'POST',headers:{'x-api-key':key,'content-type':'application/json'},body:JSON.stringify({base_amount:amt,reference:'SNAP-DEMO'})});
       var j=await r.json();
       if(!r.ok){ log('✗ '+(j.error||r.status),'bad'); b.disabled=false; return; }
       log('✓ order '+j.id,'ok');
