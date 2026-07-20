@@ -1,4 +1,4 @@
-// Dashboard merchant — tema Y2K / retro-desktop (niru sendtestemail.com).
+// Dashboard merchant — tema Y2K / retro-desktop.
 // Layout sidebar collapsible. Login/register, QRIS+fee, order, kredensial APK, webhook. Kotak siku.
 
 export function renderDashboard() {

@@ -1,4 +1,4 @@
-// Landing marketing page — tema Y2K retro-desktop (niru sendtestemail.com). Kotak siku.
+// Landing marketing page — tema Y2K retro-desktop. Kotak siku.
 
 export function renderLanding() {
   return `<!DOCTYPE html>
