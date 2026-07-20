@@ -203,13 +203,20 @@ function faviconSvg(emoji) {
 }
 
 // Sisipin favicon/theme/manifest ke <head> tiap halaman
+// Sisipkan sebelum kemunculan TERAKHIR tag (penutup halaman asli), bukan yang pertama —
+// penting: HTML inline JS (mis. fungsi export) bisa mengandung '</body>'/'</head>' di dalam
+// string, jadi replace kemunculan pertama malah nyuntik ke tengah string JS → rusak.
+function insertBeforeLast(html, tag, insert) {
+  const i = html.lastIndexOf(tag);
+  return i < 0 ? html + insert : html.slice(0, i) + insert + html.slice(i);
+}
 function injectHead(html, s) {
   const tags =
     `<link rel="icon" href="/favicon.svg" type="image/svg+xml">` +
     `<link rel="apple-touch-icon" href="/favicon.svg">` +
     `<meta name="theme-color" content="${esc(s.theme_color)}">` +
     (s.pwa_enabled === '1' ? `<link rel="manifest" href="/manifest.webmanifest">` : '');
-  return html.includes('</head>') ? html.replace('</head>', tags + '</head>') : html;
+  return html.includes('</head>') ? insertBeforeLast(html, '</head>', tags) : html;
 }
 
 // Floating chat support (pojok kanan bawah) — WA dan/atau Telegram, kalau diaktifkan admin
@@ -251,10 +258,10 @@ function injectSupport(html, s) {
     const menu = ch.map((c) => supportPill(c.href, c.bg, c.logo, c.label)).join('');
     widget = `<div style="position:fixed;right:18px;bottom:18px;z-index:9999;display:flex;flex-direction:column;gap:10px;align-items:flex-end">` +
       `<div id="gpsm" style="display:none;flex-direction:column;gap:8px;align-items:flex-end">${menu}</div>` +
-      fabBtn('🧑‍💼', '#26379d', 'Bantuan', { onclick: "var m=document.getElementById('gpsm');m.style.display=m.style.display==='flex'?'none':'flex';return false;" }) +
+      fabBtn('📞', '#d32f2f', 'Bantuan', { onclick: "var m=document.getElementById('gpsm');m.style.display=m.style.display==='flex'?'none':'flex';return false;" }) +
       `</div>`;
   }
-  return html.includes('</body>') ? html.replace('</body>', widget + '</body>') : html + widget;
+  return insertBeforeLast(html, '</body>', widget);
 }
 
 // Bungkus render halaman biar dapet head settings + widget support
