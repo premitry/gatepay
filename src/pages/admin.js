@@ -50,9 +50,6 @@ export function renderAdmin() {
   button:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
   button.red{color:var(--red)}
   button.amber{color:var(--accent)}
-  button.ib{padding:5px 7px;font-size:14px;min-width:30px;line-height:1}
-  button.ib.red{border-color:var(--red) var(--hi) var(--hi) var(--red)}
-  button.ib.amber{border-color:var(--accent) var(--hi) var(--hi) var(--accent)}
   input{width:100%;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);color:var(--text);padding:10px 11px;font-size:14px}
   .msg{font-size:12px;margin-top:8px;padding:8px;display:none;border:2px solid}
   .msg.ok{background:#dff3ea;color:var(--ok);border-color:var(--ok);display:block}
@@ -115,7 +112,7 @@ export function renderAdmin() {
 
   <div class="sub-tabs">
     <div id="t-merch" class="active" onclick="showTab('merch')">Merchant &amp; Device</div>
-    <div id="t-tiket" onclick="showTab('tiket')">Tiket</div>
+    <div id="t-tiket" onclick="showTab('tiket')" style="position:relative">Tiket <span id="tk-tabdot" style="display:none;position:absolute;top:3px;right:3px;width:10px;height:10px;background:#b0362a;border:1px solid #fff"></span></div>
     <div id="t-log" onclick="showTab('log')">Log Global</div>
     <div id="t-set" onclick="showTab('set')">Pengaturan Web</div>
   </div>
@@ -123,9 +120,10 @@ export function renderAdmin() {
   <div id="view-merch">
     <div class="panel">
       <h2>Merchant &amp; Monitoring Device</h2>
+      <div class="dim" style="margin-bottom:8px;font-size:12px">Klik baris user buat lihat rekap &amp; aksi.</div>
       <div style="overflow-x:auto"><table><thead><tr>
-        <th>User</th><th>Device</th><th>QRIS</th><th>Fee</th><th>Order</th><th>Revenue</th><th>Status</th><th>Aksi</th>
-      </tr></thead><tbody id="mtbody"><tr><td colspan=8 class=dim style="text-align:center;padding:20px">Loading…</td></tr></tbody></table></div>
+        <th>User</th><th>Device</th><th>QRIS</th><th>Fee</th><th>Order</th><th>Revenue</th><th>Status</th>
+      </tr></thead><tbody id="mtbody"><tr><td colspan=7 class=dim style="text-align:center;padding:20px">Loading…</td></tr></tbody></table></div>
       <div class="msg" id="mmsg"></div>
     </div>
   </div>
@@ -212,6 +210,16 @@ export function renderAdmin() {
 </div>
 </div>
 
+<div class="modal" id="mmodal" onclick="if(event.target===this)closeMModal()">
+  <div class="box" style="max-width:480px">
+    <div class="tt"><span id="mm-title">MERCHANT</span><span class="x" onclick="closeMModal()">✕</span></div>
+    <div class="bd2">
+      <div id="mm-recap"></div>
+      <div id="mm-actions" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px"></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="box">
     <div class="tt"><span id="mtt">RESULT</span><span class="x" onclick="closeModal()">✕</span></div>
@@ -233,7 +241,7 @@ export function renderAdmin() {
   const bdg=s=>{const[bg,fg]=bmap[s]||['#6b7280','#0b0d11'];return '<span class="bd" style="background:'+bg+';color:'+fg+'">'+escj(s)+'</span>';};
   function msg(id,cls,t){ var e=$(id); e.className='msg '+cls; e.textContent=t; }
 
-  let meIsOwner=false;
+  let meIsOwner=false, allMerchants=[];
   function sess(){ try{ return JSON.parse(localStorage.getItem('gp_admin')||'null'); }catch(e){ return null; } }
   function key(){ var s=sess(); return s?s.api_key:''; }
   function hdr(){ return {'x-api-key':key(),'content-type':'application/json'}; }
@@ -270,9 +278,11 @@ export function renderAdmin() {
   function tkbadge(s){var b=TKB[s]||['#9aa0a8','#fff'];return '<span class="bd" style="background:'+b[0]+';color:'+b[1]+'">'+escj(s)+'</span>';}
   async function loadAdminTickets(){
     try{ var j=await (await fetch('/api/admin/tickets',{headers:hdr()})).json();
+      var unc=(j.tickets||[]).filter(t=>t.admin_unread).length; if($('tk-tabdot')) $('tk-tabdot').style.display=unc>0?'block':'none';
       $('tktbody').innerHTML=(j.tickets||[]).map(t=>{
         var opts=['active','proses','close'].map(s=>'<option value="'+s+'"'+(t.status===s?' selected':'')+'>'+s+'</option>').join('');
-        return '<tr><td><b>@'+escj(t.username||'-')+'</b></td><td>'+escj((t.subject||'').slice(0,40))+'</td><td class=dim>'+(t.msg_count||0)+' pesan</td><td class=dim>'+agoj(t.updated_at)+'</td>'+
+        var dot=t.admin_unread?' <span title="baru dari user" style="display:inline-block;width:9px;height:9px;background:#b0362a;border:1px solid #fff;vertical-align:middle"></span>':'';
+        return '<tr><td><b>@'+escj(t.username||'-')+'</b></td><td>'+escj((t.subject||'').slice(0,40))+dot+'</td><td class=dim>'+(t.msg_count||0)+' pesan</td><td class=dim>'+agoj(t.updated_at)+'</td>'+
           '<td><select onchange="changeTicketStatus(\\''+t.id+'\\',this.value)" style="width:auto;padding:4px">'+opts+'</select></td>'+
           '<td><button onclick="openAdminTicket(\\''+t.id+'\\')">Lihat</button></td></tr>';
       }).join('')||'<tr><td colspan=6 class=dim style="text-align:center;padding:20px">Belum ada tiket</td></tr>';
@@ -300,6 +310,7 @@ export function renderAdmin() {
       }).join('')||'<div class=dim>kosong</div>';
       $('atk-thread').scrollTop=$('atk-thread').scrollHeight;
       $('atk-detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+      loadAdminTickets();
     }catch(e){}
   }
   async function replyAdminTicket(){
@@ -340,31 +351,23 @@ export function renderAdmin() {
       $('s-merch').textContent=st.merchants?.n||0; $('s-active').textContent=st.merchants?.active||0;
       $('s-orders').textContent=st.orders?.total||0; $('s-paid').textContent=st.orders?.paid||0;
       $('s-rev').textContent=idr(st.orders?.revenue);
+      if($('tk-tabdot')) $('tk-tabdot').style.display=(st.tickets_unread>0)?'block':'none';
       if(tab==='merch'){
         var d=await (await fetch('/api/admin/merchants',{headers:hdr()})).json();
-        meIsOwner=!!d.me_is_owner;
-        $('mtbody').innerHTML=(d.merchants||[]).map(m=>{
+        meIsOwner=!!d.me_is_owner; allMerchants=d.merchants||[];
+        $('mtbody').innerHTML=allMerchants.map(m=>{
           var on = m.last_seen && (Math.floor(Date.now()/1000)-m.last_seen < 300);
           var dev = m.device_id ? '<span class="'+(on?'online':'offline')+'"><span class="dot '+(on?'on':'off')+'"></span>'+(on?'online':(m.last_seen?agoj(m.last_seen):'belum pernah'))+'</span>' : '<span class=dim>-</span>';
           var st = m.active?'<span class="bd" style="background:#0e7c66;color:#fff">aktif</span>':'<span class="bd" style="background:#b0362a;color:#fff">suspend</span>';
-          var role = m.is_owner?' <span class="bd" style="background:#c26107;color:#fff">👑 OWNER</span>':(m.is_admin?' <span class="bd" style="background:#26379d;color:#fff">🛡 ADMIN</span>':'');
-          var roleBtn = (meIsOwner && !m.is_owner) ? (m.is_admin?'<button class="ib amber" title="Cabut Admin" onclick="setAdmin(\\''+m.id+'\\',0)">🛡️</button>':'<button class="ib" title="Jadikan Admin" onclick="setAdmin(\\''+m.id+'\\',1)">🛡️</button>') : '';
-          return '<tr><td><b>@'+escj(m.username||'-')+'</b>'+role+'<br><span class=dim>'+escj((m.name||'').slice(0,18))+'</span></td>'+
+          var role = m.is_owner?' <span class="bd" style="background:#c26107;color:#fff">OWNER</span>':(m.is_admin?' <span class="bd" style="background:#26379d;color:#fff">ADMIN</span>':'');
+          return '<tr onclick="openMerchant(\\''+m.id+'\\')" style="cursor:pointer"><td><b>@'+escj(m.username||'-')+'</b>'+role+'<br><span class=dim>'+escj((m.name||'').slice(0,18))+'</span></td>'+
             '<td class=dim>'+dev+'</td>'+
             '<td>'+(m.has_qris?'✓':'<span class=dim>-</span>')+'</td>'+
             '<td class=dim>'+(m.fee_percent||0)+'%</td>'+
             '<td class=dim>'+m.paid_orders+'/'+m.total_orders+'</td>'+
             '<td class=mono>'+idr(m.revenue)+'</td>'+
-            '<td>'+st+'</td>'+
-            '<td style="white-space:nowrap">'+
-              (m.active?'<button class="ib amber" title="Suspend" onclick="setActive(\\''+m.id+'\\',0)">⏸️</button>':'<button class="ib" title="Aktifkan" onclick="setActive(\\''+m.id+'\\',1)">▶️</button>')+
-              '<button class="ib" title="Reset Password" onclick="resetPw(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">🔑</button>'+
-              (m.totp_enabled?'<button class="ib amber" title="Reset 2FA" onclick="reset2fa(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">🔐</button>':'')+
-              '<button class="ib" title="API Key baru" onclick="regenKey(\\''+m.id+'\\')">🔄</button>'+
-              roleBtn+
-              (m.is_owner?'':'<button class="ib red" title="Hapus" onclick="delMerch(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">🗑️</button>')+
-            '</td></tr>';
-        }).join('')||'<tr><td colspan=8 class=dim style="text-align:center;padding:20px">Belum ada merchant</td></tr>';
+            '<td>'+st+'</td></tr>';
+        }).join('')||'<tr><td colspan=7 class=dim style="text-align:center;padding:20px">Belum ada merchant</td></tr>';
       } else {
         var lg=await (await fetch('/api/admin/log',{headers:hdr()})).json();
         $('ologbody').innerHTML=(lg.orders||[]).map(o=>'<tr><td class=mono>'+escj(o.id.slice(0,12))+'</td><td class=dim>@'+escj(o.username||'-')+'</td><td class=mono>'+idr(o.unique_amount)+'</td><td>'+bdg(o.status)+'</td><td class=dim>'+agoj(o.created_at)+'</td></tr>').join('')||'<tr><td colspan=5 class=dim style="text-align:center;padding:16px">kosong</td></tr>';
@@ -379,10 +382,43 @@ export function renderAdmin() {
   function copyResult(){ var v=$('mval').value; if(navigator.clipboard){ navigator.clipboard.writeText(v).then(function(){ $('mcopy').textContent='✓ Tersalin'; }); } $('mval').select(); }
   document.addEventListener('keydown',function(e){ if(e.key==='Escape')closeModal(); });
 
-  async function setAdmin(id,v){ if(!confirm(v?'Jadikan user ini admin?':'Cabut akses admin user ini?'))return; var r=await fetch('/api/admin/merchants/'+id+'/set-admin',{method:'POST',headers:hdr(),body:JSON.stringify({admin:v})}); var j=await r.json(); if(!r.ok)alert(j.error||'gagal'); load(); }
-  async function reset2fa(id,u){ if(!confirm('Reset/matikan 2FA untuk @'+u+'? Dia bisa login tanpa kode lagi & set ulang authenticator.'))return; var r=await fetch('/api/admin/merchants/'+id+'/reset-2fa',{method:'POST',headers:hdr()}); if(r.ok){ alert('2FA @'+u+' udah di-reset'); load(); } else alert('gagal'); }
-  async function setActive(id,a){ await fetch('/api/admin/merchants/'+id+'/active',{method:'POST',headers:hdr(),body:JSON.stringify({active:a})}); load(); }
-  async function delMerch(id,u){ if(!confirm('Hapus merchant @'+u+'? Semua ordernya ikut hilang.'))return; await fetch('/api/admin/merchants/'+id+'/delete',{method:'POST',headers:hdr()}); load(); }
+  async function setAdmin(id,v){ if(!confirm(v?'Jadikan user ini admin?':'Cabut akses admin user ini?'))return; var r=await fetch('/api/admin/merchants/'+id+'/set-admin',{method:'POST',headers:hdr(),body:JSON.stringify({admin:v})}); var j=await r.json(); if(!r.ok)alert(j.error||'gagal'); reopenAfter(id); }
+  // ── popup rekap merchant + aksi (text) ──
+  function mmRow(k,v){ return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--edge)"><span class=dim>'+k+'</span><span style="font-weight:600;text-align:right">'+v+'</span></div>'; }
+  function mmBtn(cls,label,onc){ return '<button class="'+cls+'" onclick="'+onc+'">'+label+'</button>'; }
+  function openMerchant(id){
+    var m=allMerchants.find(x=>x.id===id); if(!m) return;
+    var on=m.last_seen && (Math.floor(Date.now()/1000)-m.last_seen<300);
+    var role=m.is_owner?'👑 Owner':(m.is_admin?'🛡 Admin':'Merchant');
+    var u=escj(m.username||'');
+    $('mm-title').textContent='@'+(m.username||'-');
+    $('mm-recap').innerHTML=
+      mmRow('Nama', escj(m.name||'-'))+
+      mmRow('Role', role)+
+      mmRow('Status', m.active?'<span style="color:var(--ok)">Aktif</span>':'<span style="color:var(--red)">Suspend</span>')+
+      mmRow('Device', m.device_id?(on?'<span style="color:var(--ok)">online</span>':(m.last_seen?agoj(m.last_seen):'belum pernah')):'-')+
+      mmRow('QRIS', m.has_qris?'✓ ada':'belum ada')+
+      mmRow('Fee', (m.fee_percent||0)+'% · kode '+(m.unique_digits||2)+' digit')+
+      mmRow('Order', m.paid_orders+' / '+m.total_orders+' paid')+
+      mmRow('Revenue', idr(m.revenue))+
+      mmRow('2FA', m.totp_enabled?'<span style="color:var(--ok)">aktif</span>':'nonaktif')+
+      mmRow('Gabung', agoj(m.created_at));
+    var a=[];
+    a.push(m.active?mmBtn('amber','Suspend',"setActive('"+m.id+"',0)"):mmBtn('','Aktifkan',"setActive('"+m.id+"',1)"));
+    a.push(mmBtn('','Reset Password',"resetPw('"+m.id+"','"+u+"')"));
+    if(m.totp_enabled) a.push(mmBtn('amber','Reset 2FA',"reset2fa('"+m.id+"','"+u+"')"));
+    a.push(mmBtn('','API Key Baru',"regenKey('"+m.id+"')"));
+    if(meIsOwner && !m.is_owner) a.push(m.is_admin?mmBtn('amber','Cabut Admin',"setAdmin('"+m.id+"',0)"):mmBtn('','Jadikan Admin',"setAdmin('"+m.id+"',1)"));
+    if(!m.is_owner) a.push(mmBtn('red','Hapus',"delMerch('"+m.id+"','"+u+"')"));
+    $('mm-actions').innerHTML=a.join('');
+    $('mmodal').classList.add('on');
+  }
+  function closeMModal(){ $('mmodal').classList.remove('on'); }
+  async function reopenAfter(id){ await load(); if($('mmodal').classList.contains('on')) openMerchant(id); }
+
+  async function reset2fa(id,u){ if(!confirm('Reset/matikan 2FA untuk @'+u+'? Dia bisa login tanpa kode lagi & set ulang authenticator.'))return; var r=await fetch('/api/admin/merchants/'+id+'/reset-2fa',{method:'POST',headers:hdr()}); if(r.ok){ alert('2FA @'+u+' udah di-reset'); reopenAfter(id); } else alert('gagal'); }
+  async function setActive(id,a){ await fetch('/api/admin/merchants/'+id+'/active',{method:'POST',headers:hdr(),body:JSON.stringify({active:a})}); reopenAfter(id); }
+  async function delMerch(id,u){ if(!confirm('Hapus merchant @'+u+'? Semua ordernya ikut hilang.'))return; await fetch('/api/admin/merchants/'+id+'/delete',{method:'POST',headers:hdr()}); closeMModal(); load(); }
   async function resetPw(id,u){ var r=await (await fetch('/api/admin/merchants/'+id+'/reset-password',{method:'POST',headers:hdr()})).json(); if(r.new_password) showResult('PASSWORD_BARU.KEY','Password baru untuk @'+u+':',r.new_password); }
   async function regenKey(id){ var r=await (await fetch('/api/admin/merchants/'+id+'/regenerate-key',{method:'POST',headers:hdr()})).json(); if(r.api_key) showResult('API_KEY_BARU.KEY','API Key baru (sk_live):',r.api_key); }
 

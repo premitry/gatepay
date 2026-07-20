@@ -106,13 +106,14 @@ let _ticketsReady = false;
 async function ensureTickets(DB) {
   if (_ticketsReady) return;
   await DB.prepare(
-    "CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, merchant_id TEXT, subject TEXT, status TEXT DEFAULT 'active', user_unread INTEGER DEFAULT 0, created_at INTEGER, updated_at INTEGER)",
+    "CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, merchant_id TEXT, subject TEXT, status TEXT DEFAULT 'active', user_unread INTEGER DEFAULT 0, admin_unread INTEGER DEFAULT 0, created_at INTEGER, updated_at INTEGER)",
   ).run();
   await DB.prepare(
     'CREATE TABLE IF NOT EXISTS ticket_messages (id TEXT PRIMARY KEY, ticket_id TEXT, sender TEXT, sender_role TEXT, sender_name TEXT, body TEXT, image TEXT, created_at INTEGER)',
   ).run();
   // untuk DB yang tabelnya udah ada tanpa kolom baru
   try { await DB.prepare('ALTER TABLE tickets ADD COLUMN user_unread INTEGER DEFAULT 0').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE tickets ADD COLUMN admin_unread INTEGER DEFAULT 0').run(); } catch {}
   try { await DB.prepare('ALTER TABLE ticket_messages ADD COLUMN image TEXT').run(); } catch {}
   try { await DB.prepare('ALTER TABLE ticket_messages ADD COLUMN sender_role TEXT').run(); } catch {}
   try { await DB.prepare('ALTER TABLE ticket_messages ADD COLUMN sender_name TEXT').run(); } catch {}
@@ -657,9 +658,10 @@ app.post('/api/tickets', async (c) => {
   if (!subject || (!msg && !image)) return json(c, { error: 'subject & pesan/gambar wajib diisi' }, 400);
   const id = rid('tkt');
   const t = now();
+  const adminUnread = roleOf(m) === 'user' ? 1 : 0;
   await c.env.DB.prepare(
-    "INSERT INTO tickets (id, merchant_id, subject, status, user_unread, created_at, updated_at) VALUES (?, ?, ?, 'active', 0, ?, ?)",
-  ).bind(id, m.id, subject, t, t).run();
+    "INSERT INTO tickets (id, merchant_id, subject, status, user_unread, admin_unread, created_at, updated_at) VALUES (?, ?, ?, 'active', 0, ?, ?, ?)",
+  ).bind(id, m.id, subject, adminUnread, t, t).run();
   await c.env.DB.prepare(
     "INSERT INTO ticket_messages (id, ticket_id, sender, sender_role, sender_name, body, image, created_at) VALUES (?, ?, 'user', ?, ?, ?, ?, ?)",
   ).bind(rid('msg'), id, roleOf(m), m.username || '', msg, image, t).run();
@@ -675,10 +677,15 @@ app.get('/api/tickets/:id', async (c) => {
   const tk = await c.env.DB.prepare('SELECT * FROM tickets WHERE id = ?').bind(id).first();
   if (!tk) return json(c, { error: 'tiket tidak ditemukan' }, 404);
   if (tk.merchant_id !== m.id && !m.is_admin) return json(c, { error: 'forbidden' }, 403);
-  // owner buka → tandai udah dibaca (hilangin dot)
+  // owner/merchant buka tiket sendiri → hilangin dot user
   if (tk.merchant_id === m.id && !m.is_admin && tk.user_unread) {
     await c.env.DB.prepare('UPDATE tickets SET user_unread = 0 WHERE id = ?').bind(id).run();
     tk.user_unread = 0;
+  }
+  // admin/owner buka tiket → hilangin dot admin
+  if ((m.is_admin || m.is_owner) && tk.admin_unread) {
+    await c.env.DB.prepare('UPDATE tickets SET admin_unread = 0 WHERE id = ?').bind(id).run();
+    tk.admin_unread = 0;
   }
   const msgs = await c.env.DB.prepare(
     'SELECT * FROM ticket_messages WHERE ticket_id = ? ORDER BY created_at ASC',
@@ -708,9 +715,10 @@ app.post('/api/tickets/:id/reply', async (c) => {
   let newStatus = tk.status;
   if (isAdmin && tk.status === 'active') newStatus = 'proses';
   if (!isAdmin && tk.status === 'close') newStatus = 'active';
-  const unread = isAdmin ? 1 : tk.user_unread;
-  await c.env.DB.prepare('UPDATE tickets SET updated_at = ?, status = ?, user_unread = ? WHERE id = ?')
-    .bind(t, newStatus, unread, id).run();
+  const userUnread = isAdmin ? 1 : tk.user_unread;      // admin balas → user ada dot
+  const adminUnread = isAdmin ? 0 : 1;                  // user balas → admin ada dot; admin balas → clear
+  await c.env.DB.prepare('UPDATE tickets SET updated_at = ?, status = ?, user_unread = ?, admin_unread = ? WHERE id = ?')
+    .bind(t, newStatus, userUnread, adminUnread, id).run();
   return json(c, { ok: true, status: newStatus });
 });
 
@@ -1099,7 +1107,13 @@ app.get('/api/admin/stats', async (c) => {
        SUM(CASE WHEN status='paid' THEN base_amount ELSE 0 END) as revenue
      FROM orders`,
   ).first();
-  return json(c, { merchants, orders });
+  let ticketsUnread = 0;
+  try {
+    await ensureTickets(c.env.DB);
+    const tu = await c.env.DB.prepare('SELECT COUNT(*) as n FROM tickets WHERE admin_unread = 1').first();
+    ticketsUnread = (tu && tu.n) || 0;
+  } catch {}
+  return json(c, { merchants, orders, tickets_unread: ticketsUnread });
 });
 
 // Log global (order + event lintas merchant)
