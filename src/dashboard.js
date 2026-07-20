@@ -570,7 +570,8 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     var el=$('v-'+v); if(el) el.classList.add('on');
     document.querySelectorAll('.navi').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
     $('ptitle').textContent=TITLES[v]||'';
-    if(v==='tiket') loadTickets();
+    curView=v;
+    if(v==='tiket'){ closeTicket(); loadTickets(); } // selalu balik ke list pas masuk menu tiket
     if(v==='profile') fa2Load();
     toggleMnav(false);
   }
@@ -724,7 +725,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   }
 
   // ── tiket support ──
-  let curTicket=null; var tkImg={};
+  let curTicket=null; var tkImg={}; var curView='dash'; var tkSig='';
   const TKB={active:['#ffc266','#3a2a00'],proses:['#3f7fc4','#fff'],close:['#9aa0a8','#fff']};
   function tkbadge(s){var b=TKB[s]||['#9aa0a8','#fff'];return '<span class="bd" style="background:'+b[0]+';color:'+b[1]+'">'+escj(s)+'</span>';}
   function pickTkImg(input,slot){
@@ -737,14 +738,14 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     var role=mm.sender_role||(mm.sender==='admin'?'admin':'user'); var mine=role==='user'; var name=mm.sender_name||'';
     var lbl=mine?'Kamu':(role.charAt(0).toUpperCase()+role.slice(1)+(name?' ('+name+')':''));
     var img=mm.image?'<img src="'+mm.image+'" style="max-width:200px;display:block;margin-top:6px;border:2px solid var(--edge);cursor:pointer" onclick="window.open(this.src)">':'';
-    return '<div style="margin-bottom:8px;text-align:'+(mine?'right':'left')+'"><div style="display:inline-block;max-width:82%;padding:8px 10px;border:2px solid var(--edge);background:'+(mine?'#dbe7fb':'#fff6d9')+';text-align:left"><div class=dim style="font-size:10px;margin-bottom:2px">'+escj(lbl)+' · '+agoj(mm.created_at)+' lalu</div>'+escj(mm.body)+img+'</div></div>';
+    return '<div style="margin-bottom:8px;text-align:'+(mine?'right':'left')+'"><div style="display:inline-block;max-width:82%;padding:8px 10px;border:2px solid var(--edge);background:'+(mine?'#dbe7fb':'#fff6d9')+';text-align:left"><div class=dim style="font-size:10px;margin-bottom:2px">'+escj(lbl)+' · '+agoj(mm.created_at)+'</div>'+escj(mm.body)+img+'</div></div>';
   }
   async function loadTickets(){
     if(!key()) return;
     try{ var j=await (await fetch('/api/tickets',{headers:{'x-api-key':key()},cache:'no-store'})).json();
       var list=j.tickets||[];
       $('tklist').innerHTML=list.length?list.map(t=>{ var dot=t.user_unread?' <span title="balasan baru" style="display:inline-block;width:9px;height:9px;background:#b0362a;border:1px solid #fff;vertical-align:middle"></span>':'';
-        return '<div onclick="openTicket(\\''+t.id+'\\')" style="padding:9px 10px;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:6px;cursor:pointer;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>'+escj(t.subject)+dot+'</b>'+tkbadge(t.status)+'</div><div class=dim style="font-size:11px">update '+agoj(t.updated_at)+' lalu</div></div>';}).join(''):'<div class=dim>Belum ada tiket</div>';
+        return '<div onclick="openTicket(\\''+t.id+'\\')" style="padding:9px 10px;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:6px;cursor:pointer;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>'+escj(t.subject)+dot+'</b>'+tkbadge(t.status)+'</div><div class=dim style="font-size:11px">update '+agoj(t.updated_at)+'</div></div>';}).join(''):'<div class=dim>Belum ada tiket</div>';
     }catch(e){}
   }
   async function createTicket(){
@@ -754,17 +755,22 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       var j=await r.json(); if(r.ok){ msg('tkmsg','ok','Tiket terkirim ✓'); $('tk-subject').value=''; $('tk-msg').value=''; $('tk-file').value=''; $('tk-prev').style.display='none'; tkImg.create=null; loadTickets(); openTicket(j.id); } else msg('tkmsg','err',j.error||'gagal');
     }catch(e){ msg('tkmsg','err',String(e)); }
   }
-  function closeTicket(){ $('tk-detail').style.display='none'; curTicket=null; }
-  async function openTicket(id){
+  function closeTicket(){ $('tk-detail').style.display='none'; curTicket=null; tkSig=''; }
+  async function openTicket(id,silent){
     curTicket=id;
     try{ var j=await (await fetch('/api/tickets/'+id,{headers:{'x-api-key':key()},cache:'no-store'})).json();
       if(!j.ticket) return;
       $('tk-detail').style.display='block';
       $('tk-dtitle').innerHTML=escj(j.ticket.subject)+' &nbsp;'+tkbadge(j.ticket.status);
-      $('tk-thread').innerHTML=(j.messages||[]).map(msgLine).join('')||'<div class=dim>kosong</div>';
-      $('tk-thread').scrollTop=$('tk-thread').scrollHeight;
-      $('tk-detail').scrollIntoView({behavior:'smooth',block:'nearest'});
-      loadTickets(); tick();
+      var msgs=j.messages||[];
+      // cuma re-render kalau ada perubahan (biar refresh live nggak bikin flicker/scroll lompat)
+      var sig=id+':'+msgs.length+':'+(msgs.length?msgs[msgs.length-1].created_at:'')+':'+j.ticket.status;
+      if(sig!==tkSig){
+        tkSig=sig;
+        $('tk-thread').innerHTML=msgs.map(msgLine).join('')||'<div class=dim>kosong</div>';
+        $('tk-thread').scrollTop=$('tk-thread').scrollHeight;
+      }
+      if(!silent){ $('tk-detail').scrollIntoView({behavior:'smooth',block:'nearest'}); loadTickets(); tick(); }
     }catch(e){}
   }
   async function replyTicket(){
@@ -877,6 +883,8 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       allOrders=d.orders||[]; allEvents=d.events||[];
       renderOrders(); renderEvents(); renderChart(d.series);
       if($('tk-dot')) $('tk-dot').style.display=(d.tickets_unread>0)?'block':'none';
+      // live refresh tiket kalau lagi buka menu tiket (list + percakapan yg kebuka)
+      if(curView==='tiket'){ loadTickets(); if(curTicket) openTicket(curTicket,true); }
     }catch(e){}
   }
 
