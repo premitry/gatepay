@@ -50,6 +50,9 @@ export function renderAdmin() {
   button:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
   button.red{color:var(--red)}
   button.amber{color:var(--accent)}
+  button.ib{padding:5px 7px;font-size:14px;min-width:30px;line-height:1}
+  button.ib.red{border-color:var(--red) var(--hi) var(--hi) var(--red)}
+  button.ib.amber{border-color:var(--accent) var(--hi) var(--hi) var(--accent)}
   input{width:100%;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);color:var(--text);padding:10px 11px;font-size:14px}
   .msg{font-size:12px;margin-top:8px;padding:8px;display:none;border:2px solid}
   .msg.ok{background:#dff3ea;color:var(--ok);border-color:var(--ok);display:block}
@@ -146,7 +149,8 @@ export function renderAdmin() {
       <div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Subjek</th><th>Pesan</th><th>Update</th><th>Status</th><th>Aksi</th></tr></thead>
       <tbody id="tktbody"><tr><td colspan=6 class=dim style="text-align:center;padding:20px">Loading…</td></tr></tbody></table></div>
     </div>
-    <div class="panel" id="atk-detail" style="display:none">
+    <div class="panel" id="atk-detail" style="display:none;position:relative">
+      <button onclick="closeAdminTicket()" title="Tutup" style="position:absolute;top:5px;right:6px;z-index:2;width:auto;margin:0;padding:2px 10px;font-size:14px;background:transparent;border:0;color:#fff">✕</button>
       <h2 id="atk-dtitle">THREAD</h2>
       <div id="atk-thread" style="max-height:360px;overflow-y:auto;margin-bottom:12px"></div>
       <div style="display:flex;gap:8px;align-items:stretch">
@@ -282,6 +286,7 @@ export function renderAdmin() {
     var im=new Image(); im.onload=function(){ var mx=1280,sc=Math.min(1,mx/Math.max(im.width,im.height)); var w=Math.round(im.width*sc),h=Math.round(im.height*sc); var cv=document.createElement('canvas'); cv.width=w;cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); atkImg=cv.toDataURL('image/jpeg',0.82); if($('atk-rprev')){$('atk-rprev').src=atkImg;$('atk-rprev').style.display='block';} };
     im.onerror=function(){ alert('File bukan gambar'); input.value=''; atkImg=null; }; im.src=URL.createObjectURL(f);
   }
+  function closeAdminTicket(){ $('atk-detail').style.display='none'; curTk=null; }
   async function openAdminTicket(id){
     curTk=id;
     try{ var j=await (await fetch('/api/tickets/'+id,{headers:hdr()})).json(); if(!j.ticket) return;
@@ -343,7 +348,7 @@ export function renderAdmin() {
           var dev = m.device_id ? '<span class="'+(on?'online':'offline')+'"><span class="dot '+(on?'on':'off')+'"></span>'+(on?'online':(m.last_seen?agoj(m.last_seen):'belum pernah'))+'</span>' : '<span class=dim>-</span>';
           var st = m.active?'<span class="bd" style="background:#0e7c66;color:#fff">aktif</span>':'<span class="bd" style="background:#b0362a;color:#fff">suspend</span>';
           var role = m.is_owner?' <span class="bd" style="background:#c26107;color:#fff">👑 OWNER</span>':(m.is_admin?' <span class="bd" style="background:#26379d;color:#fff">🛡 ADMIN</span>':'');
-          var roleBtn = (meIsOwner && !m.is_owner) ? (m.is_admin?'<button class="amber" onclick="setAdmin(\\''+m.id+'\\',0)">Cabut Admin</button>':'<button onclick="setAdmin(\\''+m.id+'\\',1)">Jadikan Admin</button>') : '';
+          var roleBtn = (meIsOwner && !m.is_owner) ? (m.is_admin?'<button class="ib amber" title="Cabut Admin" onclick="setAdmin(\\''+m.id+'\\',0)">🛡️</button>':'<button class="ib" title="Jadikan Admin" onclick="setAdmin(\\''+m.id+'\\',1)">🛡️</button>') : '';
           return '<tr><td><b>@'+escj(m.username||'-')+'</b>'+role+'<br><span class=dim>'+escj((m.name||'').slice(0,18))+'</span></td>'+
             '<td class=dim>'+dev+'</td>'+
             '<td>'+(m.has_qris?'✓':'<span class=dim>-</span>')+'</td>'+
@@ -352,12 +357,12 @@ export function renderAdmin() {
             '<td class=mono>'+idr(m.revenue)+'</td>'+
             '<td>'+st+'</td>'+
             '<td style="white-space:nowrap">'+
-              (m.active?'<button class="amber" onclick="setActive(\\''+m.id+'\\',0)">Suspend</button>':'<button onclick="setActive(\\''+m.id+'\\',1)">Aktifkan</button>')+
-              '<button onclick="resetPw(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">Reset PW</button>'+
-              (m.totp_enabled?'<button class="amber" onclick="reset2fa(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">Reset 2FA</button>':'')+
-              '<button onclick="regenKey(\\''+m.id+'\\')">New Key</button>'+
+              (m.active?'<button class="ib amber" title="Suspend" onclick="setActive(\\''+m.id+'\\',0)">⏸️</button>':'<button class="ib" title="Aktifkan" onclick="setActive(\\''+m.id+'\\',1)">▶️</button>')+
+              '<button class="ib" title="Reset Password" onclick="resetPw(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">🔑</button>'+
+              (m.totp_enabled?'<button class="ib amber" title="Reset 2FA" onclick="reset2fa(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">🔐</button>':'')+
+              '<button class="ib" title="API Key baru" onclick="regenKey(\\''+m.id+'\\')">🔄</button>'+
               roleBtn+
-              (m.is_owner?'':'<button class="red" onclick="delMerch(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">Hapus</button>')+
+              (m.is_owner?'':'<button class="ib red" title="Hapus" onclick="delMerch(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">🗑️</button>')+
             '</td></tr>';
         }).join('')||'<tr><td colspan=8 class=dim style="text-align:center;padding:20px">Belum ada merchant</td></tr>';
       } else {

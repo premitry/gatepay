@@ -427,7 +427,8 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <div id="tklist" class="dim">Loading…</div>
           </div>
         </div>
-        <div class="panel" id="tk-detail" style="display:none">
+        <div class="panel" id="tk-detail" style="display:none;position:relative">
+          <button onclick="closeTicket()" title="Tutup" style="position:absolute;top:5px;right:6px;z-index:2;width:auto;margin:0;padding:2px 10px;font-size:14px;background:transparent;border:0;color:#fff;box-shadow:none">✕</button>
           <h2 id="tk-dtitle">THREAD</h2>
           <div id="tk-thread" style="max-height:340px;overflow-y:auto;margin-bottom:12px"></div>
           <label>Balasan</label>
@@ -743,6 +744,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       var j=await r.json(); if(r.ok){ msg('tkmsg','ok','Tiket terkirim ✓'); $('tk-subject').value=''; $('tk-msg').value=''; $('tk-file').value=''; $('tk-prev').style.display='none'; tkImg.create=null; loadTickets(); openTicket(j.id); } else msg('tkmsg','err',j.error||'gagal');
     }catch(e){ msg('tkmsg','err',String(e)); }
   }
+  function closeTicket(){ $('tk-detail').style.display='none'; curTicket=null; }
   async function openTicket(id){
     curTicket=id;
     try{ var j=await (await fetch('/api/tickets/'+id,{headers:{'x-api-key':key()}})).json();
