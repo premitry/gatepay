@@ -16,7 +16,7 @@ export function renderDashboard() {
     --title-a:#26379d;--title-b:#3f7fc4;--text:#23262e;--dim:#5b5f66;--link:#3843b8;
     --accent:#c26107;--term-bg:#141f5c;--term-text:#dfe6ff;--term-ok:#8fe3f7;
     --ok:#0e7c66;--warn:#a05a00;--bad:#b0362a;
-    /* alias biar inline style lama tetap jalan */
+    /* alias supaya inline style lama tetap jalan */
     --card:#eceade;--card2:#e0ded1;--bd:#8f8b7e;--tx:#23262e;--brand:#26379d;--brandink:#fff;
   }
   *{box-sizing:border-box;border-radius:0!important;margin:0;padding:0}
@@ -201,7 +201,7 @@ export function renderDashboard() {
   <div id="fpw-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(20,31,92,.55);align-items:center;justify-content:center;padding:16px">
     <div class="panel" style="max-width:400px;width:100%;margin:0">
       <div style="font-family:'Michroma',sans-serif;color:#12235c;font-size:15px;margin-bottom:4px">🔒 GANTI PASSWORD</div>
-      <div class="dim" style="font-size:12px;margin-bottom:14px">Password akun Anda baru saja diatur ulang oleh admin. Demi keamanan, Anda wajib membuat password baru terlebih dahulu sebelum melanjutkan.</div>
+      <div class="dim" style="font-size:12px;margin-bottom:14px">Password akun kamu baru saja diatur ulang oleh admin. Demi keamanan, kamu perlu membuat password baru dulu sebelum melanjutkan.</div>
       <label class="dim" style="font-size:11px">Password baru (minimal 6 karakter)</label>
       <input id="fpw-new" type="password" placeholder="password baru" style="margin-bottom:8px">
       <label class="dim" style="font-size:11px">Ulangi password baru</label>
@@ -291,7 +291,7 @@ export function renderDashboard() {
         <div class="grid2">
           <div class="panel">
             <h2>QRIS_STATIS.CFG · Langkah 1</h2>
-            <div class="dim" style="margin-bottom:8px">Wajib duluan. Upload foto QRIS statis DANA Bisnis kamu → Decode → Simpan. Order nggak bisa dibuat sebelum QRIS ke-set.</div>
+            <div class="dim" style="margin-bottom:8px">Wajib duluan. Upload foto QRIS statis DANA Bisnis kamu → Decode → Simpan. Order tidak bisa dibuat sebelum QRIS ke-set.</div>
             <label>Upload QR (foto/gambar)</label>
             <input type="file" id="qrfile" accept="image/*">
             <button class="sec" onclick="decodeQr()">🔍 Decode QR</button>
@@ -354,7 +354,7 @@ export function renderDashboard() {
       <section class="view" id="v-hook">
         <div class="panel" style="max-width:640px">
           <h2>WEBHOOK.CFG</h2>
-          <div class="dim" style="margin-bottom:10px">Opsional. GatePay nembak POST ke URL ini tiap ada order <b>PAID</b>, jadi sistem kamu (toko/bot/invoice) tau otomatis tanpa polling. Kosongkan kalau cuma pakai dashboard.</div>
+          <div class="dim" style="margin-bottom:10px">Opsional. GatePay mengirim POST ke URL ini tiap ada order <b>PAID</b>, jadi sistem kamu (toko/bot/invoice) tau otomatis tanpa polling. Kosongkan kalau hanya pakai dashboard.</div>
           <label>Notify URL</label>
           <input id="notify" type="url" placeholder="https://sistem-kamu.com/webhook/gatepay">
           <button onclick="saveHook()">Simpan Webhook</button>
@@ -374,7 +374,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
           <pre>x-api-key: sk_live_xxxxxxxxxxxx</pre>
 
           <h3><span class="mth p">POST</span> /api/merchant/qris — Setup QRIS Statis</h3>
-          <p>Sekali aja. Isi string QRIS statis (bisa juga lewat menu QRIS &amp; Order pakai upload foto).</p>
+          <p>Sekali saja. Isi string QRIS statis (bisa juga lewat menu QRIS &amp; Order pakai upload foto).</p>
           <pre>curl -X POST https://gatepay.biz.id/api/merchant/qris \\
   -H "x-api-key: sk_live_xxx" \\
   -H "content-type: application/json" \\
@@ -388,7 +388,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <tr><td class=mono>order_ttl</td><td>number</td><td>Masa aktif order default (detik, 60-86400).</td></tr>
           </tbody></table>
 
-          <h3><span class="mth p">POST</span> /api/orders — Bikin Order</h3>
+          <h3><span class="mth p">POST</span> /api/orders — Buat Order</h3>
           <table><thead><tr><th>Field</th><th>Tipe</th><th>Ket</th></tr></thead><tbody>
             <tr><td class=mono>base_amount</td><td>number</td><td>Harga asli (Rp). Wajib.</td></tr>
             <tr><td class=mono>reference</td><td>string</td><td>No invoice kamu. Opsional.</td></tr>
@@ -406,11 +406,11 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
           <p>Status: <code>pending</code> · <code>paid</code> · <code>expired</code> · <code>cancelled</code>.</p>
 
           <h3><span class="mth p">POST</span> /api/orders/:id/cancel — Batalin Order</h3>
-          <p>Batalin order yang masih <code>pending</code> biar berhenti nunggu bayar.</p>
+          <p>Batalin order yang masih <code>pending</code> supaya berhenti menunggu bayar.</p>
 
           <h3>Alur Lengkap</h3>
           <pre>1. (sekali) Upload QRIS statis di menu QRIS & Order
-2. Bikin order   -> POST /api/orders  -> dapat qris + checkout_url
+2. Buat order   -> POST /api/orders  -> dapat qris + checkout_url
 3. Tampilkan QR / arahkan customer ke checkout_url
 4. Customer scan & bayar (nominal terkunci)
 5. Notif kebaca -> order jadi PAID
@@ -425,7 +425,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
           <div class="panel">
             <h2>TIKET_BARU.MSG</h2>
             <div class="dim" style="margin-bottom:8px">Ada kendala? Kirim tiket, nanti dibalas admin.</div>
-            <label>Subjek</label><input id="tk-subject" type="text" placeholder="mis. Pembayaran nggak kebaca">
+            <label>Subjek</label><input id="tk-subject" type="text" placeholder="mis. Pembayaran tidak kebaca">
             <label>Pesan</label>
             <div style="display:flex;gap:8px;align-items:stretch">
               <textarea id="tk-msg" placeholder="jelasin masalahnya..." style="flex:1"></textarea>
@@ -487,7 +487,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
 
             <div style="border-top:2px solid var(--edge);margin:16px 0 0"></div>
             <h2 style="margin-left:-18px;margin-right:-18px;margin-top:16px">AUTH_2FA.SYS</h2>
-            <div class="dim" style="margin-bottom:8px">Autentikator (Google Authenticator / Authy) — kode 6 digit tiap login. Bikin akun lebih aman.</div>
+            <div class="dim" style="margin-bottom:8px">Autentikator (Google Authenticator / Authy) — kode 6 digit tiap login. Buat akun lebih aman.</div>
             <div id="fa-status" class="mono dim" style="margin-bottom:8px">cek status…</div>
             <div id="fa-off" style="display:none"><button onclick="fa2Setup()">🔐 Aktifkan 2FA</button></div>
             <div id="fa-setup" style="display:none">
@@ -635,7 +635,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   }
 
   async function regenApiKey(){
-    if(!confirm('Ganti API key baru? API key lama langsung nggak berlaku — integrasi yang pakai key lama harus di-update.')) return;
+    if(!confirm('Ganti API key baru? API key lama langsung tidak berlaku — integrasi yang pakai key lama harus di-update.')) return;
     try{
       var r=await fetch('/api/merchant/regenerate-key',{method:'POST',headers:{'x-api-key':key()}});
       var j=await r.json();
@@ -667,7 +667,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
         var d=ctx.getImageData(0,0,w,h);
         var code=jsQR(d.data,w,h,{inversionAttempts:'attemptBoth'});
         if(code&&code.data){ $('qris').value=code.data; $('qrprev').src=img.src; $('qrprev').style.display='block'; msg('qmsg','ok','QR ke-decode ✓ — cek lalu Simpan'); }
-        else msg('qmsg','err','QR nggak kebaca. Coba foto lebih jelas / crop.');
+        else msg('qmsg','err','QR tidak kebaca. Coba foto lebih jelas / crop.');
       }catch(e){ msg('qmsg','err','Gagal baca gambar: '+e); }
     };
     img.onerror=function(){ msg('qmsg','err','File bukan gambar valid'); };
@@ -699,7 +699,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       } }catch(e){}
   }
   async function saveProfile(){
-    var n=$('p-name').value.trim(); if(!n) return msg('promsg','err','Nama nggak boleh kosong');
+    var n=$('p-name').value.trim(); if(!n) return msg('promsg','err','Nama tidak boleh kosong');
     try{ var r=await fetch('/api/merchant/profile',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({name:n})});
       var j=await r.json(); if(r.ok) msg('promsg','ok','Nama tampilan tersimpan ✓'); else msg('promsg','err',j.error||'gagal');
     }catch(e){ msg('promsg','err',String(e)); }
@@ -711,7 +711,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     }catch(e){ msg('smsg','err',String(e)); }
   }
   async function clearQris(){
-    if(!confirm('Hapus QRIS tersimpan? Order nggak bisa dibuat sampai upload QRIS lagi.')) return;
+    if(!confirm('Hapus QRIS tersimpan? Order tidak bisa dibuat sampai upload QRIS lagi.')) return;
     try{ var r=await fetch('/api/merchant/qris/clear',{method:'POST',headers:{'x-api-key':key()}});
       if(r.ok){ $('qris').value=''; $('qrprev').style.display='none'; msg('qmsg','ok','QRIS dihapus — status terputus, aman dari ketimpa'); loadSettings(); }
       else msg('qmsg','err','gagal hapus');
@@ -790,7 +790,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       $('tk-detail').style.display='block';
       $('tk-dtitle').innerHTML=escj(j.ticket.subject)+' &nbsp;'+tkbadge(j.ticket.status);
       var msgs=j.messages||[];
-      // cuma re-render kalau ada perubahan (biar refresh live nggak bikin flicker/scroll lompat)
+      // hanya re-render kalau ada perubahan (supaya refresh live tidak buat flicker/scroll lompat)
       var sig=id+':'+msgs.length+':'+(msgs.length?msgs[msgs.length-1].created_at:'')+':'+j.ticket.status;
       if(sig!==tkSig){
         tkSig=sig;
@@ -833,7 +833,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function ordersRows(){ return filteredOrders().map(o=>({id:o.id,reference:o.reference||'',amount:o.unique_amount,base:o.base_amount,status:dispStatus(o),created_at:new Date((o.created_at||0)*1000).toLocaleString('id-ID')})); }
   function exportOrders(fmt){
     $('expmenu').classList.remove('on');
-    var rows=ordersRows(); if(!rows.length){ alert('Nggak ada data buat di-export'); return; }
+    var rows=ordersRows(); if(!rows.length){ alert('Tidak ada data buat di-export'); return; }
     var keys=['id','reference','amount','base','status','created_at'];
     if(fmt==='json'){ dl('gatepay-orders.json',JSON.stringify(rows,null,2),'application/json'); return; }
     if(fmt==='csv'){ var ec=v=>'"'+String(v).replace(/"/g,'""')+'"';
@@ -855,7 +855,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     var slice=list.slice(oPage*PER,oPage*PER+PER);
     $('otbody').innerHTML=slice.map(o=>{var st=dispStatus(o);
       var aksi=st==='pending'?'<button class=btncancel onclick="cancelOrder(\\''+escj(o.id)+'\\')">Cancel</button>':'<span class=dim>-</span>';
-      return '<tr><td class=mono>'+escj(o.id.slice(0,12))+'</td><td class=mono>'+idr(o.unique_amount)+'<br><span class=dim>base '+idr(o.base_amount)+'</span></td><td>'+bdg(st)+'</td><td class=dim>'+escj(o.reference||'-')+'</td><td><a class=lnk href="/pay/'+escj(o.id)+'" target=_blank>checkout ↗</a></td><td class=dim>'+agoj(o.created_at)+'</td><td>'+aksi+'</td></tr>';}).join('')||'<tr><td colspan=7 class=dim style="text-align:center;padding:20px">Nggak ada order '+(oFilter==='all'?'':escj(oFilter))+'</td></tr>';
+      return '<tr><td class=mono>'+escj(o.id.slice(0,12))+'</td><td class=mono>'+idr(o.unique_amount)+'<br><span class=dim>base '+idr(o.base_amount)+'</span></td><td>'+bdg(st)+'</td><td class=dim>'+escj(o.reference||'-')+'</td><td><a class=lnk href="/pay/'+escj(o.id)+'" target=_blank>checkout ↗</a></td><td class=dim>'+agoj(o.created_at)+'</td><td>'+aksi+'</td></tr>';}).join('')||'<tr><td colspan=7 class=dim style="text-align:center;padding:20px">Tidak ada order '+(oFilter==='all'?'':escj(oFilter))+'</td></tr>';
     $('opinfo').textContent=tot?('Hal '+(oPage+1)+'/'+(mx+1)+' · '+tot+' order'):'';
     $('oprev').disabled=oPage<=0; $('onext').disabled=oPage>=mx;
   }

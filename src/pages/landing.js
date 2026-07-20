@@ -5,7 +5,7 @@ export function renderLanding() {
 <html lang="id"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GatePay — Payment Gateway QRIS Otomatis</title>
-<meta name="description" content="Terima pembayaran QRIS DANA otomatis. Bikin order, customer scan, langsung terkonfirmasi. Tanpa ribet API merchant enterprise.">
+<meta name="description" content="Terima pembayaran QRIS DANA otomatis. Buat order, customer scan, langsung terkonfirmasi. Tanpa ribet API merchant enterprise.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Michroma&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
@@ -84,7 +84,7 @@ export function renderLanding() {
 <header class="hero"><div class="wrap">
   <div class="badge">▮ PAYMENT_GATEWAY.SYS · QRIS · INDONESIA</div>
   <h1>Terima <span class="hl">QRIS</span> otomatis,<br>tanpa ribet.</h1>
-  <p class="sub">Bikin order, customer scan QRIS, pembayaran langsung terkonfirmasi otomatis. QRIS statis kamu diubah jadi dinamis dengan nominal terkunci — anti salah transfer.</p>
+  <p class="sub">Buat order, customer scan QRIS, pembayaran langsung terkonfirmasi otomatis. QRIS statis kamu diubah jadi dinamis dengan nominal terkunci — anti salah transfer.</p>
   <div class="cta">
     <a class="btn primary" href="/dashboard">Mulai Sekarang →</a>
     <a class="btn" href="/docs">Lihat Dokumentasi</a>
@@ -103,8 +103,8 @@ export function renderLanding() {
     <div class="bd2">
       <div class="sec-title"><h2>Cara Kerja</h2><p>Tiga langkah, pembayaran langsung masuk.</p></div>
       <div class="steps">
-        <div class="step"><div class="num">1</div><h3>Bikin Order</h3><p>Panggil API atau lewat dashboard. Sistem generate nominal unik + QRIS dinamis otomatis.</p></div>
-        <div class="step"><div class="num">2</div><h3>Customer Scan</h3><p>Customer scan QRIS pakai DANA / e-wallet / m-banking. Nominal udah terkunci, tinggal bayar.</p></div>
+        <div class="step"><div class="num">1</div><h3>Buat Order</h3><p>Panggil API atau lewat dashboard. Sistem generate nominal unik + QRIS dinamis otomatis.</p></div>
+        <div class="step"><div class="num">2</div><h3>Customer Scan</h3><p>Customer scan QRIS pakai DANA / e-wallet / m-banking. Nominal sudah terkunci, tinggal bayar.</p></div>
         <div class="step"><div class="num">3</div><h3>Auto Konfirmasi</h3><p>Begitu bayar, notifikasi tertangkap & dicocokkan. Order jadi PAID + callback ke sistem kamu.</p></div>
       </div>
     </div>
@@ -117,12 +117,12 @@ export function renderLanding() {
     <div class="bd2">
       <div class="sec-title"><h2>Kenapa GatePay</h2><p>Simpel, cepat, dan cocok buat toko kecil sampai SaaS.</p></div>
       <div class="feats">
-        <div class="feat"><div class="ic">🔒</div><h3>Nominal Terkunci</h3><p>QRIS dinamis dengan nominal ke-embed. Customer nggak bisa salah nominal.</p></div>
+        <div class="feat"><div class="ic">🔒</div><h3>Nominal Terkunci</h3><p>QRIS dinamis dengan nominal ke-embed. Customer tidak bisa salah nominal.</p></div>
         <div class="feat"><div class="ic">⚡</div><h3>Real-time</h3><p>Konfirmasi otomatis dari notifikasi pembayaran, tanpa cek manual.</p></div>
-        <div class="feat"><div class="ic">🧩</div><h3>API Sederhana</h3><p>Satu endpoint bikin order, satu buat cek status. Callback webhook ke sistem kamu.</p></div>
+        <div class="feat"><div class="ic">🧩</div><h3>API Sederhana</h3><p>Satu endpoint buat order, satu buat cek status. Callback webhook ke sistem kamu.</p></div>
         <div class="feat"><div class="ic">📊</div><h3>Dashboard</h3><p>Pantau order, pembayaran, dan statistik secara live.</p></div>
         <div class="feat"><div class="ic">🏦</div><h3>Semua e-wallet</h3><p>QRIS = 1 kode buat DANA, OVO, GoPay, ShopeePay, m-banking, dll.</p></div>
-        <div class="feat"><div class="ic">🚀</div><h3>Tanpa Onboarding Ribet</h3><p>Nggak perlu PKS enterprise. Upload QRIS statis kamu, langsung jalan.</p></div>
+        <div class="feat"><div class="ic">🚀</div><h3>Tanpa Onboarding Ribet</h3><p>Tidak perlu PKS enterprise. Upload QRIS statis kamu, langsung jalan.</p></div>
       </div>
     </div>
   </div>
@@ -134,12 +134,12 @@ export function renderLanding() {
     <div class="bd2">
       <div class="sec-title"><h2>Aplikasi yang Didukung</h2><p>APK penangkap notif GatePay baca notifikasi "uang masuk" dari aplikasi apa pun di HP kamu.</p></div>
       <div class="feats" style="grid-template-columns:repeat(2,1fr)">
-        <div class="feat"><div class="ic">💙</div><h3>DANA &amp; DANA Bisnis</h3><p>Paling utama & paling cepat. Notif transaksi masuk langsung ketangkep.<br><span class="mono" style="font-size:12px;color:var(--accent)">id.dana</span></p></div>
+        <div class="feat"><div class="ic">💙</div><h3>DANA &amp; DANA Bisnis</h3><p>Paling utama & paling cepat. Notif transaksi masuk langsung tertangkap.<br><span class="mono" style="font-size:12px;color:var(--accent)">id.dana</span></p></div>
         <div class="feat"><div class="ic">💜</div><h3>E-wallet lain</h3><p>OVO, GoPay, ShopeePay, LinkAja — asal munculin notif uang masuk.<br><span class="mono" style="font-size:12px;color:var(--accent)">ovo.id · com.gojek.app · com.shopee.id</span></p></div>
         <div class="feat"><div class="ic">🏦</div><h3>Mobile Banking</h3><p>BCA mobile, BRImo, Livin' Mandiri, dll — kalau ngasih notif kredit masuk.<br><span class="mono" style="font-size:12px;color:var(--accent)">com.bca · id.co.bri.brimo</span></p></div>
         <div class="feat"><div class="ic">➕</div><h3>Bebas Tambah</h3><p>Isi package name aplikasi lain (pisah koma) di APK — apa pun yang notifnya ada nominal Rp.</p></div>
       </div>
-      <div class="warn" style="margin-top:20px;text-align:left">&gt; SYARAT: kamu harus upload QRIS statis dulu di dashboard. Semua e-wallet/bank di atas bayar ke QRIS itu — GatePay cuma cocokin nominalnya dari notif. Cara nemu package name: Setelan HP → Aplikasi → detail aplikasi, atau isi contoh di atas.</div>
+      <div class="warn" style="margin-top:20px;text-align:left">&gt; SYARAT: kamu harus upload QRIS statis dulu di dashboard. Semua e-wallet/bank di atas bayar ke QRIS itu — GatePay hanya cocokin nominalnya dari notif. Cara nemu package name: Setelan HP → Aplikasi → detail aplikasi, atau isi contoh di atas.</div>
     </div>
   </div>
 </div></section>
@@ -148,7 +148,7 @@ export function renderLanding() {
   <div class="cta-box out">
     <div class="bd2">
       <h2>Siap terima pembayaran?</h2>
-      <p>Upload QRIS kamu, bikin order pertama, dalam hitungan menit.</p>
+      <p>Upload QRIS kamu, buat order pertama, dalam hitungan menit.</p>
       <a class="btn primary" href="/dashboard" style="padding:13px 30px;font-size:14px">Buka Dashboard →</a>
     </div>
   </div>

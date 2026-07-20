@@ -74,7 +74,7 @@ const DEFAULT_SETTINGS = {
   site_name: 'GatePay',
   favicon: '💳',
   theme_color: '#26379d',
-  description: 'Payment gateway QRIS otomatis — bikin order, customer scan, langsung terkonfirmasi.',
+  description: 'Payment gateway QRIS otomatis — buat order, customer scan, langsung terkonfirmasi.',
   pwa_enabled: '1',
   pwa_name: 'GatePay',
   pwa_short_name: 'GatePay',
@@ -112,7 +112,7 @@ async function ensureTickets(DB) {
   await DB.prepare(
     'CREATE TABLE IF NOT EXISTS ticket_messages (id TEXT PRIMARY KEY, ticket_id TEXT, sender TEXT, sender_role TEXT, sender_name TEXT, body TEXT, image TEXT, created_at INTEGER)',
   ).run();
-  // untuk DB yang tabelnya udah ada tanpa kolom baru
+  // untuk DB yang tabelnya sudah ada tanpa kolom baru
   try { await DB.prepare('ALTER TABLE tickets ADD COLUMN user_unread INTEGER DEFAULT 0').run(); } catch {}
   try { await DB.prepare('ALTER TABLE tickets ADD COLUMN admin_unread INTEGER DEFAULT 0').run(); } catch {}
   try { await DB.prepare('ALTER TABLE ticket_messages ADD COLUMN image TEXT').run(); } catch {}
@@ -223,7 +223,7 @@ function injectHead(html, s) {
 const SVG_WA = `<svg viewBox="0 0 32 32" width="24" height="24" fill="#fff"><path d="M16 3C9 3 3.5 8.5 3.5 15.5c0 2.3.6 4.4 1.7 6.3L3 29l7.4-2.1c1.8 1 3.9 1.6 6.1 1.6 7 0 12.5-5.5 12.5-12.5S23 3 16 3zm0 22.8c-1.9 0-3.7-.5-5.3-1.5l-.4-.2-4.4 1.2 1.2-4.3-.3-.4c-1-1.6-1.6-3.5-1.6-5.4C5.4 9.6 10.1 5 16 5s10.6 4.6 10.6 10.5S21.9 25.8 16 25.8zm5.8-7.9c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.3-.2-.3 0-.5.1-.7.1-.1.3-.4.5-.6.1-.2.2-.3.3-.5.1-.2 0-.4 0-.6 0-.2-.7-1.7-1-2.3-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1.1 1-1.1 2.5s1.1 2.9 1.3 3.1c.2.2 2.2 3.4 5.3 4.7.7.3 1.3.5 1.8.7.7.2 1.4.2 1.9.1.6-.1 1.9-.8 2.1-1.5.3-.7.3-1.4.2-1.5-.1-.1-.3-.2-.6-.4z"/></svg>`;
 const SVG_TG = `<svg viewBox="0 0 24 24" width="23" height="23" fill="#fff"><path d="M21.9 4.3l-3.1 14.6c-.2 1-.8 1.3-1.7.8l-4.6-3.4-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.7 8.6-7.8c.4-.3-.1-.5-.6-.2L7.3 12.6 2.7 11.2c-1-.3-1-1 .2-1.5l17.7-6.8c.8-.3 1.5.2 1.3 1.4z"/></svg>`;
 
-// Tombol bulat (icon saja) — dipakai kalau cuma 1 channel, atau sebagai toggle
+// Tombol bulat (icon saja) — dipakai kalau hanya 1 channel, atau sebagai toggle
 function fabBtn(inner, bg, label, extra) {
   return `<a href="${extra.href || 'javascript:void(0)'}"${extra.href ? ' target="_blank" rel="noopener"' : ''}${extra.onclick ? ` onclick="${extra.onclick}"` : ''} title="${label}" ` +
     `style="display:flex;align-items:center;justify-content:center;width:56px;height:56px;background:${bg};color:#fff;` +
@@ -250,7 +250,7 @@ function injectSupport(html, s) {
 
   let widget;
   if (ch.length === 1) {
-    // cuma 1 channel → tombol langsung dengan ikon channel itu (logo WA / pesawat kertas)
+    // hanya 1 channel → tombol langsung dengan ikon channel itu (logo WA / pesawat kertas)
     const c = ch[0];
     widget = `<div style="position:fixed;right:18px;bottom:18px;z-index:9999">${fabBtn(c.logo, c.bg, 'Chat ' + c.label, { href: c.href })}</div>`;
   } else {
@@ -264,7 +264,7 @@ function injectSupport(html, s) {
   return insertBeforeLast(html, '</body>', widget);
 }
 
-// Bungkus render halaman biar dapet head settings + widget support
+// Bungkus render halaman supaya dapet head settings + widget support
 async function page(c, htmlStr) {
   const s = await getSettings(c.env.DB);
   return c.html(injectSupport(injectHead(htmlStr, s), s));
@@ -513,7 +513,7 @@ app.post('/api/merchant/qris', async (c) => {
   return json(c, { ok: true, merchant_name: info.merchantName, city: info.merchantCity });
 });
 
-// Hapus QRIS statis tersimpan (biar tau udah terputus, nggak ketimpa diam-diam)
+// Hapus QRIS statis tersimpan (supaya tau sudah terputus, tidak ketimpa diam-diam)
 app.post('/api/merchant/qris/clear', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
@@ -609,7 +609,7 @@ app.post('/api/merchant/change-password', async (c) => {
   const newP = String(body.new_password || '');
   if (newP.length < 6) return json(c, { error: 'password baru minimal 6 karakter' }, 400);
   if (!merchant.password_hash) return json(c, { error: 'akun tidak punya password' }, 400);
-  // Kalau lagi dipaksa ganti PW (habis di-reset admin), user udah login pakai PW temp
+  // Kalau lagi dipaksa ganti PW (habis di-reset admin), user sudah login pakai PW temp
   // & terautentikasi via api_key → boleh set PW baru tanpa verif PW lama.
   if (!merchant.must_change_pw) {
     const ok = await verifyPassword(oldP, merchant.password_salt, merchant.password_hash);
@@ -678,7 +678,7 @@ app.post('/api/merchant/2fa/disable', async (c) => {
 });
 
 // ─────────────────────────────────────────────────────────
-// Tiket support — merchant bikin & balas, admin baca & ubah status
+// Tiket support — merchant buat & balas, admin baca & ubah status
 // ─────────────────────────────────────────────────────────
 // List tiket milik merchant
 app.get('/api/tickets', async (c) => {
@@ -691,7 +691,7 @@ app.get('/api/tickets', async (c) => {
   return json(c, { tickets: r.results || [] });
 });
 
-// Bikin tiket baru
+// Buat tiket baru
 app.post('/api/tickets', async (c) => {
   const m = await requireMerchant(c);
   if (!m) return json(c, { error: 'invalid api key' }, 401);
@@ -795,7 +795,7 @@ app.get('/pay/:id', async (c) => {
   return page(c, renderCheckout({ order, qris, embed }));
 });
 
-// Status order buat polling checkout (publik, cuma status)
+// Status order buat polling checkout (publik, hanya status)
 app.get('/pay/:id/status', async (c) => {
   const order = await c.env.DB.prepare('SELECT id, status, expires_at FROM orders WHERE id = ?')
     .bind(c.req.param('id'))
@@ -915,7 +915,7 @@ app.get('/snap-demo', (c) => {
     <input id="amt" type="number" value="10000" min="1">
     <button class="btn" id="go" onclick="mulai()">🪟 Buka Popup Bayar</button>
     <div class="log" id="log">Siap. Masukin API key kamu dulu…</div>
-    <div class="tip">💡 API key cuma dipakai di browser kamu buat demo ini. Di produksi, <b>bikin order dari server</b> — jangan pernah taruh API key di frontend.</div>
+    <div class="tip">💡 API key hanya dipakai di browser kamu buat demo ini. Di produksi, <b>buat order dari server</b> — jangan pernah taruh API key di frontend.</div>
   </div>
 </div>
 <script src="/snap.js"></script>
@@ -938,7 +938,7 @@ app.get('/snap-demo', (c) => {
       log('> GatePay.pay() → buka popup…');
       GatePay.pay(j.id,{
         onSuccess:function(o){ log('✔ PAID! Rp '+Number(o.unique_amount).toLocaleString('id-ID'),'win'); b.disabled=false; },
-        onPending:function(o){ log('  popup kebuka, nunggu bayar…'); },
+        onPending:function(o){ log('  popup kebuka, menunggu bayar…'); },
         onError:function(o){ log('✗ order '+(o.status||'gagal'),'bad'); b.disabled=false; },
         onClose:function(){ log('  popup ditutup.'); b.disabled=false; }
       });
@@ -1132,7 +1132,7 @@ app.get('/dashboard/data', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
 
-  // Expire order pending yang udah lewat waktu (biar status di list/stat akurat)
+  // Expire order pending yang sudah lewat waktu (supaya status di list/stat akurat)
   await c.env.DB.prepare(
     `UPDATE orders SET status='expired' WHERE merchant_id = ? AND status='pending' AND expires_at <= ?`,
   ).bind(merchant.id, now()).run();

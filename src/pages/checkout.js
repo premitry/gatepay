@@ -78,11 +78,11 @@ export function renderCheckout({ order, qris, embed }) {
         <div class="steps">
           <b>1.</b> Buka DANA / e-wallet / m-banking<br>
           <b>2.</b> Scan QRIS di atas<br>
-          <b>3.</b> Nominal udah otomatis ${rupiah(order.unique_amount)} — konfirmasi bayar
+          <b>3.</b> Nominal sudah otomatis ${rupiah(order.unique_amount)} — konfirmasi bayar
         </div>` : `
         <div class="note">Merchant belum upload QRIS. Hubungi merchant.</div>`}
       <div class="timer">Berlaku <span id="cd">--:--</span></div>
-      <div class="status wait" id="st"><span class="spin"></span>Nunggu pembayaran…</div>
+      <div class="status wait" id="st"><span class="spin"></span>Menunggu pembayaran…</div>
     `}
   </div>
   <div class="foot">Diproses aman oleh GatePay</div>

@@ -238,7 +238,7 @@ export function renderAdmin() {
       <div class="dim" id="msub" style="margin-bottom:8px"></div>
       <input class="val" id="mval" readonly onclick="this.select()">
       <button onclick="copyResult()" id="mcopy">📋 Copy</button>
-      <div class="dim" style="font-size:11px;margin-top:8px">Klik field buat select semua, atau tekan Copy. Simpan sebelum tutup — nggak ditampilkan lagi.</div>
+      <div class="dim" style="font-size:11px;margin-top:8px">Klik field buat select semua, atau tekan Copy. Simpan sebelum tutup — tidak ditampilkan lagi.</div>
     </div>
   </div>
 </div>
@@ -437,7 +437,7 @@ export function renderAdmin() {
   function closeMModal(){ $('mmodal').classList.remove('on'); }
   async function reopenAfter(id){ await load(); if($('mmodal').classList.contains('on')) openMerchant(id); }
 
-  async function reset2fa(id,u){ if(!confirm('Reset/matikan 2FA untuk @'+u+'? Dia bisa login tanpa kode lagi & set ulang authenticator.'))return; var r=await fetch('/api/admin/merchants/'+id+'/reset-2fa',{method:'POST',headers:hdr()}); if(r.ok){ alert('2FA @'+u+' udah di-reset'); reopenAfter(id); } else alert('gagal'); }
+  async function reset2fa(id,u){ if(!confirm('Reset/matikan 2FA untuk @'+u+'? Dia bisa login tanpa kode lagi & set ulang authenticator.'))return; var r=await fetch('/api/admin/merchants/'+id+'/reset-2fa',{method:'POST',headers:hdr()}); if(r.ok){ alert('2FA @'+u+' sudah di-reset'); reopenAfter(id); } else alert('gagal'); }
   async function setActive(id,a){ await fetch('/api/admin/merchants/'+id+'/active',{method:'POST',headers:hdr(),body:JSON.stringify({active:a})}); reopenAfter(id); }
   async function delMerch(id,u){ if(!confirm('Hapus merchant @'+u+'? Semua ordernya ikut hilang.'))return; await fetch('/api/admin/merchants/'+id+'/delete',{method:'POST',headers:hdr()}); closeMModal(); load(); }
   async function resetPw(id,u){ var r=await (await fetch('/api/admin/merchants/'+id+'/reset-password',{method:'POST',headers:hdr()})).json(); if(r.new_password) showResult('PASSWORD_BARU.KEY','Password sementara untuk @'+u+' (user wajib ganti pas login):',r.new_password); }

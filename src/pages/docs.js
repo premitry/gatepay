@@ -63,7 +63,7 @@ export function renderDocs() {
     <a href="#auth">Autentikasi</a>
     <a href="#qris">Setup QRIS</a>
     <div class="h">API</div>
-    <a href="#create">Bikin Order</a>
+    <a href="#create">Buat Order</a>
     <a href="#status">Cek Status</a>
     <a href="#cancel">Cancel Order</a>
     <a href="#callback">Webhook</a>
@@ -74,7 +74,7 @@ export function renderDocs() {
   </aside>
   <main>
     <h1>Dokumentasi GatePay</h1>
-    <p class="lead">Payment gateway QRIS. Bikin order → customer scan QRIS dinamis → pembayaran terkonfirmasi otomatis.</p>
+    <p class="lead">Payment gateway QRIS. Buat order → customer scan QRIS dinamis → pembayaran terkonfirmasi otomatis.</p>
 
     <h2 id="intro">Pengantar</h2>
     <p>Base URL semua endpoint:</p>
@@ -92,9 +92,9 @@ export function renderDocs() {
   -H "x-api-key: sk_live_xxx" \\
   -H "content-type: application/json" \\
   -d '{"qris": "00020101021126...6304ABCD"}'</code></pre>
-    <div class="tip">💡 Isi <code>qris</code> = teks string QRIS statis (bukan gambar). Bisa di-decode dari foto QR pakai app scanner apa aja, atau lewat dashboard.</div>
+    <div class="tip">💡 Isi <code>qris</code> = teks string QRIS statis (bukan gambar). Bisa di-decode dari foto QR pakai app scanner apa saja, atau lewat dashboard.</div>
 
-    <h2 id="create">Bikin Order</h2>
+    <h2 id="create">Buat Order</h2>
     <p><span class="method post">POST</span><code>/api/orders</code></p>
     <table>
       <tr><th>Field</th><th>Tipe</th><th>Keterangan</th></tr>
@@ -128,7 +128,7 @@ export function renderDocs() {
     <p><span class="method post">POST</span><code>/api/orders/:id/cancel</code></p>
 
     <h2 id="callback">Webhook (Callback)</h2>
-    <p>Webhook bikin GatePay <b>ngasih kabar otomatis ke sistem kamu</b> tiap ada order yang jadi <code>paid</code> — jadi toko/bot/invoice kamu tau tanpa perlu polling status terus. Opsional; kalau cuma pakai dashboard, skip aja.</p>
+    <p>Webhook buat GatePay <b>ngasih kabar otomatis ke sistem kamu</b> tiap ada order yang jadi <code>paid</code> — jadi toko/bot/invoice kamu tau tanpa perlu polling status terus. Opsional; kalau hanya pakai dashboard, skip saja.</p>
 
     <h3>Cara aktifin</h3>
     <p>Buka <a href="/dashboard">Dashboard</a> → menu <b>Webhook</b> → isi <b>Notify URL</b> (endpoint kamu) → Simpan. Di situ juga ada <b>Callback Secret</b> buat verifikasi. Atau lewat API:</p>
@@ -164,26 +164,26 @@ app.post('/webhook/gatepay', (req, res) =&gt; {
   }
   res.json({ ok: true });                     // balas 2xx = sukses
 });</code></pre>
-    <div class="tip">💡 Balas HTTP <code>2xx</code> supaya GatePay tau webhook diterima. Kalau endpoint down, pembayaran tetap tercatat <code>paid</code> di dashboard — webhook cuma notifikasi tambahan.</div>
+    <div class="tip">💡 Balas HTTP <code>2xx</code> supaya GatePay tau webhook diterima. Kalau endpoint down, pembayaran tetap tercatat <code>paid</code> di dashboard — webhook hanya notifikasi tambahan.</div>
 
     <h2 id="checkout">Halaman Checkout</h2>
     <p>Tiap order otomatis punya halaman bayar di <code>/pay/:id</code> — nampilin QR, nominal, countdown, dan auto-update jadi "Berhasil" pas dibayar. Tinggal redirect customer ke situ.</p>
 
     <h2 id="popup">Popup Pembayaran (Snap)</h2>
-    <p>Kalau nggak mau redirect customer keluar dari web kamu, pakai <b>popup pembayaran</b> — mirip Snap-nya Midtrans. QRIS muncul sebagai modal melayang di atas halaman kamu, dan kamu dapat notifikasi lewat callback tanpa pindah halaman.</p>
+    <p>Kalau tidak mau redirect customer keluar dari web kamu, pakai <b>popup pembayaran</b> — mirip Snap-nya Midtrans. QRIS muncul sebagai modal melayang di atas halaman kamu, dan kamu dapat notifikasi lewat callback tanpa pindah halaman.</p>
 
     <div class="demobox">
-      <div class="t">Mau lihat langsung bentuknya? <b>Coba demo live</b> — isi API key &amp; nominal, popup-nya muncul persis kayak di produksi.</div>
+      <div class="t">Mau lihat langsung bentuknya? <b>Coba demo live</b> — isi API key &amp; nominal, popup-nya muncul persis seperti di produksi.</div>
       <a class="dbtn" href="/snap-demo" target="_blank">🪟 Buka Demo</a>
     </div>
 
     <h3>1. Pasang loader</h3>
     <p>Taruh sekali di halaman kamu (biasanya sebelum <code>&lt;/body&gt;</code>):</p>
     <pre><code>&lt;script src="https://gatepay.biz.id/snap.js"&gt;&lt;/script&gt;</code></pre>
-    <p>Ini bikin object global <code>GatePay</code> di browser.</p>
+    <p>Ini buat object global <code>GatePay</code> di browser.</p>
 
-    <h3>2. Bikin order di backend</h3>
-    <p>Sama kayak biasa — <code>POST /api/orders</code> dari server kamu (jangan taruh <code>x-api-key</code> di frontend!). Ambil <code>id</code> order-nya, kirim ke halaman.</p>
+    <h3>2. Buat order di backend</h3>
+    <p>Sama seperti biasa — <code>POST /api/orders</code> dari server kamu (jangan taruh <code>x-api-key</code> di frontend!). Ambil <code>id</code> order-nya, kirim ke halaman.</p>
 
     <h3>3. Buka popup di frontend</h3>
     <p>Panggil <code>GatePay.pay(orderId, callbacks)</code> — misalnya pas tombol "Bayar" diklik:</p>
@@ -199,7 +199,7 @@ async function bayar(){
       // ✓ QRIS kebayar — nominal terkunci di o.unique_amount
       window.location = '/terima-kasih';
     },
-    onPending: (o) =&gt; { console.log('nunggu bayar', o.id); },
+    onPending: (o) =&gt; { console.log('menunggu bayar', o.id); },
     onError:   (o) =&gt; { alert('Order kadaluarsa / batal'); },
     onClose:   ()  =&gt; { console.log('popup ditutup user'); }
   });
@@ -216,12 +216,12 @@ async function bayar(){
     </table>
     <p><code>order</code> yang dikirim ke callback isinya <code>{ id, unique_amount, status }</code>. <code>GatePay.pay()</code> balikin <code>{ close() }</code> kalau mau nutup popup secara manual dari kode kamu.</p>
 
-    <div class="tip">💡 Popup cuma soal tampilan. <b>Sumber kebenaran</b> pembayaran tetap status order di server + <a href="#callback">webhook</a>. Jangan kasih barang/akses cuma karena <code>onSuccess</code> jalan di browser — verifikasi ulang via webhook atau <code>GET /api/orders/:id</code> di backend.</div>
-    <div class="tip">⚠️ Syarat: QRIS statis kamu <b>wajib udah ke-setup</b> (lihat <a href="#qris">Setup QRIS</a>), karena popup nge-load QRIS dinamis dari situ.</div>
+    <div class="tip">💡 Popup hanya soal tampilan. <b>Sumber kebenaran</b> pembayaran tetap status order di server + <a href="#callback">webhook</a>. Jangan kasih barang/akses hanya karena <code>onSuccess</code> jalan di browser — verifikasi ulang via webhook atau <code>GET /api/orders/:id</code> di backend.</div>
+    <div class="tip">⚠️ Syarat: QRIS statis kamu <b>wajib sudah ke-setup</b> (lihat <a href="#qris">Setup QRIS</a>), karena popup nge-load QRIS dinamis dari situ.</div>
 
     <h2 id="flow">Alur Lengkap</h2>
     <pre><code>1. (sekali) Upload QRIS statis  → POST /api/merchant/qris
-2. Bikin order                  → POST /api/orders  → dapat qris + checkout_url
+2. Buat order                  → POST /api/orders  → dapat qris + checkout_url
 3. Tampilkan QR / redirect ke checkout_url
 4. Customer scan & bayar (nominal terkunci)
 5. Notif pembayaran tertangkap  → order jadi PAID
