@@ -73,11 +73,11 @@ export function makeDynamic(staticPayload, amount, reference) {
   const body = idx >= 0 ? p.substring(0, idx) : p;
 
   const tlv = parseTLV(body);
-  // susun ulang: set tag 01 = 12, sisipkan tag 54, sisipkan tag 62 (reference) kalau ada
+  // susun ulang: cuma sisipkan nominal (tag 54). Tag lain (26/51/62/dst) DIBIARKAN utuh.
   const map = new Map();
   for (const { tag, value } of tlv) map.set(tag, value);
 
-  // PENTING: JANGAN ubah POI ke '12' (dynamic).
+  // PENTING #1: JANGAN ubah POI ke '12' (dynamic).
   // QR dinamis (POI 12) itu harusnya digenerate sistem acquirer sendiri dgn transaksi
   // terdaftar di backend mereka. Kalau kita paksa 12, app bayar (GoPay/SeaBank/dll) kirim
   // ke acquirer, acquirer nyari transaksi yg match → gak ketemu → DITOLAK
@@ -86,16 +86,11 @@ export function makeDynamic(staticPayload, amount, reference) {
   if (!map.has('01')) map.set('01', '11');
   map.set('54', String(Math.round(amount))); // transaction amount (tanpa desimal)
 
-  if (reference) {
-    // tag 62 = Additional Data Field Template; sub-tag 05 = Bill/Reference Number
-    const ref = String(reference).slice(0, 25).replace(/[^\x20-\x7E]/g, '');
-    const existing = map.get('62') || '';
-    // gabung: pertahankan sub-field lain kalau ada, tambah/replace sub 05
-    const subs = parseTLV(existing).filter((s) => s.tag !== '05');
-    let inner = subs.map((s) => field(s.tag, s.value)).join('');
-    inner += field('05', ref);
-    map.set('62', inner);
-  }
+  // PENTING #2: JANGAN utak-atik tag 62 (Additional Data / reference).
+  // Matching pembayaran pakai NOMINAL UNIK, bukan baca reference dari QR — jadi reference
+  // di QR nggak diperlukan. Nyisipin sub-tag 05 bikin urutan sub-tag kebalik (07 lalu 05)
+  // dan sebagian acquirer strict nolak QR-nya. Biarin tag 62 persis kayak QRIS statis.
+  // (param `reference` sengaja diabaikan.)
 
   // urutkan tag ascending (QRIS harus urut), tag 63 (CRC) di akhir
   const order = [...map.keys()].filter((t) => t !== '63').sort();
