@@ -585,6 +585,15 @@ app.post('/api/merchant/change-password', async (c) => {
   return json(c, { ok: true });
 });
 
+// Regenerate API key sendiri (ranah user)
+app.post('/api/merchant/regenerate-key', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  const apiKey = 'sk_live_' + hex(16);
+  await c.env.DB.prepare('UPDATE merchants SET api_key = ? WHERE id = ?').bind(apiKey, merchant.id).run();
+  return json(c, { ok: true, api_key: apiKey });
+});
+
 // ── 2FA / Authenticator ──
 // Status
 app.get('/api/merchant/2fa', async (c) => {

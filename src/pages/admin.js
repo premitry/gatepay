@@ -407,7 +407,6 @@ export function renderAdmin() {
     a.push(m.active?mmBtn('amber','Suspend',"setActive('"+m.id+"',0)"):mmBtn('','Aktifkan',"setActive('"+m.id+"',1)"));
     a.push(mmBtn('','Reset Password',"resetPw('"+m.id+"','"+u+"')"));
     if(m.totp_enabled) a.push(mmBtn('amber','Reset 2FA',"reset2fa('"+m.id+"','"+u+"')"));
-    a.push(mmBtn('','API Key Baru',"regenKey('"+m.id+"')"));
     if(meIsOwner && !m.is_owner) a.push(m.is_admin?mmBtn('amber','Cabut Admin',"setAdmin('"+m.id+"',0)"):mmBtn('','Jadikan Admin',"setAdmin('"+m.id+"',1)"));
     if(!m.is_owner) a.push(mmBtn('red','Hapus',"delMerch('"+m.id+"','"+u+"')"));
     $('mm-actions').innerHTML=a.join('');

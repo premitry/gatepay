@@ -328,7 +328,8 @@ export function renderDashboard() {
         <div class="panel" style="max-width:640px">
           <h2>CREDENTIALS.SYS</h2>
           <div class="dim" style="margin-bottom:10px">Buat integrasi API + setup HP penangkap notif pembayaran. Rahasiakan.</div>
-          <div class="cred"><div><div class="l">API Key (sk_live)</div><div class="v" id="c-api">-</div></div><button class="sec" onclick="cp('c-api')">Copy</button></div>
+          <div class="cred"><div><div class="l">API Key (sk_live)</div><div class="v" id="c-api">-</div></div><div style="display:flex;gap:4px"><button class="sec" onclick="cp('c-api')">Copy</button><button class="sec" onclick="regenApiKey()" title="Ganti API key baru">↻ Baru</button></div></div>
+          <div class="msg" id="keymsg" style="margin-bottom:8px"></div>
           <div class="cred"><div><div class="l">Device ID (APK)</div><div class="v" id="c-devid">-</div></div><button class="sec" onclick="cp('c-devid')">Copy</button></div>
           <div class="cred"><div><div class="l">Device Secret (APK)</div><div class="v" id="c-devsec">-</div></div><button class="sec" onclick="cp('c-devsec')">Copy</button></div>
           <div class="cred"><div><div class="l">Server URL (APK)</div><div class="v">https://gatepay.biz.id</div></div><button class="sec" onclick="cpTxt('https://gatepay.biz.id')">Copy</button></div>
@@ -605,6 +606,15 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     navTo((location.hash||'').replace('#','')||'dash');
   }
 
+  async function regenApiKey(){
+    if(!confirm('Ganti API key baru? API key lama langsung nggak berlaku — integrasi yang pakai key lama harus di-update.')) return;
+    try{
+      var r=await fetch('/api/merchant/regenerate-key',{method:'POST',headers:{'x-api-key':key()}});
+      var j=await r.json();
+      if(r.ok && j.api_key){ var s=sess()||{}; s.api_key=j.api_key; localStorage.setItem('gp_sess',JSON.stringify(s)); $('c-api').textContent=j.api_key; msg('keymsg','ok','API key baru dibuat ✓ — update di integrasi kamu'); }
+      else msg('keymsg','err',j.error||'gagal');
+    }catch(e){ msg('keymsg','err',String(e)); }
+  }
   async function changePw(){
     var o=$('oldpw').value, n=$('newpw').value;
     if(!o||!n) return msg('pwmsg','err','Isi password lama & baru');
