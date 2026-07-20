@@ -254,8 +254,8 @@ function injectSupport(html, s) {
     const c = ch[0];
     widget = `<div style="position:fixed;right:18px;bottom:18px;z-index:9999">${fabBtn(c.logo, c.bg, 'Chat ' + c.label, { href: c.href })}</div>`;
   } else {
-    // 2 channel → tombol emoji orang, klik muncul pilihan ke atas
-    const menu = ch.map((c) => supportPill(c.href, c.bg, c.logo, c.label)).join('');
+    // 2 channel → tombol telepon merah, klik muncul pilihan ke atas (logo saja, tanpa teks)
+    const menu = ch.map((c) => fabBtn(c.logo, c.bg, 'Chat ' + c.label, { href: c.href })).join('');
     widget = `<div style="position:fixed;right:18px;bottom:18px;z-index:9999;display:flex;flex-direction:column;gap:10px;align-items:flex-end">` +
       `<div id="gpsm" style="display:none;flex-direction:column;gap:8px;align-items:flex-end">${menu}</div>` +
       fabBtn('📞', '#d32f2f', 'Bantuan', { onclick: "var m=document.getElementById('gpsm');m.style.display=m.style.display==='flex'?'none':'flex';return false;" }) +
