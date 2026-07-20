@@ -354,6 +354,7 @@ export function renderAdmin() {
             '<td style="white-space:nowrap">'+
               (m.active?'<button class="amber" onclick="setActive(\\''+m.id+'\\',0)">Suspend</button>':'<button onclick="setActive(\\''+m.id+'\\',1)">Aktifkan</button>')+
               '<button onclick="resetPw(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">Reset PW</button>'+
+              (m.totp_enabled?'<button class="amber" onclick="reset2fa(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">Reset 2FA</button>':'')+
               '<button onclick="regenKey(\\''+m.id+'\\')">New Key</button>'+
               roleBtn+
               (m.is_owner?'':'<button class="red" onclick="delMerch(\\''+m.id+'\\',\\''+escj(m.username)+'\\')">Hapus</button>')+
@@ -374,6 +375,7 @@ export function renderAdmin() {
   document.addEventListener('keydown',function(e){ if(e.key==='Escape')closeModal(); });
 
   async function setAdmin(id,v){ if(!confirm(v?'Jadikan user ini admin?':'Cabut akses admin user ini?'))return; var r=await fetch('/api/admin/merchants/'+id+'/set-admin',{method:'POST',headers:hdr(),body:JSON.stringify({admin:v})}); var j=await r.json(); if(!r.ok)alert(j.error||'gagal'); load(); }
+  async function reset2fa(id,u){ if(!confirm('Reset/matikan 2FA untuk @'+u+'? Dia bisa login tanpa kode lagi & set ulang authenticator.'))return; var r=await fetch('/api/admin/merchants/'+id+'/reset-2fa',{method:'POST',headers:hdr()}); if(r.ok){ alert('2FA @'+u+' udah di-reset'); load(); } else alert('gagal'); }
   async function setActive(id,a){ await fetch('/api/admin/merchants/'+id+'/active',{method:'POST',headers:hdr(),body:JSON.stringify({active:a})}); load(); }
   async function delMerch(id,u){ if(!confirm('Hapus merchant @'+u+'? Semua ordernya ikut hilang.'))return; await fetch('/api/admin/merchants/'+id+'/delete',{method:'POST',headers:hdr()}); load(); }
   async function resetPw(id,u){ var r=await (await fetch('/api/admin/merchants/'+id+'/reset-password',{method:'POST',headers:hdr()})).json(); if(r.new_password) showResult('PASSWORD_BARU.KEY','Password baru untuk @'+u+':',r.new_password); }

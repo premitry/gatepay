@@ -1014,9 +1014,10 @@ async function requireOwner(c) {
 // List merchant + statistik ringkas per merchant
 app.get('/api/admin/merchants', async (c) => {
   if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
+  await ensure2fa(c.env.DB);
   const r = await c.env.DB.prepare(
     `SELECT m.id, m.name, m.username, m.api_key, m.device_id, m.fee_percent, m.unique_digits,
-            m.active, m.is_admin, m.is_owner, m.last_seen, m.created_at,
+            m.active, m.is_admin, m.is_owner, m.totp_enabled, m.last_seen, m.created_at,
             (m.qris_static IS NOT NULL) as has_qris,
             (SELECT COUNT(*) FROM orders o WHERE o.merchant_id = m.id) as total_orders,
             (SELECT COUNT(*) FROM orders o WHERE o.merchant_id = m.id AND o.status='paid') as paid_orders,
@@ -1068,6 +1069,15 @@ app.post('/api/admin/merchants/:id/reset-password', async (c) => {
   await c.env.DB.prepare('UPDATE merchants SET password_hash = ?, password_salt = ? WHERE id = ?')
     .bind(hash, salt, c.req.param('id')).run();
   return json(c, { ok: true, new_password: newPass });
+});
+
+// Reset / matikan 2FA user (buat kasus authenticator hilang)
+app.post('/api/admin/merchants/:id/reset-2fa', async (c) => {
+  if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
+  await ensure2fa(c.env.DB);
+  await c.env.DB.prepare('UPDATE merchants SET totp_enabled = 0, totp_secret = NULL WHERE id = ?')
+    .bind(c.req.param('id')).run();
+  return json(c, { ok: true });
 });
 
 // Regenerate API key
