@@ -188,6 +188,7 @@ export function renderDashboard() {
       <input id="u" type="text" placeholder="username" autocomplete="username">
       <label>Password</label>
       <input id="p" type="password" placeholder="password" autocomplete="current-password">
+      <div id="fa2-wrap" class="hidden"><label>Kode 2FA (authenticator)</label><input id="fa2" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code"></div>
       <button id="authbtn" onclick="doAuth()">Masuk</button>
       <div class="msg" id="amsg"></div>
       <div class="dim" style="font-size:11px;margin-top:14px" id="reghint"></div>
@@ -469,6 +470,28 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <label>Password Baru</label><input id="newpw" type="password" placeholder="minimal 6 karakter">
             <button onclick="changePw()">Ganti Password</button>
             <div class="msg" id="pwmsg"></div>
+
+            <div style="border-top:2px solid var(--edge);margin:16px 0 0"></div>
+            <h2 style="margin-left:-18px;margin-right:-18px;margin-top:16px">AUTH_2FA.SYS</h2>
+            <div class="dim" style="margin-bottom:8px">Autentikator (Google Authenticator / Authy) — kode 6 digit tiap login. Bikin akun lebih aman.</div>
+            <div id="fa-status" class="mono dim" style="margin-bottom:8px">cek status…</div>
+            <div id="fa-off" style="display:none"><button onclick="fa2Setup()">🔐 Aktifkan 2FA</button></div>
+            <div id="fa-setup" style="display:none">
+              <div class="dim">1. Scan QR ini di app authenticator:</div>
+              <canvas id="fa-qr" style="background:#fff;padding:8px;margin:8px 0;max-width:180px;border:2px solid var(--edge-dark)"></canvas>
+              <div class="cred"><div><div class="l">Atau kode manual</div><div class="v" id="fa-secret">-</div></div><button class="sec" onclick="cp('fa-secret')">Copy</button></div>
+              <label>2. Masukin 6 digit dari app</label>
+              <input id="fa-code" inputmode="numeric" maxlength="6" placeholder="123456">
+              <button onclick="fa2Verify()">Verifikasi &amp; Aktifkan</button>
+              <div class="msg" id="fa-msg"></div>
+            </div>
+            <div id="fa-on" style="display:none">
+              <div class="msg ok" style="display:block">✓ 2FA aktif — login butuh kode authenticator</div>
+              <label>Nonaktifkan — masukin kode dulu</label>
+              <input id="fa-dcode" inputmode="numeric" maxlength="6" placeholder="123456">
+              <button class="sec" onclick="fa2Disable()">Nonaktifkan 2FA</button>
+              <div class="msg" id="fa-dmsg"></div>
+            </div>
           </div>
         </div>
       </section>
@@ -521,10 +544,15 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   async function doAuth(){
     var u=$('u').value.trim().toLowerCase(), p=$('p').value;
     if(!u||!p) return msg('amsg','err','Isi username & password');
+    var payload={username:u,password:p};
+    if(mode==='login' && !$('fa2-wrap').classList.contains('hidden')) payload.totp=$('fa2').value.trim();
     try{
-      var r=await fetch('/api/'+(mode==='login'?'login':'register'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:u,password:p})});
+      var r=await fetch('/api/'+(mode==='login'?'login':'register'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       var j=await r.json();
-      if(!r.ok) return msg('amsg','err',j.error||'gagal');
+      if(!r.ok){
+        if(j.needs_2fa){ $('fa2-wrap').classList.remove('hidden'); $('fa2').focus(); return msg('amsg','err',j.error||'Masukin kode 2FA'); }
+        return msg('amsg','err',j.error||'gagal');
+      }
       localStorage.setItem('gp_sess', JSON.stringify(j));
       showApp();
     }catch(e){ msg('amsg','err',String(e)); }
@@ -541,8 +569,15 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     document.querySelectorAll('.navi').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
     $('ptitle').textContent=TITLES[v]||'';
     if(v==='tiket') loadTickets();
+    if(v==='profile') fa2Load();
     toggleMnav(false);
   }
+  // ── 2FA ──
+  function fa2Render(en){ $('fa-status').textContent=en?'Status: AKTIF ●':'Status: nonaktif'; $('fa-status').style.color=en?'var(--ok)':'var(--dim)'; $('fa-off').style.display=en?'none':'block'; $('fa-on').style.display=en?'block':'none'; $('fa-setup').style.display='none'; }
+  async function fa2Load(){ try{ var j=await (await fetch('/api/merchant/2fa',{headers:{'x-api-key':key()}})).json(); fa2Render(!!j.enabled); }catch(e){} }
+  async function fa2Setup(){ try{ var r=await fetch('/api/merchant/2fa/setup',{method:'POST',headers:{'x-api-key':key()}}); var j=await r.json(); if(!r.ok) return alert(j.error||'gagal'); $('fa-secret').textContent=j.secret; $('fa-off').style.display='none'; $('fa-setup').style.display='block'; new QRious({element:$('fa-qr'),value:j.otpauth,size:300,level:'M'}); }catch(e){ alert(String(e)); } }
+  async function fa2Verify(){ var code=$('fa-code').value.trim(); try{ var r=await fetch('/api/merchant/2fa/verify',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({code:code})}); var j=await r.json(); if(r.ok){ msg('fa-msg','ok','2FA aktif ✓'); fa2Render(true); } else msg('fa-msg','err',j.error||'gagal'); }catch(e){ msg('fa-msg','err',String(e)); } }
+  async function fa2Disable(){ var code=$('fa-dcode').value.trim(); try{ var r=await fetch('/api/merchant/2fa/disable',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({code:code})}); var j=await r.json(); if(r.ok){ msg('fa-dmsg','ok','2FA dinonaktifkan'); fa2Render(false); } else msg('fa-dmsg','err',j.error||'gagal'); }catch(e){ msg('fa-dmsg','err',String(e)); } }
   function go(v){ if(location.hash==='#'+v) navTo(v); else location.hash='#'+v; }
   window.addEventListener('hashchange',function(){ navTo((location.hash||'').replace('#','')); });
   function setColArrow(){ var b=document.querySelector('.collapse'); if(b) b.textContent=document.body.classList.contains('col')?'›':'‹'; }

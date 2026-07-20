@@ -89,6 +89,7 @@ export function renderAdmin() {
     <div class="sub">Login akun admin GatePay.</div>
     <label>Username</label><input id="u" type="text" placeholder="admin username">
     <label>Password</label><input id="p" type="password" placeholder="password">
+    <div id="fa2-wrap" class="hidden"><label>Kode 2FA</label><input id="fa2" inputmode="numeric" maxlength="6" placeholder="123456"></div>
     <button onclick="login()">Masuk Admin</button>
     <div class="msg" id="amsg"></div>
     <div class="dim" style="font-size:11px;margin-top:14px"><a href="/dashboard">← Dashboard merchant biasa</a></div>
@@ -236,10 +237,12 @@ export function renderAdmin() {
   async function login(){
     var u=$('u').value.trim().toLowerCase(), p=$('p').value;
     if(!u||!p) return msg('amsg','err','Isi username & password');
+    var payload={username:u,password:p};
+    if(!$('fa2-wrap').classList.contains('hidden')) payload.totp=$('fa2').value.trim();
     try{
-      var r=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:u,password:p})});
+      var r=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       var j=await r.json();
-      if(!r.ok) return msg('amsg','err',j.error||'gagal');
+      if(!r.ok){ if(j.needs_2fa){ $('fa2-wrap').classList.remove('hidden'); $('fa2').focus(); return msg('amsg','err',j.error||'Masukin kode 2FA'); } return msg('amsg','err',j.error||'gagal'); }
       if(!j.is_admin) return msg('amsg','err','Akun ini bukan admin');
       localStorage.setItem('gp_admin',JSON.stringify(j)); showApp();
     }catch(e){ msg('amsg','err',String(e)); }

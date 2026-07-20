@@ -128,6 +128,46 @@ async function ensureOwner(DB) {
   _ownerReady = true;
 }
 function roleOf(m) { return m.is_owner ? 'owner' : m.is_admin ? 'admin' : 'user'; }
+
+// ── 2FA / TOTP (RFC 6238) ──
+let _2faReady = false;
+async function ensure2fa(DB) {
+  if (_2faReady) return;
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN totp_secret TEXT').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN totp_enabled INTEGER DEFAULT 0').run(); } catch {}
+  _2faReady = true;
+}
+const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+function base32Encode(bytes) {
+  let bits = 0, val = 0, out = '';
+  for (const b of bytes) { val = (val << 8) | b; bits += 8; while (bits >= 5) { out += B32[(val >>> (bits - 5)) & 31]; bits -= 5; } }
+  if (bits > 0) out += B32[(val << (5 - bits)) & 31];
+  return out;
+}
+function base32Decode(str) {
+  str = String(str || '').toUpperCase().replace(/[^A-Z2-7]/g, '');
+  let bits = 0, val = 0; const out = [];
+  for (const ch of str) { const idx = B32.indexOf(ch); if (idx < 0) continue; val = (val << 5) | idx; bits += 5; if (bits >= 8) { out.push((val >>> (bits - 8)) & 0xff); bits -= 8; } }
+  return new Uint8Array(out);
+}
+function genTotpSecret() { return base32Encode(crypto.getRandomValues(new Uint8Array(20))); }
+async function hotp(secretBytes, counter) {
+  const buf = new ArrayBuffer(8); const dv = new DataView(buf);
+  dv.setUint32(0, Math.floor(counter / 2 ** 32)); dv.setUint32(4, counter >>> 0);
+  const key = await crypto.subtle.importKey('raw', secretBytes, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, buf));
+  const off = sig[sig.length - 1] & 0x0f;
+  const code = ((sig[off] & 0x7f) << 24) | ((sig[off + 1] & 0xff) << 16) | ((sig[off + 2] & 0xff) << 8) | (sig[off + 3] & 0xff);
+  return (code % 1000000).toString().padStart(6, '0');
+}
+async function verifyTotp(secretB32, token) {
+  if (!/^\d{6}$/.test(String(token || ''))) return false;
+  const secret = base32Decode(secretB32);
+  if (!secret.length) return false;
+  const step = Math.floor(now() / 30);
+  for (let w = -1; w <= 1; w++) { if (await hotp(secret, step + w) === String(token)) return true; }
+  return false;
+}
 // Validasi + batasi data URI gambar (maks ~2.2MB base64 ≈ 1.5MB file)
 function cleanImage(v) {
   const s = String(v || '');
@@ -254,10 +294,17 @@ app.post('/api/login', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const username = String(body.username || '').trim().toLowerCase();
   const password = String(body.password || '');
+  await ensure2fa(c.env.DB);
   const m = await c.env.DB.prepare('SELECT * FROM merchants WHERE username = ?').bind(username).first();
   if (!m || !m.password_hash) return json(c, { error: 'username / password salah' }, 401);
   const ok = await verifyPassword(password, m.password_salt, m.password_hash);
   if (!ok) return json(c, { error: 'username / password salah' }, 401);
+  // 2FA: kalau aktif, wajib kode TOTP yang valid
+  if (m.totp_enabled) {
+    const totp = String(body.totp || '').trim();
+    if (!totp) return json(c, { needs_2fa: true, error: 'butuh kode 2FA' }, 401);
+    if (!(await verifyTotp(m.totp_secret, totp))) return json(c, { needs_2fa: true, error: 'kode 2FA salah' }, 401);
+  }
   return json(c, {
     ok: true,
     username: m.username,
@@ -535,6 +582,53 @@ app.post('/api/merchant/change-password', async (c) => {
   await c.env.DB.prepare('UPDATE merchants SET password_hash = ?, password_salt = ? WHERE id = ?')
     .bind(hash, salt, merchant.id).run();
   return json(c, { ok: true });
+});
+
+// ── 2FA / Authenticator ──
+// Status
+app.get('/api/merchant/2fa', async (c) => {
+  const m = await requireMerchant(c);
+  if (!m) return json(c, { error: 'invalid api key' }, 401);
+  await ensure2fa(c.env.DB);
+  const mm = await c.env.DB.prepare('SELECT totp_enabled FROM merchants WHERE id = ?').bind(m.id).first();
+  return json(c, { enabled: !!(mm && mm.totp_enabled) });
+});
+// Mulai setup → generate secret (belum aktif), balikin otpauth URI buat di-scan
+app.post('/api/merchant/2fa/setup', async (c) => {
+  const m = await requireMerchant(c);
+  if (!m) return json(c, { error: 'invalid api key' }, 401);
+  await ensure2fa(c.env.DB);
+  const cur = await c.env.DB.prepare('SELECT totp_enabled FROM merchants WHERE id = ?').bind(m.id).first();
+  if (cur && cur.totp_enabled) return json(c, { error: '2FA sudah aktif' }, 400);
+  const secret = genTotpSecret();
+  await c.env.DB.prepare('UPDATE merchants SET totp_secret = ?, totp_enabled = 0 WHERE id = ?').bind(secret, m.id).run();
+  const label = encodeURIComponent('GatePay:' + (m.username || 'user'));
+  const otpauth = `otpauth://totp/${label}?secret=${secret}&issuer=GatePay&period=30&digits=6`;
+  return json(c, { ok: true, secret, otpauth });
+});
+// Verifikasi kode → aktifkan
+app.post('/api/merchant/2fa/verify', async (c) => {
+  const m = await requireMerchant(c);
+  if (!m) return json(c, { error: 'invalid api key' }, 401);
+  await ensure2fa(c.env.DB);
+  const mm = await c.env.DB.prepare('SELECT totp_secret FROM merchants WHERE id = ?').bind(m.id).first();
+  if (!mm || !mm.totp_secret) return json(c, { error: 'belum setup 2FA' }, 400);
+  const code = String((await c.req.json().catch(() => ({}))).code || '').trim();
+  if (!(await verifyTotp(mm.totp_secret, code))) return json(c, { error: 'kode salah, coba lagi' }, 400);
+  await c.env.DB.prepare('UPDATE merchants SET totp_enabled = 1 WHERE id = ?').bind(m.id).run();
+  return json(c, { ok: true, enabled: true });
+});
+// Nonaktifkan (butuh kode valid)
+app.post('/api/merchant/2fa/disable', async (c) => {
+  const m = await requireMerchant(c);
+  if (!m) return json(c, { error: 'invalid api key' }, 401);
+  await ensure2fa(c.env.DB);
+  const mm = await c.env.DB.prepare('SELECT totp_secret, totp_enabled FROM merchants WHERE id = ?').bind(m.id).first();
+  if (!mm || !mm.totp_enabled) return json(c, { error: '2FA belum aktif' }, 400);
+  const code = String((await c.req.json().catch(() => ({}))).code || '').trim();
+  if (!(await verifyTotp(mm.totp_secret, code))) return json(c, { error: 'kode salah' }, 400);
+  await c.env.DB.prepare('UPDATE merchants SET totp_enabled = 0, totp_secret = NULL WHERE id = ?').bind(m.id).run();
+  return json(c, { ok: true, enabled: false });
 });
 
 // ─────────────────────────────────────────────────────────
