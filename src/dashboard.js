@@ -226,7 +226,7 @@ export function renderDashboard() {
       <div class="grp">Bantuan</div>
       <div class="navi" data-view="tiket" onclick="go('tiket')" style="position:relative"><span class="ic">🎫</span><span class="lbl">Tiket Support</span><span id="tk-dot" style="display:none;position:absolute;top:6px;right:8px;width:9px;height:9px;background:#b0362a;border:1px solid #fff"></span></div>
       <div class="grp hidden" id="grp-akun">Admin</div>
-      <div class="navi hidden" id="nav-events" data-view="events" onclick="go('events')"><span class="ic">📡</span><span class="lbl">Events Device</span></div>
+      <div class="navi" data-view="events" onclick="go('events')"><span class="ic">📋</span><span class="lbl">Logs</span></div>
       <div class="navi hidden" id="nav-admin" data-view="admin" onclick="go('admin')"><span class="ic">👑</span><span class="lbl">Admin</span></div>
     </nav>
     <div class="side-bot">
@@ -514,6 +514,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       <section class="view" id="v-events">
         <div class="panel">
           <h2>DEVICE_EVENTS.LOG</h2>
+          <div class="dim" style="margin-bottom:10px">Semua notifikasi yang tertangkap perangkat kamu (termasuk hasil <b>Uji Kirim</b> dari APK). Hanya log milik akunmu sendiri.</div>
           <table><thead><tr><th>Event</th><th>Nominal</th><th>Status</th><th>Raw</th><th>Waktu</th></tr></thead>
           <tbody id="etbody"><tr><td colspan=5 class=dim style="text-align:center;padding:20px">Belum ada event</td></tr></tbody></table>
           <div class="pager">
@@ -574,10 +575,10 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function logout(){ localStorage.removeItem('gp_sess'); location.reload(); }
 
   // ── shell / navigation ──
-  const TITLES={dash:'Dashboard',qris:'QRIS & Order',apk:'Kredensial & APK',hook:'Docs & Webhook',tiket:'Tiket Support',profile:'Profil',events:'Events Device',admin:'Admin'};
+  const TITLES={dash:'Dashboard',qris:'QRIS & Order',apk:'Kredensial & APK',hook:'Docs & Webhook',tiket:'Tiket Support',profile:'Profil',events:'Logs',admin:'Admin'};
   function navTo(v){
     if(!TITLES[v]) v='dash';
-    var s=sess(); if((v==='admin'||v==='events') && !(s&&s.is_admin)) v='dash';
+    var s=sess(); if(v==='admin' && !(s&&s.is_admin)) v='dash';
     document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
     var el=$('v-'+v); if(el) el.classList.add('on');
     document.querySelectorAll('.navi').forEach(x=>x.classList.toggle('active',x.dataset.view===v));

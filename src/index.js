@@ -1140,9 +1140,9 @@ app.get('/dashboard/data', async (c) => {
   const orders = await c.env.DB.prepare(
     `SELECT * FROM orders WHERE merchant_id = ? ORDER BY created_at DESC LIMIT 200`,
   ).bind(merchant.id).all();
-  // events dari device milik merchant ini (+ event lama tanpa merchant_id = null)
+  // events dari device milik merchant ini saja (strict — nggak bocor ke tenant lain)
   const events = await c.env.DB.prepare(
-    `SELECT * FROM events WHERE merchant_id = ? OR merchant_id IS NULL ORDER BY created_at DESC LIMIT 50`,
+    `SELECT * FROM events WHERE merchant_id = ? ORDER BY created_at DESC LIMIT 100`,
   ).bind(merchant.id).all();
   const stats = await c.env.DB.prepare(
     `SELECT COUNT(*) as total,
