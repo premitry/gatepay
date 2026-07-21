@@ -1,6 +1,6 @@
 {
-  "versionCode": 11,
-  "versionName": "2.3",
+  "versionCode": 12,
+  "versionName": "2.3.1",
   "url": "/gatepay-catcher.apk",
-  "notes": "Update lewat browser (tanpa izin install), login di tengah, popup bertema, panduan izin diperbaiki."
+  "notes": "Panduan izin lebih jelas (letak Allow restricted settings beda tiap HP)."
 }
