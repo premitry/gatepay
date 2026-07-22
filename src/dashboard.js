@@ -125,16 +125,16 @@ export function renderDashboard() {
   .faq summary:before{content:'▸ ';color:var(--title-a)}
   .faq details[open] summary:before{content:'▾ '}
   .faq details>div{padding:10px 12px;font-size:13px;line-height:1.6;border-top:1px solid var(--edge)}
-  .flowrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .flowstep{display:flex;align-items:center;gap:6px;background:var(--chrome-2);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);padding:6px 10px;font-size:12px;font-weight:700}
-  .flowstep.done{background:var(--ok);color:#fff;border-color:#0a5c4c}
-  .fnum{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:var(--title-a);color:#fff;font-size:11px;font-family:'Share Tech Mono',monospace}
-  .flowstep.done .fnum{background:#0a5c4c}
-  .farr{color:var(--dim);font-weight:700}
-  .tnum{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:var(--title-a);color:#fff;font-size:11px;font-family:'Share Tech Mono',monospace;margin-right:6px;vertical-align:-3px}
-  .tbadge{display:inline-block;background:var(--tonal,#d0d4e8);color:var(--title-a);font-size:10px;font-weight:700;padding:2px 6px;margin-left:6px;text-transform:uppercase;letter-spacing:.03em}
-  .tbadge.red{background:#f7dcd9;color:var(--red)}
-  .jbtn{margin-top:10px;margin-right:6px;font-size:12px}
+  .prereq{background:#fff6d9;border:2px solid var(--accent);padding:10px 12px;font-size:13px;line-height:1.6;color:#3a2a00}
+  .stepcard{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-top:1px solid var(--edge)}
+  .stepcard:first-of-type{border-top:0;padding-top:2px}
+  .stepnum{flex:0 0 auto;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,var(--title-b),var(--title-a));color:#fff;font-family:'Share Tech Mono',monospace;font-weight:700;font-size:15px;border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
+  .stepbody{flex:1;font-size:13px;line-height:1.65}
+  .stepbody h4{margin:2px 0 6px;font-size:14px;color:var(--title-a)}
+  .stepbody p{margin:0 0 8px}
+  .stepbody .sec{margin-top:4px}
+  .tipbox{background:#dff3ea;border:2px solid var(--ok);color:#0a5c4c;padding:8px 10px;font-size:12px;line-height:1.55;margin:8px 0}
+  .warnbox{background:#fff6d9;border:2px solid var(--accent);color:#3a2a00;padding:8px 10px;font-size:12px;line-height:1.55;margin:8px 0}
   .spstat{font-size:12px;padding:8px 10px;border:2px solid}
   .spstat.ok{background:#dff3ea;border-color:var(--ok);color:var(--ok);font-weight:700}
   .spstat.dead{background:#f7dcd9;border-color:var(--red);color:var(--red);font-weight:700}
@@ -463,68 +463,69 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       <!-- TUTORIAL -->
       <section class="view" id="v-tutor">
         <div class="panel">
-          <h2>TUTORIAL · Panduan Interaktif</h2>
-          <div class="dim" style="margin-bottom:12px">Klik tiap langkah buat buka detailnya. Tombol biru langsung loncat ke menunya.</div>
-          <div class="flowrow">
-            <div class="flowstep"><span class="fnum">1</span>QRIS</div><span class="farr">›</span>
-            <div class="flowstep"><span class="fnum">2</span>Catcher</div><span class="farr">›</span>
-            <div class="flowstep"><span class="fnum">3</span>Order</div><span class="farr">›</span>
-            <div class="flowstep"><span class="fnum">4</span>Bayar</div><span class="farr">›</span>
-            <div class="flowstep done"><span class="fnum">✓</span>PAID</div>
+          <h2>TUTORIAL · Panduan GatePay</h2>
+          <div class="dim" style="margin-bottom:10px">Panduan dari nol sampai order otomatis PAID. Baca berurutan dari atas.</div>
+          <div class="prereq">📌 <b>Syarat utama:</b> GatePay <b>tidak</b> bikin QRIS dari nol. Kamu harus sudah punya <b>QRIS statis</b> merchant (dari DANA Bisnis / ShopeePay Partner / bank). GatePay ngubahnya jadi QRIS dinamis + deteksi pembayaran otomatis.</div>
+        </div>
+
+        <div class="panel">
+          <h2>Bagian 1 · Setup Wajib</h2>
+          <div class="stepcard">
+            <div class="stepnum">1</div>
+            <div class="stepbody">
+              <h4>📤 Upload QRIS Statis</h4>
+              <p>Di menu <b>QRIS &amp; Order</b>: upload foto QRIS statis → <b>Decode QR</b> (atau paste teksnya yang diawali <code>00020101...</code>) → <b>Simpan QRIS</b>. Nama merchant muncul = berhasil. Atur juga Fee %, digit kode unik, dan masa aktif order.</p>
+              <div class="tipbox">💡 <b>Tips:</b> pastikan yang diupload QRIS <b>statis</b> (bukan QR sekali pakai). Foto harus jelas / nggak blur.</div>
+              <button class="sec" onclick="go('qris')">Buka QRIS &amp; Order →</button>
+            </div>
           </div>
-          <div class="faq" style="margin-top:16px">
-            <details open><summary><span class="tnum">1</span> QRIS Statis <span class="tbadge red">wajib</span></summary><div>
-              <p>GatePay bikin QR dinamis (nominal unik) dari QRIS statis kamu.</p>
-              <ol>
-                <li>Upload foto QRIS statis → <b>Decode QR</b> (atau paste teks <code>00020101...</code>).</li>
-                <li><b>Simpan QRIS</b> — nama merchant muncul = berhasil.</li>
-                <li>Atur Fee %, digit kode unik, masa aktif → <b>Simpan Pengaturan</b>.</li>
-              </ol>
-              <button class="sec jbtn" onclick="go('qris')">→ Buka QRIS &amp; Order</button>
-            </div></details>
+          <div class="stepcard">
+            <div class="stepnum">2</div>
+            <div class="stepbody">
+              <h4>📱 Setup HP Catcher (APK)</h4>
+              <p>Cara default deteksi pembayaran: aplikasi Android nangkep notifikasi "uang masuk" lalu kirim ke GatePay. Di menu <b>Kredensial &amp; APK</b>: Download APK → install → Login pakai akun GatePay → aktifkan <b>Akses Notifikasi</b> → tab Status → <b>Pilih Aplikasi</b> target (DANA/ShopeePay/dll).</p>
+              <div class="tipbox">💡 <b>Biar nggak mati sendiri:</b> aktifkan <b>Autostart</b> + set baterai "tanpa batasan" (khususnya HP Xiaomi/MIUI).</div>
+              <div class="warnbox">⚠ HP harus tetap nyala &amp; online supaya catcher jalan.</div>
+              <button class="sec" onclick="go('apk')">Buka Kredensial &amp; APK →</button>
+            </div>
+          </div>
+          <div class="stepcard">
+            <div class="stepnum">3</div>
+            <div class="stepbody">
+              <h4>🧾 Buat Order &amp; Terima Bayar</h4>
+              <p>Di menu <b>QRIS &amp; Order</b>: isi nominal → <b>Buat Order + QR</b>. Bagikan link checkout / QR ke pelanggan. Pelanggan bayar <b>persis nominal unik</b> → order otomatis jadi <b>PAID</b>.</p>
+              <div class="tipbox">💡 Kode unik (angka kecil di ekor nominal) bikin tiap order beda, jadi sistem bisa cocokin pembayaran otomatis.</div>
+              <button class="sec" onclick="go('qris')">Buat Order →</button>
+            </div>
+          </div>
+        </div>
 
-            <details><summary><span class="tnum">2</span> Setup HP Catcher <span class="tbadge">default</span></summary><div>
-              <p>APK nangkep notif "uang masuk" → kirim ke GatePay. Cara default (semua e-wallet).</p>
-              <ol>
-                <li>Download APK → install (izinkan "install app tak dikenal").</li>
-                <li>Buka app → Login akun GatePay (Device ID/Secret otomatis).</li>
-                <li>Aktifkan <b>Akses Notifikasi</b> (kalau "Restricted" → Info Aplikasi → izinkan).</li>
-                <li>Tab Status → <b>Pilih Aplikasi</b> (DANA/ShopeePay/dll).</li>
-                <li>Aktifkan <b>Autostart</b> + baterai "tanpa batasan" (khususnya Xiaomi).</li>
-              </ol>
-              <button class="sec jbtn" onclick="go('apk')">→ Buka Kredensial &amp; APK</button>
-            </div></details>
-
-            <details><summary><span class="tnum">3</span> Buat Order &amp; Bayar</summary><div>
-              <ol>
-                <li>Isi Nominal → <b>Buat Order + QR</b>.</li>
-                <li>Bagikan link checkout / tampilkan QR ke pelanggan.</li>
-                <li>Bayar <b>persis nominal unik</b> → otomatis <b>PAID</b>.</li>
-              </ol>
-              <button class="sec jbtn" onclick="go('qris')">→ Buat Order</button>
-            </div></details>
-
-            <details id="tut-shopee"><summary><span class="tnum">4</span> Token ShopeePay Partner <span class="tbadge">opsional · tanpa HP</span></summary><div>
-              <p>Khusus <b>ShopeePay Partner</b> — konfirmasi server-side, tanpa HP. E-wallet lain tetap butuh catcher.</p>
-              <ol>
-                <li>Buka <b>partner.shopee.co.id</b> (login) di laptop.</li>
-                <li><b>F12</b> → tab <b>Application</b> → <b>Cookies</b> → <code>partner.shopee.co.id</code>.</li>
-                <li>Cari <b>__shopee_partner_website_x_token_live</b> → copy <b>Value</b> (diawali <code>eyJ</code>).</li>
-                <li>Paste di panel <b>ShopeePay Partner</b> (menu QRIS &amp; Order) → <b>Simpan Token</b>.</li>
-              </ol>
-              <div class="tut" style="background:#fff6d9;border:2px solid var(--accent);padding:8px;font-size:12px;color:#3a2a00">⚠ Token tidak resmi, bisa expired &amp; ada risiko ToS. Kalau mati → catcher HP otomatis ambil alih.</div>
-              <button class="sec jbtn" onclick="go('qris')" style="margin-top:8px">→ Buka panel ShopeePay</button>
-            </div></details>
-
-            <details><summary><span class="tnum">5</span> Webhook &amp; Keamanan</summary><div>
-              <ul>
-                <li><b>Webhook</b>: Docs &amp; Webhook → isi URL. POST tiap order PAID (HMAC).</li>
-                <li><b>2FA</b>: Profil → aktifkan Authenticator (scan QR).</li>
-                <li><b>API Key</b>: bisa di-regenerate kalau bocor.</li>
-              </ul>
-              <button class="sec jbtn" onclick="go('hook')">→ Docs &amp; Webhook</button>
-              <button class="sec jbtn" onclick="go('profile')">→ Profil (2FA)</button>
-            </div></details>
+        <div class="panel">
+          <h2>Bagian 2 · Opsional</h2>
+          <div class="stepcard" id="tut-shopee">
+            <div class="stepnum">A</div>
+            <div class="stepbody">
+              <h4>🛍 Token ShopeePay Partner <span class="dim" style="font-size:11px">(tanpa HP)</span></h4>
+              <p>Khusus <b>ShopeePay Partner</b>. Dengan token cookie, pembayaran ShopeePay dikonfirmasi <b>server-side</b> tanpa HP. Cara ambil: buka <b>partner.shopee.co.id</b> (login) → <b>F12</b> → tab <b>Application</b> → <b>Cookies</b> → copy <b>Value</b> dari <code>__shopee_partner_website_x_token_live</code> (diawali <code>eyJ</code>) → paste di panel <b>ShopeePay Partner</b> (menu QRIS &amp; Order).</p>
+              <div class="warnbox">⚠ Token tidak resmi &amp; bisa expired. Kalau mati, catcher HP otomatis ambil alih. Ada risiko ToS akun ShopeePay.</div>
+              <button class="sec" onclick="go('qris')">Buka panel ShopeePay →</button>
+            </div>
+          </div>
+          <div class="stepcard">
+            <div class="stepnum">B</div>
+            <div class="stepbody">
+              <h4>🔔 Webhook</h4>
+              <p>Kalau punya sistem/toko sendiri: isi Webhook URL di menu <b>Docs &amp; Webhook</b>. GatePay nembak POST ke situ tiap order PAID (pakai HMAC buat verifikasi).</p>
+              <button class="sec" onclick="go('hook')">Docs &amp; Webhook →</button>
+            </div>
+          </div>
+          <div class="stepcard">
+            <div class="stepnum">C</div>
+            <div class="stepbody">
+              <h4>🔐 Keamanan (2FA)</h4>
+              <p>Aktifkan <b>2FA</b> (Authenticator) di menu <b>Profil</b> buat pengaman login. API Key bisa di-regenerate di Kredensial &amp; APK kalau bocor.</p>
+              <button class="sec" onclick="go('profile')">Buka Profil →</button>
+            </div>
           </div>
         </div>
 
