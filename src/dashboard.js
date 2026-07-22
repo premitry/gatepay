@@ -799,7 +799,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   let mode='login';
   function switchTab(m){ mode=m; $('tab-login').className=m==='login'?'active':''; $('tab-reg').className=m==='reg'?'active':'';
     $('authbtn').textContent=m==='login'?'Masuk':'Daftar'; $('reghint').textContent=m==='reg'?'Username 3-20 karakter (huruf/angka/_). Password min 6.':'';
-    var tw=$('tos-wrap'); if(tw){ tw.style.display=(m==='reg')?'flex':'none'; if(m!=='reg'){ var t=$('tos'); if(t) t.checked=false; } } }
+    var tw=$('tos-wrap'); if(tw){ tw.classList.toggle('hidden', m!=='reg'); tw.style.display=(m==='reg')?'flex':'none'; if(m!=='reg'){ var t=$('tos'); if(t) t.checked=false; } } }
 
   async function doAuth(){
     var u=$('u').value.trim().toLowerCase(), p=$('p').value;
