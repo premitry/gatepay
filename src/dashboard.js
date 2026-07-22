@@ -614,7 +614,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     $('c-devsec').textContent=s.device_secret||'-';
     if(s.fee_percent!=null) $('fee').value=s.fee_percent;
     if(s.unique_digits!=null) $('digits').value=s.unique_digits;
-    if(s.is_admin){ $('nav-admin').classList.remove('hidden'); $('nav-events').classList.remove('hidden'); $('grp-akun').classList.remove('hidden'); $('p-role').innerHTML='<span class="bd" style="background:var(--accent);color:#fff">ADMIN 👑</span>'; }
+    if(s.is_admin){ var na=$('nav-admin'); if(na) na.classList.remove('hidden'); var ga=$('grp-akun'); if(ga) ga.classList.remove('hidden'); var pr=$('p-role'); if(pr) pr.innerHTML='<span class="bd" style="background:var(--accent);color:#fff">ADMIN 👑</span>'; }
     loadSettings();
     tick(); setInterval(tick,3000);
     navTo((location.hash||'').replace('#','')||'dash');
