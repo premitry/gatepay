@@ -136,6 +136,34 @@ export function renderDashboard() {
   .tipbox{background:#dff3ea;border:2px solid var(--ok);color:#0a5c4c;padding:8px 10px;font-size:12px;line-height:1.55;margin:8px 0}
   .warnbox{background:#fff6d9;border:2px solid var(--accent);color:#3a2a00;padding:8px 10px;font-size:12px;line-height:1.55;margin:8px 0}
   .spstat{font-size:12px;padding:8px 10px;border:2px solid}
+  /* hero tutorial */
+  .thero{display:grid;grid-template-columns:1.3fr .7fr;gap:16px;margin-bottom:16px;background:linear-gradient(135deg,var(--term-bg,#141f5c),var(--title-a) 120%);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:3px 3px 0 var(--edge);padding:20px}
+  .thero-kick{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.1em;color:#ffc266;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);padding:4px 8px;margin-bottom:12px}
+  .thero-h1{font-family:'Michroma',sans-serif;font-size:20px;line-height:1.2;color:#fff;margin-bottom:10px}
+  .thero-p{font-size:13px;line-height:1.6;color:#dfe6ff;max-width:520px}
+  .thero-card{background:rgba(0,0,0,.28);border:2px solid rgba(255,255,255,.25);padding:12px}
+  .thero-clabel{font-size:10px;font-weight:700;letter-spacing:.1em;color:#ffc266;margin-bottom:8px}
+  .thero-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,.12);color:#fff;font-size:12px;font-weight:700}
+  .thero-row span{display:flex;flex-direction:column}
+  .thero-row small{color:#aeb8e0;font-weight:400;font-size:10px}
+  .thero-row b{font-size:9px;padding:3px 6px;white-space:nowrap}
+  .thero-row .req{background:#c26107;color:#fff}.thero-row .ready{background:#0e7c66;color:#fff}.thero-row .opt{background:#3f7fc4;color:#fff}
+  /* provider cards */
+  .provs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .prov{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);padding:12px;text-decoration:none;color:var(--text)}
+  .prov:hover{box-shadow:2px 2px 0 var(--edge);text-decoration:none}
+  .prov-ic{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;color:#fff}
+  .prov-t{flex:1;display:flex;flex-direction:column}
+  .prov-t b{font-size:13px}.prov-t small{font-size:11px;color:var(--dim)}
+  .prov-ar{color:var(--accent);font-weight:700}
+  /* flow diagram */
+  .tflow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap}
+  .tnode{flex:1;min-width:96px;text-align:center;background:var(--chrome-2);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);padding:10px 6px;font-size:12px;font-weight:700}
+  .tnode small{display:block;font-weight:400;color:var(--dim);font-size:10px;margin-top:2px}
+  .tnode.done{background:var(--ok);color:#fff}.tnode.done small{color:#cdeee2}
+  .tnode-ic{font-size:22px;margin-bottom:4px}
+  .tarr{display:flex;align-items:center;color:var(--dim);font-size:18px;font-weight:700}
+  @media(max-width:640px){.thero{grid-template-columns:1fr}.provs{grid-template-columns:1fr}.tflow{flex-direction:column}.tarr{transform:rotate(90deg);justify-content:center}}
   .spstat.ok{background:#dff3ea;border-color:var(--ok);color:var(--ok);font-weight:700}
   .spstat.dead{background:#f7dcd9;border-color:var(--red);color:var(--red);font-weight:700}
   .spstat.off{background:var(--chrome-2);border-color:var(--edge);color:var(--dim)}
@@ -462,10 +490,44 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
 
       <!-- TUTORIAL -->
       <section class="view" id="v-tutor">
+        <div class="thero">
+          <div class="thero-in">
+            <div class="thero-kick">📚 PANDUAN OPERATOR</div>
+            <div class="thero-h1">Dari QRIS statis sampai order otomatis PAID.</div>
+            <div class="thero-p">Ikuti panduan singkat ini: setup QRIS, HP catcher / token, buat order, dan konfirmasi pembayaran otomatis — tanpa menebak-nebak.</div>
+          </div>
+          <div class="thero-card">
+            <div class="thero-clabel">CHECKLIST SETUP</div>
+            <div class="thero-row"><span>QRIS statis<small>dari PSP / bank</small></span><b class="req">WAJIB</b></div>
+            <div class="thero-row"><span>HP Catcher (APK)<small>deteksi default</small></span><b class="ready">SIAP</b></div>
+            <div class="thero-row"><span>Token ShopeePay<small>opsional, tanpa HP</small></span><b class="opt">OPSIONAL</b></div>
+          </div>
+        </div>
+
         <div class="panel">
-          <h2>TUTORIAL · Panduan GatePay</h2>
-          <div class="dim" style="margin-bottom:10px">Panduan dari nol sampai order otomatis PAID. Baca berurutan dari atas.</div>
-          <div class="prereq">📌 <b>Syarat utama:</b> GatePay <b>tidak</b> bikin QRIS dari nol. Kamu harus sudah punya <b>QRIS statis</b> merchant (dari DANA Bisnis / ShopeePay Partner / bank). GatePay ngubahnya jadi QRIS dinamis + deteksi pembayaran otomatis.</div>
+          <h2>Sebelum Mulai · Harus Punya QRIS Statis</h2>
+          <div class="tut"><p>GatePay <b>tidak</b> bikin akun QRIS dari nol. Sistem ini <b>mengubah QRIS statis</b> yang sudah kamu punya jadi QRIS dinamis (nominal unik) + deteksi pembayaran otomatis. Belum punya? Daftar merchant di salah satu penyedia berikut:</p></div>
+          <div class="provs">
+            <a class="prov" href="https://dana.id/bisnis" target="_blank" rel="noopener"><span class="prov-ic" style="background:linear-gradient(135deg,#0057d9,#1498ff)">💙</span><span class="prov-t"><b>DANA Bisnis</b><small>Akun bisnis buat terima QRIS</small></span><span class="prov-ar">↗</span></a>
+            <a class="prov" href="https://shopee.co.id/m/shopeepay" target="_blank" rel="noopener"><span class="prov-ic" style="background:linear-gradient(135deg,#ee4d2d,#ff7337)">🛍</span><span class="prov-t"><b>ShopeePay Partner</b><small>Merchant QRIS ShopeePay</small></span><span class="prov-ar">↗</span></a>
+            <a class="prov" href="https://www.gojek.com/gobiz/" target="_blank" rel="noopener"><span class="prov-ic" style="background:linear-gradient(135deg,#00aa13,#1ed760)">🟢</span><span class="prov-t"><b>GoPay Merchant</b><small>Daftar lewat GoBiz</small></span><span class="prov-ar">↗</span></a>
+            <a class="prov" href="https://www.bi.go.id/QRIS/default.aspx" target="_blank" rel="noopener"><span class="prov-ic" style="background:linear-gradient(135deg,#0f172a,#475569)">🏦</span><span class="prov-t"><b>Bank / PSP lain</b><small>Ajukan QRIS via bank terdaftar</small></span><span class="prov-ar">↗</span></a>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Alur Singkat</h2>
+          <div class="tflow">
+            <div class="tnode"><div class="tnode-ic">📤</div><b>Upload QRIS</b><small>sekali saja</small></div>
+            <div class="tarr">›</div>
+            <div class="tnode"><div class="tnode-ic">🧾</div><b>Buat Order</b><small>isi nominal</small></div>
+            <div class="tarr">›</div>
+            <div class="tnode"><div class="tnode-ic">📱</div><b>Pelanggan Bayar</b><small>scan QR</small></div>
+            <div class="tarr">›</div>
+            <div class="tnode"><div class="tnode-ic">📡</div><b>Catcher / Token</b><small>deteksi</small></div>
+            <div class="tarr">›</div>
+            <div class="tnode done"><div class="tnode-ic">✓</div><b>PAID</b><small>otomatis</small></div>
+          </div>
         </div>
 
         <div class="panel">
