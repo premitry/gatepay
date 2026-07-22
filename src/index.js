@@ -736,13 +736,27 @@ app.post('/api/merchant/gopay', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const refresh = String(body.refresh_token || '').trim();
   if (!refresh) return json(c, { error: 'refresh_token tidak boleh kosong' }, 400);
+  // Auto-strip: kalau user copy "refresh_token=xxx" dari cookie/DevTools, ambil xxx saja.
+  // Juga kalau copy full JSON, coba parse.
+  if (refresh.includes('=') && !refresh.startsWith('eyJ')) {
+    const parts = refresh.split('=');
+    if (parts.length >= 2) refresh = parts.slice(1).join('=').trim();
+    try { refresh = decodeURIComponent(refresh); } catch {}
+  }
+  if (refresh.startsWith('{')) {
+    try { const j = JSON.parse(refresh); if (j.refresh_token) refresh = String(j.refresh_token); } catch {}
+  }
+  refresh = refresh.replace(/^["']|["']$/g, '').trim(); // hilangkan quote di awal/akhir
   if (refresh.length > 4096) return json(c, { error: 'refresh_token terlalu panjang' }, 400);
+  // Uji-coba unique_id user (kalau dikasih) — GoBiz kadang mengikat token ke unique_id.
+  const suppliedUid = body.unique_id ? String(body.unique_id).trim() : null;
   // Validasi live: tukar refresh_token dgn access_token baru
-  let sess;
+  let sess, rawErr = null;
   try {
-    sess = await gopayRefresh(refresh);
+    sess = await gopayRefresh(refresh, suppliedUid);
   } catch (e) {
-    return json(c, { error: 'refresh_token tidak valid atau sudah expired. Login ulang di portal GoBiz lalu ambil refresh_token yang baru.' }, 400);
+    rawErr = e && e.message ? e.message : 'error';
+    return json(c, { error: 'Refresh gagal: ' + rawErr + '. Kemungkinan: (1) yang dicopy bukan refresh_token asli — ambil dari tab Network → response endpoint /goid/token, (2) token sudah expired, atau (3) token terikat unique_id browser (butuh field x-uniqueid).' }, 400);
   }
   // Resolve merchant_id + nama
   let mname = null, mid = null;
