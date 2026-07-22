@@ -110,14 +110,14 @@ export function renderDashboard() {
   .stat .v{font-size:24px;font-weight:700;margin-top:3px;font-family:'Share Tech Mono',monospace}
   .stat .v.g{color:var(--ok)}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .dualconn{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch}
-  .dualconn>.panel{margin-bottom:0;display:flex;flex-direction:column;min-height:280px}
+  .dualconn{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  .dualconn>.panel{margin-bottom:0}
   .dualconn .panel input,.dualconn .panel textarea{width:100%;font-size:13px;padding:6px 8px}
   .dualconn .panel input[type=email],.dualconn .panel input[type=password]{height:34px}
   .dualconn .panel textarea{height:44px;min-height:44px}
   .dualconn .panel label{font-size:11px;color:var(--dim);margin-top:6px;margin-bottom:2px;display:block;text-transform:uppercase;letter-spacing:.05em}
   .dualconn .panel button{width:100%;margin-top:8px}
-  @media(max-width:720px){.dualconn{grid-template-columns:1fr}.dualconn>.panel{min-height:0}}
+  @media(max-width:720px){.dualconn{grid-template-columns:1fr}}
 
   /* panel = window */
   .panel{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:2px 2px 0 var(--edge);padding:0 18px 18px;margin-bottom:16px}
