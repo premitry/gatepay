@@ -1545,15 +1545,28 @@ app.get('/api/admin/stats', async (c) => {
 // Log global (order + event lintas merchant)
 app.get('/api/admin/log', async (c) => {
   if (!(await requireAdmin(c))) return json(c, { error: 'unauthorized' }, 401);
-  const orders = await c.env.DB.prepare(
+  const PS = 20;
+  const op = Math.max(0, parseInt(c.req.query('op') || '0', 10) || 0);
+  const ep = Math.max(0, parseInt(c.req.query('ep') || '0', 10) || 0);
+  const ord = await c.env.DB.prepare(
     `SELECT o.*, m.username FROM orders o LEFT JOIN merchants m ON m.id=o.merchant_id
-     ORDER BY o.created_at DESC LIMIT 100`,
-  ).all();
-  const events = await c.env.DB.prepare(
+     ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
+  ).bind(PS + 1, op * PS).all();
+  const ev = await c.env.DB.prepare(
     `SELECT e.*, m.username FROM events e LEFT JOIN merchants m ON m.id=e.merchant_id
-     ORDER BY e.created_at DESC LIMIT 100`,
-  ).all();
-  return json(c, { orders: orders.results || [], events: events.results || [] });
+     ORDER BY e.created_at DESC LIMIT ? OFFSET ?`,
+  ).bind(PS + 1, ep * PS).all();
+  const orders = ord.results || [];
+  const events = ev.results || [];
+  return json(c, {
+    page_size: PS,
+    orders_page: op,
+    events_page: ep,
+    orders_more: orders.length > PS,
+    events_more: events.length > PS,
+    orders: orders.slice(0, PS),
+    events: events.slice(0, PS),
+  });
 });
 
 // Halaman admin

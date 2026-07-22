@@ -37,6 +37,12 @@ export function renderAdmin() {
   .panel{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:2px 2px 0 var(--edge);padding:0 18px 18px;margin-bottom:16px}
   .panel h2{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#fff;margin:0 -18px 16px;padding:9px 16px;background:linear-gradient(90deg,var(--title-a),var(--title-b));border-bottom:2px solid var(--edge-dark)}
   table{width:100%;border-collapse:collapse;font-size:12px}
+  .loggrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  .loggrid .panel{margin-bottom:0}
+  .pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--edge)}
+  .pager button{width:auto;margin:0;padding:6px 12px;font-size:12px}
+  .pager button:disabled{opacity:.4;cursor:default}
+  @media(max-width:820px){.loggrid{grid-template-columns:1fr}.loggrid .panel{margin-bottom:16px}}
   th{text-align:left;color:#fff;font-weight:700;padding:7px 8px;font-size:10px;text-transform:uppercase;background:linear-gradient(180deg,#3f7fc4,#26379d)}
   td{padding:7px 8px;border-bottom:1px solid var(--edge);vertical-align:middle}
   tr:nth-child(even) td{background:rgba(255,255,255,.4)}
@@ -140,15 +146,19 @@ export function renderAdmin() {
   </div>
 
   <div id="view-log" class="hidden">
-    <div class="panel">
-      <h2>Orders Global (100 terakhir)</h2>
-      <div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>User</th><th>Nominal</th><th>Status</th><th>Waktu</th></tr></thead>
-      <tbody id="ologbody"></tbody></table></div>
-    </div>
-    <div class="panel">
-      <h2>Events Global (100 terakhir)</h2>
-      <div style="overflow-x:auto"><table><thead><tr><th>Event</th><th>User</th><th>Nominal</th><th>Status</th><th>Waktu</th></tr></thead>
-      <tbody id="elogbody"></tbody></table></div>
+    <div class="loggrid">
+      <div class="panel">
+        <h2>Order Global</h2>
+        <div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>User</th><th>Nominal</th><th>Status</th><th>Waktu</th></tr></thead>
+        <tbody id="ologbody"></tbody></table></div>
+        <div class="pager"><button class="sec" id="oprev" onclick="logPage('o',-1)">‹ Sebelumnya</button><span class="dim" id="opage"></span><button class="sec" id="onext" onclick="logPage('o',1)">Berikutnya ›</button></div>
+      </div>
+      <div class="panel">
+        <h2>Event Global</h2>
+        <div style="overflow-x:auto"><table><thead><tr><th>Event</th><th>User</th><th>Nominal</th><th>Status</th><th>Waktu</th></tr></thead>
+        <tbody id="elogbody"></tbody></table></div>
+        <div class="pager"><button class="sec" id="eprev" onclick="logPage('e',-1)">‹ Sebelumnya</button><span class="dim" id="epage"></span><button class="sec" id="enext" onclick="logPage('e',1)">Berikutnya ›</button></div>
+      </div>
     </div>
   </div>
 
@@ -383,11 +393,22 @@ export function renderAdmin() {
             '<td class=mono>'+idr(m.revenue)+'</td>'+
             '<td>'+st+'</td></tr>';
         }).join('')||'<tr><td colspan=7 class=dim style="text-align:center;padding:20px">Belum ada merchant</td></tr>';
-      } else {
-        var lg=await (await fetch('/api/admin/log',{headers:hdr()})).json();
-        $('ologbody').innerHTML=(lg.orders||[]).map(o=>'<tr><td class=mono>'+escj(o.id.slice(0,12))+'</td><td class=dim>@'+escj(o.username||'-')+'</td><td class=mono>'+idr(o.unique_amount)+'</td><td>'+bdg(o.status)+'</td><td class=dim>'+agoj(o.created_at)+'</td></tr>').join('')||'<tr><td colspan=5 class=dim style="text-align:center;padding:16px">kosong</td></tr>';
-        $('elogbody').innerHTML=(lg.events||[]).map(e=>'<tr><td class=mono>'+escj((e.id||'').slice(0,12))+'</td><td class=dim>@'+escj(e.username||'-')+'</td><td class=mono>'+(e.amount!=null?idr(e.amount):'-')+'</td><td>'+bdg(e.status)+'</td><td class=dim>'+agoj(e.created_at)+'</td></tr>').join('')||'<tr><td colspan=5 class=dim style="text-align:center;padding:16px">kosong</td></tr>';
-      }
+      } else { loadLog(); }
+    }catch(e){}
+  }
+
+  // ── Log Global (paginasi 20/hal) ──
+  var oLogPage=0, eLogPage=0;
+  function logPage(which,delta){ if(which==='o') oLogPage=Math.max(0,oLogPage+delta); else eLogPage=Math.max(0,eLogPage+delta); loadLog(); }
+  async function loadLog(){
+    if(!key()) return;
+    try{
+      var lg=await (await fetch('/api/admin/log?op='+oLogPage+'&ep='+eLogPage,{headers:hdr(),cache:'no-store'})).json();
+      $('ologbody').innerHTML=(lg.orders||[]).map(o=>'<tr><td class=mono>'+escj(o.id.slice(0,12))+'</td><td class=dim>@'+escj(o.username||'-')+'</td><td class=mono>'+idr(o.unique_amount)+'</td><td>'+bdg(o.status)+'</td><td class=dim>'+agoj(o.created_at)+'</td></tr>').join('')||'<tr><td colspan=5 class=dim style="text-align:center;padding:16px">kosong</td></tr>';
+      $('elogbody').innerHTML=(lg.events||[]).map(e=>'<tr><td class=mono>'+escj((e.id||'').slice(0,12))+'</td><td class=dim>@'+escj(e.username||'-')+'</td><td class=mono>'+(e.amount!=null?idr(e.amount):'-')+'</td><td>'+bdg(e.status)+'</td><td class=dim>'+agoj(e.created_at)+'</td></tr>').join('')||'<tr><td colspan=5 class=dim style="text-align:center;padding:16px">kosong</td></tr>';
+      $('opage').textContent='Hal '+(oLogPage+1); $('epage').textContent='Hal '+(eLogPage+1);
+      $('oprev').disabled=oLogPage<=0; $('onext').disabled=!lg.orders_more;
+      $('eprev').disabled=eLogPage<=0; $('enext').disabled=!lg.events_more;
     }catch(e){}
   }
 
