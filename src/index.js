@@ -734,7 +734,7 @@ app.post('/api/merchant/gopay', async (c) => {
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   await ensureGopayColumns(c.env.DB);
   const body = await c.req.json().catch(() => ({}));
-  const refresh = String(body.refresh_token || '').trim();
+  let refresh = String(body.refresh_token || '').trim();
   if (!refresh) return json(c, { error: 'refresh_token tidak boleh kosong' }, 400);
   // Auto-strip: kalau user copy "refresh_token=xxx" dari cookie/DevTools, ambil xxx saja.
   // Juga kalau copy full JSON, coba parse.
