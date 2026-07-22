@@ -394,19 +394,38 @@ export function renderDashboard() {
           </div>
         </div>
 
-        <div class="panel" style="margin-top:14px">
-          <h2>SHOPEEPAY PARTNER · Token Opsional</h2>
-          <div class="dim" style="margin-bottom:8px">Konfirmasi pembayaran ShopeePay <b>tanpa HP</b>. Kosongkan → menggunakan APK catcher (default).</div>
-          <div id="sp-status" class="spstat" style="margin-bottom:10px"></div>
-          <div id="sp-inputwrap">
-            <a class="lnk" onclick="goTutorShopee()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara mengambil token → buka Tutorial</a>
-            <label>Cookie token (diawali "eyJ")</label>
-            <textarea id="sp-token" placeholder="eyJhbGciOi…" rows="2" style="height:46px;min-height:46px;resize:vertical"></textarea>
-            <div style="margin-top:6px"><button onclick="saveShopee()">Simpan Token</button></div>
+        <div class="grid2" style="margin-top:14px">
+          <div class="panel">
+            <h2>SHOPEEPAY PARTNER · Token Opsional</h2>
+            <div class="dim" style="margin-bottom:8px">Konfirmasi pembayaran ShopeePay <b>tanpa HP</b>. Kosongkan → menggunakan APK catcher (default).</div>
+            <div id="sp-status" class="spstat" style="margin-bottom:10px"></div>
+            <div id="sp-inputwrap">
+              <a class="lnk" onclick="goTutorShopee()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara mengambil token → buka Tutorial</a>
+              <label>Cookie token (diawali "eyJ")</label>
+              <textarea id="sp-token" placeholder="eyJhbGciOi…" rows="2" style="height:46px;min-height:46px;resize:vertical"></textarea>
+              <div style="margin-top:6px"><button onclick="saveShopee()">Simpan Token</button></div>
+            </div>
+            <button class="sec" id="sp-clearbtn" onclick="clearShopee()" style="display:none">🗑 Hapus Token</button>
+            <div class="msg" id="sp-msg"></div>
+            <div class="dim" style="font-size:11px;margin-top:6px">⚠ Token dapat expired. Jika mati, APK catcher otomatis mengambil alih.</div>
           </div>
-          <button class="sec" id="sp-clearbtn" onclick="clearShopee()" style="display:none">🗑 Hapus Token</button>
-          <div class="msg" id="sp-msg"></div>
-          <div class="dim" style="font-size:11px;margin-top:6px">⚠ Token dapat expired. Jika mati, APK catcher otomatis mengambil alih.</div>
+
+          <div class="panel">
+            <h2>GOPAY MERCHANT · Login Opsional</h2>
+            <div class="dim" style="margin-bottom:8px">Konfirmasi pembayaran GoPay <b>tanpa HP</b>. Kosongkan → menggunakan APK catcher (default).</div>
+            <div id="gp-status" class="spstat" style="margin-bottom:10px"></div>
+            <div id="gp-inputwrap">
+              <a class="lnk" onclick="goTutorGopay()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara setup akun GoPay Merchant → buka Tutorial</a>
+              <label>Email akun GoPay Merchant</label>
+              <input id="gp-email" type="email" placeholder="[email protected]" autocomplete="off">
+              <label style="margin-top:6px">Password</label>
+              <input id="gp-pass" type="password" placeholder="••••••••" autocomplete="new-password">
+              <div style="margin-top:6px"><button onclick="saveGopay()">Simpan &amp; Hubungkan</button></div>
+            </div>
+            <button class="sec" id="gp-clearbtn" onclick="clearGopay()" style="display:none">🗑 Putuskan</button>
+            <div class="msg" id="gp-msg"></div>
+            <div class="dim" style="font-size:11px;margin-top:6px">⚠ Kredensial disimpan aman &amp; hanya dipakai untuk login otomatis ke portal GoBiz. Token GoPay pendek → sistem auto-refresh.</div>
+          </div>
         </div>
       </section>
 
@@ -579,8 +598,22 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
               <button class="sec" onclick="go('qris')">Buka panel ShopeePay →</button>
             </div>
           </div>
-          <div class="stepcard">
+          <div class="stepcard" id="tut-gopay">
             <div class="stepnum">B</div>
+            <div class="stepbody">
+              <h4>🟢 GoPay Merchant <span class="dim" style="font-size:11px">(tanpa HP)</span></h4>
+              <p>Khusus <b>GoPay Merchant</b> (GoBiz). Cukup masukkan <b>email</b> &amp; <b>password</b> akun GoPay Merchant Anda — GatePay login otomatis ke portal GoBiz, mengambil mutasi, lalu mencocokkan dengan order. Sistem <b>auto-refresh</b> saat token GoPay habis (jadi hands-off).</p>
+              <ol>
+                <li>Pastikan Anda memiliki akun <b>GoPay Merchant</b> (bisa daftar di GoBiz).</li>
+                <li>Buka menu <b>QRIS &amp; Order</b> → panel <b>GoPay Merchant</b>.</li>
+                <li>Masukkan email &amp; password → <b>Simpan &amp; Hubungkan</b>.</li>
+              </ol>
+              <div class="warnbox">⚠ Menggunakan API internal GoBiz (tidak resmi). Kredensial disimpan aman dan hanya dipakai untuk login otomatis. Ada risiko ToS akun GoPay.</div>
+              <button class="sec" onclick="go('qris')">Buka panel GoPay →</button>
+            </div>
+          </div>
+          <div class="stepcard">
+            <div class="stepnum">C</div>
             <div class="stepbody">
               <h4>🔔 Webhook</h4>
               <p>Jika memiliki sistem/toko sendiri: isi Webhook URL di menu <b>Docs &amp; Webhook</b>. GatePay mengirim POST ke sana setiap order PAID (menggunakan HMAC untuk verifikasi).</p>
@@ -588,7 +621,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             </div>
           </div>
           <div class="stepcard">
-            <div class="stepnum">C</div>
+            <div class="stepnum">D</div>
             <div class="stepbody">
               <h4>🔐 Keamanan (2FA)</h4>
               <p>Aktifkan <b>2FA</b> (Authenticator) di menu <b>Profil</b> untuk pengaman login. API Key dapat di-regenerate di Kredensial &amp; APK jika bocor.</p>
@@ -778,7 +811,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     $('ptitle').textContent=TITLES[v]||'';
     curView=v;
     if(v==='tiket'){ closeTicket(); loadTickets(); } // selalu balik ke list pas masuk menu tiket
-    if(v==='qris') loadShopee();
+    if(v==="qris"){ loadShopee(); loadGopay(); }
     if(v==='profile') fa2Load();
     toggleMnav(false);
   }
@@ -873,7 +906,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     try{
       var r=await fetch('/api/merchant/qris',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({qris:$('qris').value.trim()})});
       var j=await r.json();
-      if(r.ok){ msg('qmsg','ok','QRIS tersimpan: '+(j.merchant_name||'-')+' ('+(j.city||'-')+')'); loadSettings(); loadShopee(); }
+      if(r.ok){ msg('qmsg','ok','QRIS tersimpan: '+(j.merchant_name||'-')+' ('+(j.city||'-')+')'); loadSettings(); loadShopee(); loadGopay(); }
       else msg('qmsg','err',j.error||'gagal');
     }catch(e){ msg('qmsg','err',String(e)); }
   }
@@ -909,7 +942,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   async function clearQris(){
     if(!confirm('Hapus QRIS tersimpan? Order tidak dapat dibuat sampai QRIS diunggah lagi.')) return;
     try{ var r=await fetch('/api/merchant/qris/clear',{method:'POST',headers:{'x-api-key':key()}});
-      if(r.ok){ $('qris').value=''; $('qrprev').style.display='none'; msg('qmsg','ok','QRIS dihapus — status terputus, aman dari tertimpa'); loadSettings(); loadShopee(); }
+      if(r.ok){ $('qris').value=''; $('qrprev').style.display='none'; msg('qmsg','ok','QRIS dihapus — status terputus, aman dari tertimpa'); loadSettings(); loadShopee(); loadGopay(); }
       else msg('qmsg','err','gagal hapus');
     }catch(e){ msg('qmsg','err',String(e)); }
   }
@@ -940,6 +973,33 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     try{ var r=await fetch('/api/merchant/shopee/clear',{method:'POST',headers:{'x-api-key':key()}});
       if(r.ok){ msg('sp-msg','ok','Token dihapus — menggunakan APK catcher'); loadShopee(); } else msg('sp-msg','err','gagal hapus');
     }catch(e){ msg('sp-msg','err',String(e)); }
+  }
+  // ── GoPay Merchant (opsional) ──
+  function goTutorGopay(){ go('tutor'); setTimeout(function(){ var d=$('tut-gopay'); if(d){ d.open=true; d.scrollIntoView({behavior:'smooth',block:'start'}); } },140); }
+  async function loadGopay(){
+    try{ var j=await (await fetch('/api/merchant/gopay',{headers:{'x-api-key':key()},cache:'no-store'})).json();
+      var el=$('gp-status'); var cb=$('gp-clearbtn'); var iw=$('gp-inputwrap');
+      if(j.enabled){
+        var nm=j.merchant?escj(j.merchant):null;
+        var note=(j.has_qris && !j.qris_is_gopay)?'<br><span style="font-weight:400;font-size:11px;color:var(--accent)">⚠ QRIS tersimpan bukan GoPay — pembayaran tetap terdeteksi lewat APK catcher.</span>':'';
+        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● KONEKSI GAGAL'+(nm?' ('+nm+')':'')+' — email/password mungkin berubah. Sementara itu GoPay menggunakan APK catcher.'; if(iw) iw.style.display='block'; }
+        else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG'+(nm?' — <b>'+nm+'</b>':'')+'<br><span style="font-weight:400;font-size:11px">GoPay dikonfirmasi server-side (tanpa HP). Akun: '+escj(j.email_preview||'-')+'</span>'+note; if(iw) iw.style.display='none'; }
+        if(cb) cb.style.display='inline-block';
+      } else { el.className='spstat off'; el.innerHTML='○ Belum terhubung — GoPay menggunakan APK catcher (default).'; if(cb) cb.style.display='none'; if(iw) iw.style.display='block'; }
+    }catch(e){}
+  }
+  async function saveGopay(){
+    var em=$('gp-email').value.trim(), pw=$('gp-pass').value;
+    if(!em||!pw) return msg('gp-msg','err','Email dan password wajib diisi');
+    try{ var r=await fetch('/api/merchant/gopay',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({email:em,password:pw})});
+      var j=await r.json(); if(r.ok){ msg('gp-msg','ok','Terhubung ✓'+(j.merchant?' — '+j.merchant:'')); $('gp-email').value=''; $('gp-pass').value=''; loadGopay(); setTimeout(function(){ var e=$('gp-msg'); if(e) e.innerHTML=''; },4500); } else msg('gp-msg','err',j.error||'Gagal');
+    }catch(e){ msg('gp-msg','err',String(e)); }
+  }
+  async function clearGopay(){
+    if(!confirm('Putuskan GoPay Merchant? GoPay kembali ke APK catcher (default).')) return;
+    try{ var r=await fetch('/api/merchant/gopay/clear',{method:'POST',headers:{'x-api-key':key()}});
+      if(r.ok){ msg('gp-msg','ok','GoPay diputus — menggunakan APK catcher'); loadGopay(); } else msg('gp-msg','err','gagal');
+    }catch(e){ msg('gp-msg','err',String(e)); }
   }
   async function clearHook(){
     if(!confirm('Hapus webhook tersimpan?')) return;

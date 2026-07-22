@@ -95,12 +95,13 @@ export function renderDocs() {
     <div class="tip">💡 Isi <code>qris</code> = teks string QRIS statis (bukan gambar). Dapat di-decode dari foto QR menggunakan aplikasi scanner apa saja, atau melalui dashboard.</div>
 
     <h2 id="deteksi">Deteksi Pembayaran</h2>
-    <p>GatePay mengetahui order telah terbayar melalui dua cara (dapat berjalan bersamaan, saling mencadangkan):</p>
+    <p>GatePay mengetahui order telah terbayar melalui beberapa jalur (dapat berjalan bersamaan, saling mencadangkan):</p>
     <ul>
-      <li><b>APK Catcher (default, universal)</b> — aplikasi Android menangkap notifikasi "uang masuk" (DANA, ShopeePay, OVO, dan lain-lain) lalu mengirim ke GatePay. Memerlukan HP dalam keadaan menyala. Setup melalui menu <b>Kredensial &amp; APK</b> di dashboard.</li>
-      <li><b>Token ShopeePay Partner (opsional, tanpa HP)</b> — khusus <b>ShopeePay Partner</b>. GatePay memeriksa mutasi transaksi ShopeePay langsung dari server menggunakan cookie token akun Anda, sehingga pembayaran ShopeePay terkonfirmasi tanpa HP. E-wallet lain tetap memerlukan APK. Aktifkan di dashboard menu <b>QRIS &amp; Order → panel ShopeePay Partner</b>.</li>
+      <li><b>APK Catcher (default, universal)</b> — aplikasi Android menangkap notifikasi "uang masuk" (DANA, ShopeePay, GoPay, OVO, dan lain-lain) lalu mengirim ke GatePay. Memerlukan HP dalam keadaan menyala. Setup melalui menu <b>Kredensial &amp; APK</b> di dashboard.</li>
+      <li><b>Token ShopeePay Partner (opsional, tanpa HP)</b> — khusus <b>ShopeePay Partner</b>. GatePay memeriksa mutasi transaksi ShopeePay langsung dari server menggunakan cookie token akun Anda. Aktifkan di dashboard menu <b>QRIS &amp; Order → panel ShopeePay Partner</b>.</li>
+      <li><b>Login GoPay Merchant (opsional, tanpa HP)</b> — khusus <b>GoPay Merchant / GoBiz</b>. GatePay login otomatis ke portal GoBiz menggunakan email &amp; password Anda, memeriksa mutasi, lalu mencocokkan dengan order. Token GoPay pendek, tetapi sistem auto-refresh sehingga hands-off. Aktifkan di dashboard menu <b>QRIS &amp; Order → panel GoPay Merchant</b>.</li>
     </ul>
-    <div class="tip">⚠️ Token ShopeePay Partner tidak resmi (menggunakan cookie sesi portal <code>partner.shopee.co.id</code>) — dapat expired &amp; ada risiko ToS. Jika token tidak aktif, APK catcher otomatis menjadi cadangan. Panduan mengambil token ada di menu <b>Tutorial</b> dashboard.</div>
+    <div class="tip">⚠️ ShopeePay Partner (cookie sesi <code>partner.shopee.co.id</code>) dan GoPay Merchant (login GoBiz) menggunakan API internal — tidak resmi, dapat expired, dan ada risiko ToS akun. Jika salah satu tidak aktif, APK catcher otomatis menjadi cadangan. Panduan lengkap ada di menu <b>Tutorial</b> dashboard.</div>
 
     <h2 id="create">Buat Order</h2>
     <p><span class="method post">POST</span><code>/api/orders</code></p>
