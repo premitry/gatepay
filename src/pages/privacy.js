@@ -43,24 +43,26 @@ export function renderPrivacy() {
 </div></nav>
 <main>
   <div class="card">
-    <h1>Kebijakan Privasi</h1>
-    <p class="lead">Berlaku untuk aplikasi <b>GatePay Catcher</b> (penangkap notifikasi pembayaran) dan layanan GatePay.</p>
+    <h1>Ketentuan Layanan &amp; Kebijakan Privasi</h1>
+    <p class="lead">Berlaku untuk seluruh layanan <b>GatePay</b> — dashboard, API, halaman checkout, aplikasi <b>GatePay Catcher</b>, serta integrasi opsional <b>ShopeePay Partner</b> dan <b>GoPay Merchant</b>.</p>
 
-    <h2>Apa yang aplikasi lakukan</h2>
-    <p>GatePay Catcher membantu mendeteksi pembayaran QRIS yang masuk ke akun e-wallet/bank kamu, dengan cara <b>membaca notifikasi</b> dari aplikasi pembayaran yang kamu pilih sendiri (mis. DANA). Saat ada notifikasi transaksi masuk, aplikasi mengambil <b>nominal</b> dan <b>waktu</b>-nya lalu mengirimkannya ke server GatePay milikmu untuk mencocokkan order.</p>
+    <h2>1. Ringkasan Layanan</h2>
+    <p>GatePay adalah gateway pembayaran QRIS yang mengubah QRIS statis merchant menjadi QRIS dinamis dengan nominal unik, kemudian mendeteksi pembayaran yang masuk secara otomatis melalui salah satu jalur berikut:</p>
+    <ul>
+      <li><b>APK Catcher</b> — aplikasi Android membaca notifikasi pembayaran dari aplikasi target yang Anda pilih (mis. DANA, ShopeePay, GoPay), lalu mengirim nominal &amp; waktu ke server GatePay untuk dicocokkan dengan order.</li>
+      <li><b>Token ShopeePay Partner (opsional)</b> — GatePay memeriksa mutasi transaksi melalui portal <code>partner.shopee.co.id</code> menggunakan cookie sesi yang Anda tempel sendiri.</li>
+      <li><b>Login GoPay Merchant (opsional)</b> — GatePay login otomatis ke portal <code>gobiz.co.id</code> menggunakan email &amp; kata sandi yang Anda masukkan sendiri.</li>
+    </ul>
 
-    <h2>Yang kami akses</h2>
+    <h2>2. Data yang Diakses (APK Catcher)</h2>
     <div class="ok-box">
-      <b>✓ Hanya notifikasi</b> dari aplikasi target yang kamu tentukan.<br>
-      Data yang dikirim ke server: <code>nominal</code>, <code>waktu</code>, dan teks notifikasi seperlunya untuk pencocokan.
+      <b>✓ Hanya notifikasi</b> dari aplikasi target yang Anda tentukan. Data yang dikirim ke server: <code>nominal</code>, <code>waktu</code>, dan teks notifikasi seperlunya untuk pencocokan order.
     </div>
-
-    <h2>Yang TIDAK kami akses</h2>
-    <div class="no-box">
-      Aplikasi ini <b>tidak bisa</b> dan <b>tidak pernah</b>:
+    <div class="no-box" style="margin-top:8px">
+      Aplikasi ini <b>tidak dapat</b> dan <b>tidak pernah</b>:
       <ul>
         <li>Membaca SMS atau kode OTP</li>
-        <li>Membuka kontak, file, galeri, atau foto</li>
+        <li>Membuka kontak, berkas, galeri, atau foto</li>
         <li>Mengakses lokasi</li>
         <li>Menggunakan VPN atau menyadap lalu lintas internet</li>
         <li>Mengambil alih atau mengendalikan perangkat</li>
@@ -68,17 +70,60 @@ export function renderPrivacy() {
       Aplikasi hanya meminta izin <b>Akses Notifikasi</b> + internet. Tidak ada izin SMS, kontak, lokasi, kamera, maupun penyimpanan.
     </div>
 
-    <h2>Penyimpanan & pengiriman data</h2>
-    <p>Data transaksi dikirim langsung ke server GatePay yang kamu konfigurasi (endpoint <code>/ingest</code>) memakai kredensial perangkat (Device ID &amp; Secret) milik akunmu. GatePay memakainya hanya untuk menandai order sebagai <b>PAID</b>. Kami tidak menjual atau membagikan data ke pihak ketiga.</p>
+    <h2>3. Data yang Diakses (Integrasi ShopeePay &amp; GoPay Opsional)</h2>
+    <p>Jika Anda mengaktifkan salah satu integrasi opsional:</p>
+    <ul>
+      <li><b>ShopeePay Partner</b> — GatePay menyimpan cookie sesi <code>__shopee_partner_website_x_token_live</code> yang Anda tempel. Cookie ini digunakan untuk memanggil endpoint <code>get-transaction-list</code> di portal ShopeePay Partner secara berkala pada saat ada order aktif.</li>
+      <li><b>GoPay Merchant</b> — GatePay menyimpan email &amp; kata sandi akun GoPay Merchant Anda. Kredensial ini digunakan untuk login otomatis ke portal GoBiz (<code>api.gobiz.co.id/goid/token</code>), memperbarui <code>access_token</code> saat kedaluwarsa, kemudian memanggil endpoint <i>merchant analytics</i> untuk memeriksa mutasi transaksi.</li>
+    </ul>
+    <div class="ok-box">
+      <b>✓ Enkripsi kredensial.</b> Seluruh kolom sensitif — <b>cookie ShopeePay</b>, <b>kata sandi GoPay</b>, <b>access_token</b>, dan <b>refresh_token</b> GoPay — dienkripsi dengan <b>AES-GCM 256-bit</b> sebelum disimpan ke database. Kunci enkripsi disimpan sebagai <i>Cloudflare Worker secret</i> dan tidak dapat dibaca dari luar server. Bahkan pengelola database tidak dapat melihat kredensial dalam bentuk asli.
+    </div>
 
-    <h2>Kontrol pengguna</h2>
-    <p>Kamu bisa mencabut Akses Notifikasi kapan saja lewat <b>Setelan &rarr; Akses notifikasi</b>, atau menghapus aplikasi. Setelah dicabut/dihapus, aplikasi berhenti membaca notifikasi sepenuhnya.</p>
+    <h2>4. Risiko Penggunaan Integrasi Opsional</h2>
+    <div class="no-box">
+      Anda harus memahami dan menerima risiko berikut sebelum mengaktifkan ShopeePay Partner atau GoPay Merchant:
+      <ul>
+        <li><b>Tidak resmi.</b> Endpoint ShopeePay Partner dan GoPay Merchant/GoBiz adalah <i>API internal portal web</i>, bukan API publik yang disediakan oleh Shopee/Gojek. Penggunaannya adalah <i>reverse-engineering</i> yang tidak diendorse pihak mereka.</li>
+        <li><b>Melanggar Ketentuan Layanan (ToS).</b> Kemungkinan besar penggunaan otomatis melalui integrasi ini melanggar ToS ShopeePay Partner dan GoBiz. <b>Akun Anda dapat diblokir, ditangguhkan, atau di-<i>flag</i></b> oleh pihak Shopee/Gojek tanpa pemberitahuan.</li>
+        <li><b>Rapuh.</b> Format request dan response API internal dapat berubah sewaktu-waktu tanpa peringatan. Fitur ini bisa rusak sewaktu-waktu sampai kami sesuaikan.</li>
+        <li><b>Dana milik Anda.</b> Akun ShopeePay/GoPay adalah akun uang. Jika akun diblokir sementara, saldo dan pencairan dana dapat tertahan.</li>
+        <li><b>IP server.</b> GatePay berjalan di Cloudflare Workers. Pihak Shopee/Gojek dapat memblokir IP data center di kemudian hari.</li>
+      </ul>
+      <b>Konsekuensi:</b> jika Anda tetap memilih mengaktifkan integrasi opsional, Anda <b>menerima seluruh risiko</b> di atas dan setuju bahwa GatePay <b>tidak bertanggung jawab</b> atas pemblokiran akun, kehilangan akses dana, atau kerugian lain yang timbul akibat pihak Shopee/Gojek. Fitur opsional ini disediakan <i>as-is</i> untuk kenyamanan; jalur default (APK catcher) selalu tersedia sebagai alternatif.
+    </div>
 
-    <h2>Keamanan</h2>
-    <p>Aplikasi didistribusikan di luar Play Store (sideload), sehingga Android akan menampilkan peringatan "aplikasi tidak dikenal" — ini normal untuk semua APK non-Play Store dan bukan tanda virus. Izin yang diminta sengaja dibuat seminimal mungkin agar mudah diaudit.</p>
+    <h2>5. Penyimpanan &amp; Pengiriman Data</h2>
+    <p>Data transaksi (nominal, waktu, referensi order) dikirim langsung ke server GatePay menggunakan kredensial perangkat (Device ID &amp; Secret) milik akun Anda. GatePay hanya menggunakan data ini untuk menandai order sebagai <b>PAID</b> dan meneruskan webhook (jika Anda konfigurasi). Kami tidak menjual atau membagikan data ke pihak ketiga.</p>
+    <p>Data disimpan di database <b>Cloudflare D1</b> milik akun operator GatePay. Backup dan retensi mengikuti kebijakan Cloudflare. Anda dapat meminta penghapusan akun kapan saja melalui menu <b>Tiket Support</b>.</p>
 
-    <h2>Kontak</h2>
-    <p>Pertanyaan soal privasi bisa lewat menu <b>Tiket Support</b> di dashboard GatePay.</p>
+    <h2>6. Kontrol Pengguna</h2>
+    <ul>
+      <li><b>APK Catcher.</b> Anda dapat mencabut Akses Notifikasi kapan saja lewat <b>Setelan &rarr; Akses notifikasi</b>, atau menghapus aplikasi. Setelah dicabut/dihapus, aplikasi berhenti membaca notifikasi sepenuhnya.</li>
+      <li><b>ShopeePay Partner.</b> Klik <b>🗑 Hapus Token</b> di panel dashboard. Cookie akan dihapus dari database secara permanen.</li>
+      <li><b>GoPay Merchant.</b> Klik <b>🗑 Putuskan</b> di panel dashboard. Email, kata sandi, dan seluruh token akan dihapus dari database secara permanen.</li>
+      <li><b>Regenerasi API Key.</b> Anda dapat me-<i>regenerate</i> API Key kapan saja di menu Kredensial &amp; APK jika mencurigai kebocoran.</li>
+    </ul>
+
+    <h2>7. Keamanan</h2>
+    <ul>
+      <li>Kredensial ShopeePay/GoPay dienkripsi dengan <b>AES-GCM 256-bit</b> menggunakan kunci yang disimpan sebagai <i>Cloudflare secret</i>.</li>
+      <li>Password akun GatePay disimpan dalam bentuk hash <b>PBKDF2-SHA256</b> (100.000 iterasi + salt unik).</li>
+      <li>Autentikasi dua faktor (<b>2FA</b>) tersedia di menu Profil.</li>
+      <li>Webhook dilindungi tanda tangan <b>HMAC-SHA256</b> agar Anda dapat memverifikasi keaslian payload.</li>
+      <li>Seluruh komunikasi dilakukan melalui HTTPS/TLS.</li>
+      <li>APK didistribusikan di luar Play Store (sideload), sehingga Android menampilkan peringatan "aplikasi tidak dikenal" — hal ini normal untuk semua APK non-Play Store dan bukan tanda virus. Izin yang diminta sengaja dibuat seminimal mungkin agar mudah diaudit.</li>
+    </ul>
+
+    <h2>8. Batasan Tanggung Jawab</h2>
+    <p>Layanan GatePay disediakan <b>sebagaimana adanya (as-is)</b>, tanpa jaminan apa pun. GatePay bukan bank, PJP (Penyelenggara Jasa Pembayaran), maupun agregator resmi. GatePay hanya menghubungkan QRIS statis milik Anda dengan sistem pencocokan pembayaran; seluruh dana masuk ke akun e-wallet/bank <b>milik Anda sendiri</b>, GatePay tidak menampung dana pihak ketiga.</p>
+    <p>Dalam batas maksimum yang diizinkan hukum, GatePay tidak bertanggung jawab atas kehilangan dana, pemblokiran akun oleh pihak ketiga, keterlambatan konfirmasi, atau kerugian tidak langsung yang timbul dari penggunaan layanan ini.</p>
+
+    <h2>9. Perubahan</h2>
+    <p>Kebijakan ini dapat diperbarui sewaktu-waktu. Versi terbaru selalu tersedia di halaman <code>/privasi</code>. Dengan terus menggunakan layanan setelah pembaruan, Anda dianggap menyetujui perubahan tersebut.</p>
+
+    <h2>10. Kontak</h2>
+    <p>Pertanyaan seputar ketentuan &amp; privasi dapat dikirim melalui menu <b>Tiket Support</b> di dashboard GatePay.</p>
   </div>
   <div class="foot">GatePay · Kebijakan Privasi</div>
 </main>

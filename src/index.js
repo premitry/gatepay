@@ -55,6 +55,56 @@ async function hmacHex(secret, message) {
   return [...new Uint8Array(sig)].map((x) => x.toString(16).padStart(2, '0')).join('');
 }
 
+// ── Enkripsi kredensial sensitif (AES-GCM) ──
+// Key diambil dari env.ENC_KEY (set via `wrangler secret put ENC_KEY`).
+// Fallback: derive dari `SECRET` / `CALLBACK_SECRET` / hardcode key.
+// Format tersimpan: "enc1:<iv_b64>:<ct_b64>" → mudah deteksi mana yang sudah dienkripsi.
+let _encKeyCache = null;
+async function _getEncKey(env) {
+  if (_encKeyCache) return _encKeyCache;
+  const material = String((env && (env.ENC_KEY || env.SECRET)) || 'gatepay-default-v1-do-not-use-in-prod');
+  const salt = enc.encode('gatepay-enc-v1');
+  const km = await crypto.subtle.importKey('raw', enc.encode(material), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    km, 256,
+  );
+  _encKeyCache = await crypto.subtle.importKey('raw', bits, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  return _encKeyCache;
+}
+
+function _b64(buf) { let s = ''; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); }
+function _unb64(str) { const s = atob(str); const b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; }
+
+async function encField(env, plain) {
+  if (plain == null || plain === '') return plain;
+  try {
+    const key = await _getEncKey(env);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(String(plain)));
+    return 'enc1:' + _b64(iv) + ':' + _b64(ct);
+  } catch (e) {
+    return plain; // fallback: simpan plaintext kalau enkripsi gagal (aman terhadap breakage)
+  }
+}
+
+async function decField(env, stored) {
+  if (stored == null || stored === '') return stored;
+  const s = String(stored);
+  if (!s.startsWith('enc1:')) return s; // backward-compat: value lama plaintext, biarkan
+  try {
+    const parts = s.split(':');
+    if (parts.length !== 3) return s;
+    const key = await _getEncKey(env);
+    const iv = _unb64(parts[1]);
+    const ct = _unb64(parts[2]);
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+    return new TextDecoder().decode(pt);
+  } catch {
+    return null; // decrypt gagal → return null biar caller tau
+  }
+}
+
 // Timing-safe hex compare
 function safeEqual(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
@@ -599,7 +649,8 @@ app.get('/api/merchant/shopee', async (c) => {
   await ensureShopeeColumns(c.env.DB);
   const m = await c.env.DB.prepare('SELECT shopee_token, shopee_token_status, shopee_checked_at, shopee_merchant FROM merchants WHERE id = ?')
     .bind(merchant.id).first();
-  const tok = m && m.shopee_token ? String(m.shopee_token) : '';
+  const tokRaw = m && m.shopee_token ? String(m.shopee_token) : '';
+  const tok = tokRaw ? (await decField(c.env, tokRaw)) : '';
   let mname = m ? m.shopee_merchant || null : null;
   // Backfill nama merchant sekali kalau token aktif tapi nama belum tersimpan
   if (tok && !mname && (m.shopee_token_status || 'ok') === 'ok' && SHOPEE_CFG) {
@@ -641,8 +692,9 @@ app.post('/api/merchant/shopee', async (c) => {
   if (!probe.ok) {
     return json(c, { error: 'Token tidak valid atau sudah expired. Ambil cookie baru dari portal ShopeePay Partner, lalu tempel lagi.' }, 400);
   }
+  const encToken = await encField(c.env, token);
   await c.env.DB.prepare("UPDATE merchants SET shopee_token = ?, shopee_token_status = 'ok', shopee_checked_at = ?, shopee_merchant = ? WHERE id = ?")
-    .bind(token, now(), probe.merchant || null, merchant.id).run();
+    .bind(encToken, now(), probe.merchant || null, merchant.id).run();
   return json(c, { ok: true, enabled: true, merchant: probe.merchant || null });
 });
 
@@ -692,8 +744,11 @@ app.post('/api/merchant/gopay', async (c) => {
   if (!probe.ok) {
     return json(c, { error: probe.error || 'Email atau password salah, atau akun tidak terdaftar sebagai merchant GoPay.' }, 400);
   }
+  const encPwd = await encField(c.env, password);
+  const encTok = probe.token ? await encField(c.env, probe.token) : null;
+  const encRef = probe.refresh ? await encField(c.env, probe.refresh) : null;
   await c.env.DB.prepare("UPDATE merchants SET gopay_email = ?, gopay_password = ?, gopay_token = ?, gopay_refresh = ?, gopay_expires = ?, gopay_token_status = 'ok', gopay_checked_at = ?, gopay_merchant = ?, gopay_merchant_id = ?, gopay_unique_id = ? WHERE id = ?")
-    .bind(email, password, probe.token || null, probe.refresh || null, probe.expires || null, now(), probe.merchant || null, probe.merchant_id || null, probe.unique_id || null, merchant.id).run();
+    .bind(email, encPwd, encTok, encRef, probe.expires || null, now(), probe.merchant || null, probe.merchant_id || null, probe.unique_id || null, merchant.id).run();
   return json(c, { ok: true, enabled: true, merchant: probe.merchant || null });
 });
 
@@ -1221,8 +1276,10 @@ async function gopayEnsureToken(env, merchant) {
     if (merchant.gopay_refresh) {
       const r = await gopayRefresh(merchant.gopay_refresh, merchant.gopay_unique_id);
       const exp = now() + Number(r.expires_in || 3600);
+      const eTok = await encField(env, r.access_token);
+      const eRef = await encField(env, r.refresh_token);
       await env.DB.prepare("UPDATE merchants SET gopay_token=?, gopay_refresh=?, gopay_expires=?, gopay_unique_id=?, gopay_token_status='ok' WHERE id=?")
-        .bind(r.access_token, r.refresh_token, exp, r.unique_id, merchant.id).run();
+        .bind(eTok, eRef, exp, r.unique_id, merchant.id).run();
       return { access_token: r.access_token, unique_id: r.unique_id, merchant_id: merchant.gopay_merchant_id };
     }
   } catch {}
@@ -1231,8 +1288,10 @@ async function gopayEnsureToken(env, merchant) {
     if (merchant.gopay_password) {
       const s = await gopayLogin(merchant.gopay_email, merchant.gopay_password, merchant.gopay_unique_id);
       const exp = now() + Number(s.expires_in || 3600);
+      const eTok = await encField(env, s.access_token);
+      const eRef = await encField(env, s.refresh_token);
       await env.DB.prepare("UPDATE merchants SET gopay_token=?, gopay_refresh=?, gopay_expires=?, gopay_unique_id=?, gopay_token_status='ok' WHERE id=?")
-        .bind(s.access_token, s.refresh_token, exp, s.unique_id, merchant.id).run();
+        .bind(eTok, eRef, exp, s.unique_id, merchant.id).run();
       return { access_token: s.access_token, unique_id: s.unique_id, merchant_id: merchant.gopay_merchant_id };
     }
   } catch {}
@@ -1347,7 +1406,7 @@ async function settleShopeeMatch(env, order, hit) {
 // Status order buat polling checkout (publik, hanya status)
 app.get('/pay/:id/status', async (c) => {
   const order = await c.env.DB.prepare(
-    `SELECT o.*, m.shopee_token, m.shopee_token_status, m.gopay_email, m.gopay_password, m.gopay_token, m.gopay_refresh, m.gopay_expires, m.gopay_token_status
+    `SELECT o.*, m.shopee_token, m.shopee_token_status, m.gopay_email, m.gopay_password, m.gopay_token, m.gopay_refresh, m.gopay_expires, m.gopay_token_status, m.gopay_unique_id, m.gopay_merchant_id
      FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id WHERE o.id = ?`,
   )
     .bind(c.req.param('id'))
@@ -1362,7 +1421,8 @@ app.get('/pay/:id/status', async (c) => {
   const spLast = _spThrottle.get(order.id) || 0;
   if (order.status === 'pending' && order.shopee_token && SHOPEE_CFG && Date.now() - spLast >= 9000) {
     _spThrottle.set(order.id, Date.now());
-    const r = await checkShopeePay(c.env, order, order);
+    const spToken = await decField(c.env, order.shopee_token);
+    const r = await checkShopeePay(c.env, { ...order, shopee_token: spToken }, order);
     if (r.matched) {
       const eid = await settleShopeeMatch(c.env, order, r);
       c.executionCtx.waitUntil(fireCallback(c.env, order, eid));
@@ -1375,7 +1435,10 @@ app.get('/pay/:id/status', async (c) => {
   const gpLast = _gpThrottle.get(order.id) || 0;
   if (order.status === 'pending' && order.gopay_email && Date.now() - gpLast >= 9000) {
     _gpThrottle.set(order.id, Date.now());
-    const r = await checkGoPay(c.env, { id: order.merchant_id, gopay_email: order.gopay_email, gopay_password: order.gopay_password, gopay_token: order.gopay_token, gopay_refresh: order.gopay_refresh, gopay_expires: order.gopay_expires }, order);
+    const gpPwd = await decField(c.env, order.gopay_password);
+    const gpTok = await decField(c.env, order.gopay_token);
+    const gpRef = await decField(c.env, order.gopay_refresh);
+    const r = await checkGoPay(c.env, { id: order.merchant_id, gopay_email: order.gopay_email, gopay_password: gpPwd, gopay_token: gpTok, gopay_refresh: gpRef, gopay_expires: order.gopay_expires, gopay_unique_id: order.gopay_unique_id, gopay_merchant_id: order.gopay_merchant_id }, order);
     if (r.matched) {
       const eid = await settleGopayMatch(c.env, order, r);
       c.executionCtx.waitUntil(fireCallback(c.env, order, eid));
