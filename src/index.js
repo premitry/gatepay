@@ -305,12 +305,12 @@ app.post('/api/register', async (c) => {
   const username = String(body.username || '').trim().toLowerCase();
   const password = String(body.password || '');
   if (!/^[a-z0-9_]{3,20}$/.test(username)) {
-    return json(c, { error: 'username 3-20 karakter, hanya huruf/angka/underscore' }, 400);
+    return json(c, { error: 'Username harus 3-20 karakter, hanya huruf, angka, atau underscore' }, 400);
   }
-  if (password.length < 6) return json(c, { error: 'password minimal 6 karakter' }, 400);
+  if (password.length < 6) return json(c, { error: 'Password minimal 6 karakter' }, 400);
 
   const existing = await c.env.DB.prepare('SELECT id FROM merchants WHERE username = ?').bind(username).first();
-  if (existing) return json(c, { error: 'username sudah dipakai' }, 409);
+  if (existing) return json(c, { error: 'Username sudah digunakan' }, 409);
 
   const { salt, hash } = await hashPassword(password);
   const id = rid('mch');
@@ -340,13 +340,13 @@ app.post('/api/login', async (c) => {
   const password = String(body.password || '');
   await ensure2fa(c.env.DB);
   const m = await c.env.DB.prepare('SELECT * FROM merchants WHERE username = ?').bind(username).first();
-  if (!m || !m.password_hash) return json(c, { error: 'username / password salah' }, 401);
+  if (!m || !m.password_hash) return json(c, { error: 'Username atau password salah' }, 401);
   const ok = await verifyPassword(password, m.password_salt, m.password_hash);
-  if (!ok) return json(c, { error: 'username / password salah' }, 401);
+  if (!ok) return json(c, { error: 'Username atau password salah' }, 401);
   // 2FA: kalau aktif, wajib kode TOTP yang valid
   if (m.totp_enabled) {
     const totp = String(body.totp || '').trim();
-    if (!totp) return json(c, { needs_2fa: true, error: 'butuh kode 2FA' }, 401);
+    if (!totp) return json(c, { needs_2fa: true, error: 'Kode 2FA diperlukan' }, 401);
     if (!(await verifyTotp(m.totp_secret, totp))) return json(c, { needs_2fa: true, error: 'kode 2FA salah' }, 401);
   }
   return json(c, {
@@ -381,7 +381,7 @@ app.post('/api/orders', async (c) => {
 
   const base = Math.round(Number(body.base_amount));
   if (!Number.isFinite(base) || base <= 0) {
-    return json(c, { error: 'base_amount harus angka > 0' }, 400);
+    return json(c, { error: 'base_amount harus berupa angka lebih besar dari 0' }, 400);
   }
 
   const ttl = parseInt(body.ttl_seconds ?? merchant.order_ttl ?? c.env.ORDER_TTL_SECONDS ?? DEFAULT_TTL, 10);
@@ -401,7 +401,7 @@ app.post('/api/orders', async (c) => {
   // Pastikan unique_amount belum dipakai order pending aktif lain (global).
   const uniqueAmount = await pickUniqueAmount(c.env.DB, subtotal, 1, codeMax, t);
   if (uniqueAmount == null) {
-    return json(c, { error: 'kode unik habis (terlalu banyak order pending nominal sama), coba lagi' }, 503);
+    return json(c, { error: 'Kode unik habis (terlalu banyak order pending dengan nominal sama), silakan coba lagi' }, 503);
   }
 
   const id = rid('ord');
@@ -496,7 +496,7 @@ app.post('/api/orders/:id/cancel', async (c) => {
     .bind(c.req.param('id'), merchant.id)
     .first();
   if (!order) return json(c, { error: 'order not found' }, 404);
-  if (order.status !== 'pending') return json(c, { error: `tidak bisa cancel, status=${order.status}` }, 409);
+  if (order.status !== 'pending') return json(c, { error: `Order tidak dapat dibatalkan, status=${order.status}` }, 409);
   await c.env.DB.prepare("UPDATE orders SET status='cancelled' WHERE id=?").bind(order.id).run();
   return json(c, { id: order.id, status: 'cancelled' });
 });
@@ -516,7 +516,7 @@ app.post('/api/merchant/qris', async (c) => {
   }
   const payload = String(body.qris || '').trim();
   if (!isValidQris(payload)) {
-    return json(c, { error: 'QRIS tidak valid (cek CRC / format). Pastikan ini teks QRIS statis.' }, 400);
+    return json(c, { error: 'QRIS tidak valid (periksa CRC / format). Pastikan ini merupakan teks QRIS statis.' }, 400);
   }
   const info = qrisInfo(payload);
   await c.env.DB.prepare('UPDATE merchants SET qris_static = ?, qris_merchant_name = ? WHERE id = ?')
@@ -568,15 +568,15 @@ app.post('/api/merchant/shopee', async (c) => {
   await ensureShopeeColumns(c.env.DB);
   const body = await c.req.json().catch(() => ({}));
   const token = String(body.token || '').trim();
-  if (!token) return json(c, { error: 'token kosong' }, 400);
-  if (token.length > 4096) return json(c, { error: 'token terlalu panjang' }, 400);
+  if (!token) return json(c, { error: 'Token tidak boleh kosong' }, 400);
+  if (token.length > 4096) return json(c, { error: 'Token terlalu panjang' }, 400);
   if (!token.startsWith('eyJ') && !token.startsWith('B:')) {
-    return json(c, { error: 'Format salah. Paste nilai cookie __shopee_partner_website_x_token_live (diawali "eyJ") dari portal ShopeePay Partner.' }, 400);
+    return json(c, { error: 'Format salah. Tempelkan nilai cookie __shopee_partner_website_x_token_live (diawali "eyJ") dari portal ShopeePay Partner.' }, 400);
   }
   // pastikan token bisa di-decode ke token B: (kalau cookie JWT)
   const bt = spBtoken(token);
   if (!bt || !bt.startsWith('B:')) {
-    return json(c, { error: 'Token tidak bisa dibaca (decode gagal). Pastikan copy Value cookie-nya lengkap & tidak terpotong.' }, 400);
+    return json(c, { error: 'Token tidak dapat dibaca (proses decode gagal). Pastikan Anda menyalin Value cookie secara lengkap dan tidak terpotong.' }, 400);
   }
   await c.env.DB.prepare("UPDATE merchants SET shopee_token = ?, shopee_token_status = 'ok', shopee_checked_at = ? WHERE id = ?")
     .bind(token, now(), merchant.id).run();
@@ -620,7 +620,7 @@ app.post('/api/merchant/profile', async (c) => {
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   const body = await c.req.json().catch(() => ({}));
   const name = String(body.name || '').trim().slice(0, 60);
-  if (!name) return json(c, { error: 'nama tidak boleh kosong' }, 400);
+  if (!name) return json(c, { error: 'Nama tidak boleh kosong' }, 400);
   await c.env.DB.prepare('UPDATE merchants SET name = ? WHERE id = ?').bind(name, merchant.id).run();
   return json(c, { ok: true, name });
 });
@@ -636,8 +636,8 @@ app.post('/api/merchant/settings', async (c) => {
   }
   const fee = body.fee_percent != null ? Number(body.fee_percent) : merchant.fee_percent;
   const digits = body.unique_digits != null ? parseInt(body.unique_digits, 10) : merchant.unique_digits;
-  if (!Number.isFinite(fee) || fee < 0 || fee > 100) return json(c, { error: 'fee_percent harus 0-100' }, 400);
-  if (![1, 2, 3].includes(digits)) return json(c, { error: 'unique_digits harus 1, 2, atau 3' }, 400);
+  if (!Number.isFinite(fee) || fee < 0 || fee > 100) return json(c, { error: 'fee_percent harus bernilai 0-100' }, 400);
+  if (![1, 2, 3].includes(digits)) return json(c, { error: 'unique_digits harus bernilai 1, 2, atau 3' }, 400);
 
   // notify_url opsional — validasi ringan kalau diisi
   let notifyUrl = merchant.notify_url || null;
@@ -645,7 +645,7 @@ app.post('/api/merchant/settings', async (c) => {
     const u = String(body.notify_url || '').trim();
     if (u === '') notifyUrl = null;
     else if (/^https?:\/\/.+/i.test(u)) notifyUrl = u;
-    else return json(c, { error: 'notify_url harus URL http(s) yang valid' }, 400);
+    else return json(c, { error: 'notify_url harus berupa URL http(s) yang valid' }, 400);
   }
 
   // order_ttl (detik) opsional — masa berlaku order. Batas 60 detik - 24 jam.
@@ -653,7 +653,7 @@ app.post('/api/merchant/settings', async (c) => {
   let ttl = merchant.order_ttl || DEFAULT_TTL;
   if (body.order_ttl !== undefined) {
     ttl = parseInt(body.order_ttl, 10);
-    if (!Number.isFinite(ttl) || ttl < 60 || ttl > 86400) return json(c, { error: 'order_ttl harus 60 - 86400 detik' }, 400);
+    if (!Number.isFinite(ttl) || ttl < 60 || ttl > 86400) return json(c, { error: 'order_ttl harus bernilai 60 - 86400 detik' }, 400);
   }
 
   await c.env.DB.prepare('UPDATE merchants SET fee_percent = ?, unique_digits = ?, notify_url = ?, order_ttl = ? WHERE id = ?')
@@ -669,13 +669,13 @@ app.post('/api/merchant/change-password', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const oldP = String(body.old_password || '');
   const newP = String(body.new_password || '');
-  if (newP.length < 6) return json(c, { error: 'password baru minimal 6 karakter' }, 400);
-  if (!merchant.password_hash) return json(c, { error: 'akun tidak punya password' }, 400);
+  if (newP.length < 6) return json(c, { error: 'Password baru minimal 6 karakter' }, 400);
+  if (!merchant.password_hash) return json(c, { error: 'Akun tidak memiliki password' }, 400);
   // Kalau lagi dipaksa ganti PW (habis di-reset admin), user sudah login pakai PW temp
   // & terautentikasi via api_key → boleh set PW baru tanpa verif PW lama.
   if (!merchant.must_change_pw) {
     const ok = await verifyPassword(oldP, merchant.password_salt, merchant.password_hash);
-    if (!ok) return json(c, { error: 'password lama salah' }, 401);
+    if (!ok) return json(c, { error: 'Password lama salah' }, 401);
   }
   const { salt, hash } = await hashPassword(newP);
   await c.env.DB.prepare('UPDATE merchants SET password_hash = ?, password_salt = ?, must_change_pw = 0 WHERE id = ?')
@@ -720,9 +720,9 @@ app.post('/api/merchant/2fa/verify', async (c) => {
   if (!m) return json(c, { error: 'invalid api key' }, 401);
   await ensure2fa(c.env.DB);
   const mm = await c.env.DB.prepare('SELECT totp_secret FROM merchants WHERE id = ?').bind(m.id).first();
-  if (!mm || !mm.totp_secret) return json(c, { error: 'belum setup 2FA' }, 400);
+  if (!mm || !mm.totp_secret) return json(c, { error: '2FA belum disiapkan' }, 400);
   const code = String((await c.req.json().catch(() => ({}))).code || '').trim();
-  if (!(await verifyTotp(mm.totp_secret, code))) return json(c, { error: 'kode salah, coba lagi' }, 400);
+  if (!(await verifyTotp(mm.totp_secret, code))) return json(c, { error: 'Kode salah, silakan coba lagi' }, 400);
   await c.env.DB.prepare('UPDATE merchants SET totp_enabled = 1 WHERE id = ?').bind(m.id).run();
   return json(c, { ok: true, enabled: true });
 });
@@ -734,7 +734,7 @@ app.post('/api/merchant/2fa/disable', async (c) => {
   const mm = await c.env.DB.prepare('SELECT totp_secret, totp_enabled FROM merchants WHERE id = ?').bind(m.id).first();
   if (!mm || !mm.totp_enabled) return json(c, { error: '2FA belum aktif' }, 400);
   const code = String((await c.req.json().catch(() => ({}))).code || '').trim();
-  if (!(await verifyTotp(mm.totp_secret, code))) return json(c, { error: 'kode salah' }, 400);
+  if (!(await verifyTotp(mm.totp_secret, code))) return json(c, { error: 'Kode salah' }, 400);
   await c.env.DB.prepare('UPDATE merchants SET totp_enabled = 0, totp_secret = NULL WHERE id = ?').bind(m.id).run();
   return json(c, { ok: true, enabled: false });
 });
@@ -762,7 +762,7 @@ app.post('/api/tickets', async (c) => {
   const subject = String(b.subject || '').trim().slice(0, 120);
   const msg = String(b.message || '').trim().slice(0, 2000);
   const image = cleanImage(b.image);
-  if (!subject || (!msg && !image)) return json(c, { error: 'subject & pesan/gambar wajib diisi' }, 400);
+  if (!subject || (!msg && !image)) return json(c, { error: 'Subjek dan pesan atau gambar wajib diisi' }, 400);
   const id = rid('tkt');
   const t = now();
   const adminUnread = roleOf(m) === 'user' ? 1 : 0;
@@ -782,7 +782,7 @@ app.get('/api/tickets/:id', async (c) => {
   await ensureTickets(c.env.DB);
   const id = c.req.param('id');
   const tk = await c.env.DB.prepare('SELECT * FROM tickets WHERE id = ?').bind(id).first();
-  if (!tk) return json(c, { error: 'tiket tidak ditemukan' }, 404);
+  if (!tk) return json(c, { error: 'Tiket tidak ditemukan' }, 404);
   if (tk.merchant_id !== m.id && !m.is_admin) return json(c, { error: 'forbidden' }, 403);
   // owner/merchant buka tiket sendiri → hilangin dot user
   if (tk.merchant_id === m.id && !m.is_admin && tk.user_unread) {
@@ -807,13 +807,13 @@ app.post('/api/tickets/:id/reply', async (c) => {
   await ensureTickets(c.env.DB);
   const id = c.req.param('id');
   const tk = await c.env.DB.prepare('SELECT * FROM tickets WHERE id = ?').bind(id).first();
-  if (!tk) return json(c, { error: 'tiket tidak ditemukan' }, 404);
+  if (!tk) return json(c, { error: 'Tiket tidak ditemukan' }, 404);
   const isAdmin = !!(m.is_admin || m.is_owner);
   if (tk.merchant_id !== m.id && !isAdmin) return json(c, { error: 'forbidden' }, 403);
   const b = await c.req.json().catch(() => ({}));
   const body = String(b.body || '').trim().slice(0, 2000);
   const image = cleanImage(b.image);
-  if (!body && !image) return json(c, { error: 'pesan/gambar kosong' }, 400);
+  if (!body && !image) return json(c, { error: 'Pesan atau gambar tidak boleh kosong' }, 400);
   const t = now();
   await c.env.DB.prepare(
     'INSERT INTO ticket_messages (id, ticket_id, sender, sender_role, sender_name, body, image, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -1007,7 +1007,7 @@ app.get('/snap.js', (c) => {
   var G=window.GatePay=window.GatePay||{};
   G.pay=function(orderId,opts){
     opts=opts||{};
-    if(!orderId){ if(opts.onError)opts.onError({error:'orderId kosong'}); return; }
+    if(!orderId){ if(opts.onError)opts.onError({error:'orderId tidak boleh kosong'}); return; }
     var done=false, closed=false;
     var ov=document.createElement('div');
     ov.setAttribute('data-gatepay','overlay');
@@ -1077,14 +1077,14 @@ app.get('/snap-demo', (c) => {
   <div class="top"><span class="logo">GatePay</span><span class="amt">SNAP_DEMO</span></div>
   <div class="body">
     <h1>Demo Popup Pembayaran</h1>
-    <p class="lead">Isi API key & nominal, klik tombol — order dibuat lalu popup QRIS langsung muncul. Ini simulasi persis <code>GatePay.pay()</code>.</p>
+    <p class="lead">Masukkan API key dan nominal, lalu klik tombol — order akan dibuat kemudian popup QRIS langsung muncul. Ini merupakan simulasi persis dari <code>GatePay.pay()</code>.</p>
     <label>API Key (sk_live_…)</label>
     <input id="key" placeholder="sk_live_xxxxxxxx" autocomplete="off">
     <label>Nominal (Rp)</label>
     <input id="amt" type="number" value="10000" min="1">
-    <button class="btn" id="go" onclick="mulai()">🪟 Buka Popup Bayar</button>
-    <div class="log" id="log">Siap. Masukin API key kamu dulu…</div>
-    <div class="tip">💡 API key hanya dipakai di browser kamu buat demo ini. Di produksi, <b>buat order dari server</b> — jangan pernah taruh API key di frontend.</div>
+    <button class="btn" id="go" onclick="mulai()">🪟 Buka Popup Pembayaran</button>
+    <div class="log" id="log">Siap. Masukkan API key Anda terlebih dahulu…</div>
+    <div class="tip">💡 API key hanya digunakan di browser Anda untuk demo ini. Di produksi, <b>buat order dari server</b> — jangan pernah menaruh API key di frontend.</div>
   </div>
 </div>
 <script src="/snap.js"></script>
@@ -1107,7 +1107,7 @@ app.get('/snap-demo', (c) => {
       log('> GatePay.pay() → buka popup…');
       GatePay.pay(j.id,{
         onSuccess:function(o){ log('✔ PAID! Rp '+Number(o.unique_amount).toLocaleString('id-ID'),'win'); b.disabled=false; },
-        onPending:function(o){ log('  popup kebuka, menunggu bayar…'); },
+        onPending:function(o){ log('  popup terbuka, menunggu pembayaran…'); },
         onError:function(o){ log('✗ order '+(o.status||'gagal'),'bad'); b.disabled=false; },
         onClose:function(){ log('  popup ditutup.'); b.disabled=false; }
       });
@@ -1380,12 +1380,12 @@ app.get('/api/admin/merchants', async (c) => {
 // Owner: jadikan / cabut admin (owner only)
 app.post('/api/admin/merchants/:id/set-admin', async (c) => {
   const owner = await requireOwner(c);
-  if (!owner) return json(c, { error: 'hanya owner yang bisa atur admin' }, 403);
+  if (!owner) return json(c, { error: 'Hanya owner yang dapat mengatur admin' }, 403);
   const id = c.req.param('id');
   const body = await c.req.json().catch(() => ({}));
   const target = await c.env.DB.prepare('SELECT id, is_owner FROM merchants WHERE id = ?').bind(id).first();
-  if (!target) return json(c, { error: 'merchant tidak ditemukan' }, 404);
-  if (target.is_owner) return json(c, { error: 'tidak bisa ubah role owner' }, 400);
+  if (!target) return json(c, { error: 'Merchant tidak ditemukan' }, 404);
+  if (target.is_owner) return json(c, { error: 'Tidak dapat mengubah role owner' }, 400);
   const makeAdmin = body.admin ? 1 : 0;
   await c.env.DB.prepare('UPDATE merchants SET is_admin = ? WHERE id = ?').bind(makeAdmin, id).run();
   return json(c, { ok: true, is_admin: makeAdmin });
@@ -1405,7 +1405,7 @@ app.post('/api/admin/merchants/:id/delete', async (c) => {
   const admin = await requireAdmin(c);
   if (!admin) return json(c, { error: 'unauthorized' }, 401);
   const id = c.req.param('id');
-  if (id === admin.id) return json(c, { error: 'tidak bisa hapus akun admin sendiri' }, 400);
+  if (id === admin.id) return json(c, { error: 'Tidak dapat menghapus akun admin sendiri' }, 400);
   await c.env.DB.prepare('DELETE FROM merchants WHERE id = ?').bind(id).run();
   return json(c, { ok: true });
 });
@@ -1516,7 +1516,7 @@ app.post('/api/admin/tickets/:id/status', async (c) => {
   await ensureTickets(c.env.DB);
   const b = await c.req.json().catch(() => ({}));
   const st = String(b.status || '');
-  if (!TICKET_STATUS.includes(st)) return json(c, { error: 'status harus active/proses/close' }, 400);
+  if (!TICKET_STATUS.includes(st)) return json(c, { error: 'Status harus active/proses/close' }, 400);
   await c.env.DB.prepare('UPDATE tickets SET status = ?, updated_at = ? WHERE id = ?')
     .bind(st, now(), c.req.param('id')).run();
   return json(c, { ok: true, status: st });

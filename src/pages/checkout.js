@@ -78,7 +78,7 @@ export function renderCheckout({ order, qris, embed }) {
         <div class="steps">
           <b>1.</b> Buka DANA / e-wallet / m-banking<br>
           <b>2.</b> Scan QRIS di atas<br>
-          <b>3.</b> Nominal sudah otomatis ${rupiah(order.unique_amount)} — konfirmasi bayar
+          <b>3.</b> Nominal sudah otomatis ${rupiah(order.unique_amount)} — konfirmasikan pembayaran
         </div>` : `
         <div class="note">Merchant belum upload QRIS. Hubungi merchant.</div>`}
       <div class="timer">Berlaku <span id="cd">--:--</span></div>

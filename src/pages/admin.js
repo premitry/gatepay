@@ -97,7 +97,7 @@ export function renderAdmin() {
 <div id="authview">
   <div class="authwrap"><div class="authcard">
     <h1><span style="background:var(--amber);color:#241d02;padding:0 8px">G</span> Admin</h1>
-    <div class="sub">Login akun admin GatePay.</div>
+    <div class="sub">Masuk menggunakan akun admin GatePay.</div>
     <label>Username</label><input id="u" type="text" placeholder="admin username">
     <label>Password</label><input id="p" type="password" placeholder="password">
     <div id="fa2-wrap" class="hidden"><label>Kode 2FA</label><input id="fa2" inputmode="numeric" maxlength="6" placeholder="123456"></div>
@@ -131,7 +131,7 @@ export function renderAdmin() {
   <div id="view-merch">
     <div class="panel">
       <h2>Merchant &amp; Monitoring Device</h2>
-      <div class="dim" style="margin-bottom:8px;font-size:12px">Klik baris user buat lihat rekap &amp; aksi.</div>
+      <div class="dim" style="margin-bottom:8px;font-size:12px">Klik baris pengguna untuk melihat rekap &amp; aksi.</div>
       <div style="overflow-x:auto"><table><thead><tr>
         <th>User</th><th>Device</th><th>QRIS</th><th>Fee</th><th>Order</th><th>Revenue</th><th>Status</th>
       </tr></thead><tbody id="mtbody"><tr><td colspan=7 class=dim style="text-align:center;padding:20px">Loading…</td></tr></tbody></table></div>
@@ -184,7 +184,7 @@ export function renderAdmin() {
       </div>
       <div class="panel">
         <h2>FAVICON.ICO</h2>
-        <div class="dim" style="margin-bottom:8px">Isi 1 emoji (mis. 💳 🟢 ⚡ 🏦) atau URL gambar (https://...). Kepakai jadi favicon + icon app.</div>
+        <div class="dim" style="margin-bottom:8px">Masukkan 1 emoji (mis. 💳 🟢 ⚡ 🏦) atau URL gambar (https://...). Akan digunakan sebagai favicon + icon app.</div>
         <label>Favicon (emoji / URL)</label>
         <div style="display:flex;gap:10px;align-items:center">
           <input id="set-favicon" placeholder="💳" style="flex:1" oninput="setPrev()">
@@ -192,7 +192,7 @@ export function renderAdmin() {
         </div>
         <div style="border-top:1px solid var(--edge);margin:14px 0;padding-top:8px"></div>
         <h2 style="margin-left:-16px;margin-right:-16px">WEB_APP.PWA</h2>
-        <label style="display:flex;align-items:center;gap:8px;text-transform:none"><input type="checkbox" id="set-pwa_enabled" style="width:auto"> Aktifkan Web App (PWA — bisa "Add to Home Screen")</label>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none"><input type="checkbox" id="set-pwa_enabled" style="width:auto"> Aktifkan Web App (PWA — dapat "Add to Home Screen")</label>
         <label>Nama App</label><input id="set-pwa_name" placeholder="GatePay">
         <label>Nama Pendek (icon)</label><input id="set-pwa_short_name" placeholder="GatePay">
         <button onclick="saveSet()">Simpan Pengaturan</button>
@@ -238,7 +238,7 @@ export function renderAdmin() {
       <div class="dim" id="msub" style="margin-bottom:8px"></div>
       <input class="val" id="mval" readonly onclick="this.select()">
       <button onclick="copyResult()" id="mcopy">📋 Copy</button>
-      <div class="dim" style="font-size:11px;margin-top:8px">Klik field buat select semua, atau tekan Copy. Simpan sebelum tutup — tidak ditampilkan lagi.</div>
+      <div class="dim" style="font-size:11px;margin-top:8px">Klik field untuk memilih semua, atau tekan Copy. Simpan sebelum menutup — tidak akan ditampilkan lagi.</div>
     </div>
   </div>
 </div>
@@ -259,13 +259,13 @@ export function renderAdmin() {
 
   async function login(){
     var u=$('u').value.trim().toLowerCase(), p=$('p').value;
-    if(!u||!p) return msg('amsg','err','Isi username & password');
+    if(!u||!p) return msg('amsg','err','Masukkan username & password');
     var payload={username:u,password:p};
     if(!$('fa2-wrap').classList.contains('hidden')) payload.totp=$('fa2').value.trim();
     try{
       var r=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       var j=await r.json();
-      if(!r.ok){ if(j.needs_2fa){ $('fa2-wrap').classList.remove('hidden'); $('fa2').focus(); return msg('amsg','err',j.error||'Masukin kode 2FA'); } return msg('amsg','err',j.error||'gagal'); }
+      if(!r.ok){ if(j.needs_2fa){ $('fa2-wrap').classList.remove('hidden'); $('fa2').focus(); return msg('amsg','err',j.error||'Masukkan kode 2FA'); } return msg('amsg','err',j.error||'Gagal'); }
       if(!j.is_admin) return msg('amsg','err','Akun ini bukan admin');
       localStorage.setItem('gp_admin',JSON.stringify(j)); showApp();
     }catch(e){ msg('amsg','err',String(e)); }
@@ -354,8 +354,8 @@ export function renderAdmin() {
     SET_KEYS.forEach(k=>{ payload[k]=$('set-'+k).value.trim(); });
     try{ var r=await fetch('/api/admin/settings',{method:'POST',headers:hdr(),body:JSON.stringify(payload)});
       var j=await r.json();
-      if(r.ok){ msg('setmsg','ok','Pengaturan tersimpan ✓ (refresh halaman buat lihat favicon baru)'); msg('setmsg2','ok','Tersimpan ✓'); setPrev(); }
-      else { msg('setmsg','err',j.error||'gagal'); }
+      if(r.ok){ msg('setmsg','ok','Pengaturan tersimpan ✓ (refresh halaman untuk melihat favicon baru)'); msg('setmsg2','ok','Tersimpan ✓'); setPrev(); }
+      else { msg('setmsg','err',j.error||'Gagal'); }
     }catch(e){ msg('setmsg','err',String(e)); }
   }
 
@@ -397,7 +397,7 @@ export function renderAdmin() {
   function copyResult(){ var v=$('mval').value; if(navigator.clipboard){ navigator.clipboard.writeText(v).then(function(){ $('mcopy').textContent='✓ Tersalin'; }); } $('mval').select(); }
   document.addEventListener('keydown',function(e){ if(e.key==='Escape')closeModal(); });
 
-  async function setAdmin(id,v){ if(!confirm(v?'Jadikan user ini admin?':'Cabut akses admin user ini?'))return; var r=await fetch('/api/admin/merchants/'+id+'/set-admin',{method:'POST',headers:hdr(),body:JSON.stringify({admin:v})}); var j=await r.json(); if(!r.ok)alert(j.error||'gagal'); reopenAfter(id); }
+  async function setAdmin(id,v){ if(!confirm(v?'Jadikan pengguna ini sebagai admin?':'Cabut akses admin pengguna ini?'))return; var r=await fetch('/api/admin/merchants/'+id+'/set-admin',{method:'POST',headers:hdr(),body:JSON.stringify({admin:v})}); var j=await r.json(); if(!r.ok)alert(j.error||'Gagal'); reopenAfter(id); }
   // ── popup rekap merchant + aksi (text) ──
   function mmTr(k,v){ return '<tr><td>'+k+'</td><td>'+v+'</td></tr>'; }
   function mmBtn(cls,label,onc){ return '<button class="'+cls+'" onclick="'+onc+'">'+label+'</button>'; }
@@ -437,10 +437,10 @@ export function renderAdmin() {
   function closeMModal(){ $('mmodal').classList.remove('on'); }
   async function reopenAfter(id){ await load(); if($('mmodal').classList.contains('on')) openMerchant(id); }
 
-  async function reset2fa(id,u){ if(!confirm('Reset/matikan 2FA untuk @'+u+'? Dia bisa login tanpa kode lagi & set ulang authenticator.'))return; var r=await fetch('/api/admin/merchants/'+id+'/reset-2fa',{method:'POST',headers:hdr()}); if(r.ok){ alert('2FA @'+u+' sudah di-reset'); reopenAfter(id); } else alert('gagal'); }
+  async function reset2fa(id,u){ if(!confirm('Reset/nonaktifkan 2FA untuk @'+u+'? Pengguna dapat login tanpa kode lagi & mengatur ulang authenticator.'))return; var r=await fetch('/api/admin/merchants/'+id+'/reset-2fa',{method:'POST',headers:hdr()}); if(r.ok){ alert('2FA @'+u+' sudah di-reset'); reopenAfter(id); } else alert('Gagal'); }
   async function setActive(id,a){ await fetch('/api/admin/merchants/'+id+'/active',{method:'POST',headers:hdr(),body:JSON.stringify({active:a})}); reopenAfter(id); }
-  async function delMerch(id,u){ if(!confirm('Hapus merchant @'+u+'? Semua ordernya ikut hilang.'))return; await fetch('/api/admin/merchants/'+id+'/delete',{method:'POST',headers:hdr()}); closeMModal(); load(); }
-  async function resetPw(id,u){ var r=await (await fetch('/api/admin/merchants/'+id+'/reset-password',{method:'POST',headers:hdr()})).json(); if(r.new_password) showResult('PASSWORD_BARU.KEY','Password sementara untuk @'+u+' (user wajib ganti pas login):',r.new_password); }
+  async function delMerch(id,u){ if(!confirm('Hapus merchant @'+u+'? Semua order-nya akan ikut terhapus.'))return; await fetch('/api/admin/merchants/'+id+'/delete',{method:'POST',headers:hdr()}); closeMModal(); load(); }
+  async function resetPw(id,u){ var r=await (await fetch('/api/admin/merchants/'+id+'/reset-password',{method:'POST',headers:hdr()})).json(); if(r.new_password) showResult('PASSWORD_BARU.KEY','Password sementara untuk @'+u+' (pengguna wajib mengganti saat login):',r.new_password); }
   async function regenKey(id){ var r=await (await fetch('/api/admin/merchants/'+id+'/regenerate-key',{method:'POST',headers:hdr()})).json(); if(r.api_key) showResult('API_KEY_BARU.KEY','API Key baru (sk_live):',r.api_key); }
 
   if(sess()) showApp();

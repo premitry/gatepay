@@ -232,7 +232,7 @@ export function renderDashboard() {
     <div class="tt"><span class="mark" style="background:var(--accent);color:#fff;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px">G</span> GATEPAY.EXE</div>
     <div class="bd2">
       <h1>GatePay</h1>
-      <div class="sub">Masuk atau daftar untuk kelola payment gateway kamu.</div>
+      <div class="sub">Masuk atau daftar untuk mengelola payment gateway Anda.</div>
       <div class="tabs">
         <div id="tab-login" class="active" onclick="switchTab('login')">Masuk</div>
         <div id="tab-reg" onclick="switchTab('reg')">Daftar</div>
@@ -254,7 +254,7 @@ export function renderDashboard() {
   <div id="fpw-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(20,31,92,.55);align-items:center;justify-content:center;padding:16px">
     <div class="panel" style="max-width:400px;width:100%;margin:0">
       <div style="font-family:'Michroma',sans-serif;color:#12235c;font-size:15px;margin-bottom:4px">🔒 GANTI PASSWORD</div>
-      <div class="dim" style="font-size:12px;margin-bottom:14px">Password akun kamu baru saja diatur ulang oleh admin. Demi keamanan, kamu perlu membuat password baru dulu sebelum melanjutkan.</div>
+      <div class="dim" style="font-size:12px;margin-bottom:14px">Password akun Anda baru saja diatur ulang oleh admin. Demi keamanan, Anda perlu membuat password baru terlebih dahulu sebelum melanjutkan.</div>
       <label class="dim" style="font-size:11px">Password baru (minimal 6 karakter)</label>
       <input id="fpw-new" type="password" placeholder="password baru" style="margin-bottom:8px">
       <label class="dim" style="font-size:11px">Ulangi password baru</label>
@@ -345,13 +345,13 @@ export function renderDashboard() {
         <div class="grid2">
           <div class="panel">
             <h2>QRIS_STATIS.CFG · Langkah 1</h2>
-            <div class="dim" style="margin-bottom:8px">Wajib duluan. Upload foto QRIS statis DANA Bisnis kamu → Decode → Simpan. Order tidak bisa dibuat sebelum QRIS ke-set.</div>
+            <div class="dim" style="margin-bottom:8px">Wajib dilakukan terlebih dahulu. Unggah foto QRIS statis DANA Bisnis Anda → Decode → Simpan. Order tidak dapat dibuat sebelum QRIS diatur.</div>
             <label>Upload QR (foto/gambar)</label>
             <input type="file" id="qrfile" accept="image/*">
             <button class="sec" onclick="decodeQr()">🔍 Decode QR</button>
             <img id="qrprev">
             <label>Hasil QRIS String</label>
-            <textarea id="qris" placeholder="hasil decode (atau paste manual)"></textarea>
+            <textarea id="qris" placeholder="hasil decode (atau tempel manual)"></textarea>
             <button onclick="uploadQris()">Simpan QRIS</button>
             <button class="sec" id="clearqrisbtn" onclick="clearQris()" style="display:none">🗑 Hapus QRIS Tersimpan</button>
             <div class="msg" id="qmsg"></div>
@@ -368,7 +368,7 @@ export function renderDashboard() {
 
           <div class="panel">
             <h2>NEW_ORDER.EXE · Langkah 2</h2>
-            <div id="noqris" class="dim" style="margin-bottom:10px;padding:8px;background:#fff6d9;border:2px solid var(--accent);color:#3a2a00;display:none">⚠ Set QRIS statis dulu di panel kiri sebelum buat order.</div>
+            <div id="noqris" class="dim" style="margin-bottom:10px;padding:8px;background:#fff6d9;border:2px solid var(--accent);color:#3a2a00;display:none">⚠ Atur QRIS statis terlebih dahulu di panel kiri sebelum membuat order.</div>
             <label>Nominal (Rp)</label>
             <input id="amt" type="number" placeholder="10000" oninput="estOrder()">
             <label>Reference (opsional)</label>
@@ -380,7 +380,7 @@ export function renderDashboard() {
               <div class="dim">Bayar persis</div>
               <div class="amt" id="ramt">Rp 0</div>
               <div style="margin-top:8px">
-                <div id="qrph" style="width:200px;max-width:100%;aspect-ratio:1;background:#fff;border:2px dashed var(--edge);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:12px;padding:12px">QR muncul otomatis<br>setelah klik "Buat Order + QR"</div>
+                <div id="qrph" style="width:200px;max-width:100%;aspect-ratio:1;background:#fff;border:2px dashed var(--edge);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:12px;padding:12px">QR muncul otomatis<br>setelah menekan "Buat Order + QR"</div>
                 <canvas id="qrcanvas" style="display:none"></canvas>
               </div>
               <div id="rlinkwrap" style="margin-top:8px;display:none"><a class="lnk" id="rlink" target="_blank">Buka halaman checkout ↗</a></div>
@@ -390,9 +390,9 @@ export function renderDashboard() {
 
         <div class="panel" style="margin-top:14px">
           <h2>SHOPEEPAY PARTNER · Token Opsional</h2>
-          <div class="dim" style="margin-bottom:8px">Konfirmasi pembayaran ShopeePay <b>tanpa HP</b>. Kosong → pakai APK catcher (default).</div>
+          <div class="dim" style="margin-bottom:8px">Konfirmasi pembayaran ShopeePay <b>tanpa HP</b>. Kosongkan → menggunakan APK catcher (default).</div>
           <div id="sp-status" class="spstat" style="margin-bottom:10px"></div>
-          <a class="lnk" onclick="goTutorShopee()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara ambil token → buka Tutorial</a>
+          <a class="lnk" onclick="goTutorShopee()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara mengambil token → buka Tutorial</a>
           <label>Cookie token (diawali "eyJ")</label>
           <textarea id="sp-token" placeholder="eyJhbGciOi…"></textarea>
           <div style="display:flex;gap:8px">
@@ -400,7 +400,7 @@ export function renderDashboard() {
             <button class="sec" id="sp-clearbtn" onclick="clearShopee()" style="display:none">🗑 Hapus</button>
           </div>
           <div class="msg" id="sp-msg"></div>
-          <div class="dim" style="font-size:11px;margin-top:6px">⚠ Token bisa expired. Kalau mati, APK catcher otomatis ambil alih.</div>
+          <div class="dim" style="font-size:11px;margin-top:6px">⚠ Token dapat expired. Jika mati, APK catcher otomatis mengambil alih.</div>
         </div>
       </section>
 
@@ -408,14 +408,14 @@ export function renderDashboard() {
       <section class="view" id="v-apk">
         <div class="panel" style="max-width:640px">
           <h2>CREDENTIALS.SYS</h2>
-          <div class="dim" style="margin-bottom:10px">Buat integrasi API + setup HP penangkap notif pembayaran. Rahasiakan.</div>
+          <div class="dim" style="margin-bottom:10px">Untuk integrasi API + setup HP penangkap notifikasi pembayaran. Rahasiakan.</div>
           <div class="cred"><div><div class="l">API Key (sk_live)</div><div class="v" id="c-api">-</div></div><div style="display:flex;gap:4px"><button class="sec" onclick="cp('c-api')">Copy</button><button class="sec" onclick="regenApiKey()" title="Ganti API key baru">↻ Baru</button></div></div>
           <div class="msg" id="keymsg" style="margin-bottom:8px"></div>
           <div class="cred"><div><div class="l">Device ID (APK)</div><div class="v" id="c-devid">-</div></div><button class="sec" onclick="cp('c-devid')">Copy</button></div>
           <div class="cred"><div><div class="l">Device Secret (APK)</div><div class="v" id="c-devsec">-</div></div><button class="sec" onclick="cp('c-devsec')">Copy</button></div>
           <div class="cred"><div><div class="l">Server URL (APK)</div><div class="v">https://gatepay.biz.id</div></div><button class="sec" onclick="cpTxt('https://gatepay.biz.id')">Copy</button></div>
           <a href="/gatepay-catcher.apk" download><button>⬇ Download APK Catcher</button></a>
-          <div class="dim" style="font-size:11px;margin-top:8px">Install APK di HP → isi Server URL, Device ID, Device Secret di atas → aktifkan Notification Access.</div>
+          <div class="dim" style="font-size:11px;margin-top:8px">Instal APK di HP → isi Server URL, Device ID, Device Secret di atas → aktifkan Notification Access.</div>
         </div>
       </section>
 
@@ -423,9 +423,9 @@ export function renderDashboard() {
       <section class="view" id="v-hook">
         <div class="panel" style="max-width:640px">
           <h2>WEBHOOK.CFG</h2>
-          <div class="dim" style="margin-bottom:10px">Opsional. GatePay mengirim POST ke URL ini tiap ada order <b>PAID</b>, jadi sistem kamu (toko/bot/invoice) tau otomatis tanpa polling. Kosongkan kalau hanya pakai dashboard.</div>
+          <div class="dim" style="margin-bottom:10px">Opsional. GatePay mengirim POST ke URL ini setiap ada order <b>PAID</b>, sehingga sistem Anda (toko/bot/invoice) mengetahui otomatis tanpa polling. Kosongkan jika hanya menggunakan dashboard.</div>
           <label>Notify URL</label>
-          <input id="notify" type="url" placeholder="https://sistem-kamu.com/webhook/gatepay">
+          <input id="notify" type="url" placeholder="https://sistem-anda.com/webhook/gatepay">
           <button onclick="saveHook()">Simpan Webhook</button>
           <button class="sec" onclick="clearHook()">🗑 Hapus Webhook</button>
           <div class="msg" id="hmsg"></div>
@@ -439,11 +439,11 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
           <h2>API_DOCS.TXT</h2>
           <p>Base URL semua endpoint: <code>https://gatepay.biz.id</code></p>
           <h3>Autentikasi</h3>
-          <p>Semua endpoint merchant butuh header API key kamu (ada di menu <b>Kredensial &amp; APK</b>):</p>
+          <p>Semua endpoint merchant membutuhkan header API key Anda (ada di menu <b>Kredensial &amp; APK</b>):</p>
           <pre>x-api-key: sk_live_xxxxxxxxxxxx</pre>
 
           <h3><span class="mth p">POST</span> /api/merchant/qris — Setup QRIS Statis</h3>
-          <p>Sekali saja. Isi string QRIS statis (bisa juga lewat menu QRIS &amp; Order pakai upload foto).</p>
+          <p>Cukup sekali. Isi string QRIS statis (dapat juga melalui menu QRIS &amp; Order dengan mengunggah foto).</p>
           <pre>curl -X POST https://gatepay.biz.id/api/merchant/qris \\
   -H "x-api-key: sk_live_xxx" \\
   -H "content-type: application/json" \\
@@ -460,30 +460,30 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
           <h3><span class="mth p">POST</span> /api/orders — Buat Order</h3>
           <table><thead><tr><th>Field</th><th>Tipe</th><th>Ket</th></tr></thead><tbody>
             <tr><td class=mono>base_amount</td><td>number</td><td>Harga asli (Rp). Wajib.</td></tr>
-            <tr><td class=mono>reference</td><td>string</td><td>No invoice kamu. Opsional.</td></tr>
+            <tr><td class=mono>reference</td><td>string</td><td>No invoice Anda. Opsional.</td></tr>
             <tr><td class=mono>ttl_seconds</td><td>number</td><td>Masa berlaku order ini (detik). Default = setting Masa Aktif merchant.</td></tr>
           </tbody></table>
           <pre>curl -X POST https://gatepay.biz.id/api/orders \\
   -H "x-api-key: sk_live_xxx" \\
   -H "content-type: application/json" \\
   -d '{"base_amount":10000,"reference":"INV-001"}'</pre>
-          <p>Response berisi <code>unique_amount</code> (nominal yang harus dibayar), <code>qris</code> (string QRIS dinamis), dan <code>checkout_url</code> (halaman bayar siap pakai).</p>
+          <p>Response berisi <code>unique_amount</code> (nominal yang harus dibayar), <code>qris</code> (string QRIS dinamis), dan <code>checkout_url</code> (halaman bayar siap digunakan).</p>
 
-          <h3><span class="mth g">GET</span> /api/orders/:id — Cek Status</h3>
+          <h3><span class="mth g">GET</span> /api/orders/:id — Periksa Status</h3>
           <pre>curl https://gatepay.biz.id/api/orders/ord_xxx \\
   -H "x-api-key: sk_live_xxx"</pre>
           <p>Status: <code>pending</code> · <code>paid</code> · <code>expired</code> · <code>cancelled</code>.</p>
 
-          <h3><span class="mth p">POST</span> /api/orders/:id/cancel — Batalin Order</h3>
-          <p>Batalin order yang masih <code>pending</code> supaya berhenti menunggu bayar.</p>
+          <h3><span class="mth p">POST</span> /api/orders/:id/cancel — Batalkan Order</h3>
+          <p>Batalkan order yang masih <code>pending</code> agar berhenti menunggu pembayaran.</p>
 
           <h3>Alur Lengkap</h3>
           <pre>1. (sekali) Upload QRIS statis di menu QRIS & Order
 2. Buat order   -> POST /api/orders  -> dapat qris + checkout_url
 3. Tampilkan QR / arahkan customer ke checkout_url
 4. Customer scan & bayar (nominal terkunci)
-5. Notif kebaca -> order jadi PAID
-6. Webhook ke notify_url kamu (lihat panel atas) + cek via GET status</pre>
+5. Notifikasi terbaca -> order menjadi PAID
+6. Webhook ke notify_url Anda (lihat panel atas) + periksa via GET status</pre>
           <p class="dim" style="font-size:12px">Versi lengkap dengan contoh verifikasi webhook: <a href="/docs" target="_blank">buka /docs ↗</a></p>
         </div>
       </section>
@@ -494,7 +494,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
           <div class="thero-in">
             <div class="thero-kick">📚 PANDUAN OPERATOR</div>
             <div class="thero-h1">Dari QRIS statis sampai order otomatis PAID.</div>
-            <div class="thero-p">Ikuti panduan singkat ini: setup QRIS, HP catcher / token, buat order, dan konfirmasi pembayaran otomatis — tanpa menebak-nebak.</div>
+            <div class="thero-p">Ikuti panduan singkat ini: setup QRIS, HP catcher / token, membuat order, dan konfirmasi pembayaran otomatis — tanpa menebak-nebak.</div>
           </div>
           <div class="thero-card">
             <div class="thero-clabel">CHECKLIST SETUP</div>
@@ -506,9 +506,9 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
 
         <div class="panel">
           <h2>Sebelum Mulai · Harus Punya QRIS Statis</h2>
-          <div class="tut"><p>GatePay <b>tidak</b> bikin akun QRIS dari nol. Sistem ini <b>mengubah QRIS statis</b> yang sudah kamu punya jadi QRIS dinamis (nominal unik) + deteksi pembayaran otomatis. Belum punya? Daftar merchant di salah satu penyedia berikut:</p></div>
+          <div class="tut"><p>GatePay <b>tidak</b> membuat akun QRIS dari nol. Sistem ini <b>mengubah QRIS statis</b> yang sudah Anda miliki menjadi QRIS dinamis (nominal unik) + deteksi pembayaran otomatis. Belum punya? Daftar merchant di salah satu penyedia berikut:</p></div>
           <div class="provs">
-            <a class="prov" href="https://dana.id/bisnis" target="_blank" rel="noopener"><span class="prov-ic" style="background:linear-gradient(135deg,#0057d9,#1498ff)">💙</span><span class="prov-t"><b>DANA Bisnis</b><small>Akun bisnis buat terima QRIS</small></span><span class="prov-ar">↗</span></a>
+            <a class="prov" href="https://dana.id/bisnis" target="_blank" rel="noopener"><span class="prov-ic" style="background:linear-gradient(135deg,#0057d9,#1498ff)">💙</span><span class="prov-t"><b>DANA Bisnis</b><small>Akun bisnis untuk menerima QRIS</small></span><span class="prov-ar">↗</span></a>
             <a class="prov" href="https://shopee.co.id/m/shopeepay" target="_blank" rel="noopener"><span class="prov-ic" style="background:linear-gradient(135deg,#ee4d2d,#ff7337)">🛍</span><span class="prov-t"><b>ShopeePay Partner</b><small>Merchant QRIS ShopeePay</small></span><span class="prov-ar">↗</span></a>
             <a class="prov" href="https://www.gojek.com/gobiz/" target="_blank" rel="noopener"><span class="prov-ic" style="background:linear-gradient(135deg,#00aa13,#1ed760)">🟢</span><span class="prov-t"><b>GoPay Merchant</b><small>Daftar lewat GoBiz</small></span><span class="prov-ar">↗</span></a>
             <a class="prov" href="https://www.bi.go.id/QRIS/default.aspx" target="_blank" rel="noopener"><span class="prov-ic" style="background:linear-gradient(135deg,#0f172a,#475569)">🏦</span><span class="prov-t"><b>Bank / PSP lain</b><small>Ajukan QRIS via bank terdaftar</small></span><span class="prov-ar">↗</span></a>
@@ -537,7 +537,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <div class="stepbody">
               <h4>📤 Upload QRIS Statis</h4>
               <p>Di menu <b>QRIS &amp; Order</b>: upload foto QRIS statis → <b>Decode QR</b> (atau paste teksnya yang diawali <code>00020101...</code>) → <b>Simpan QRIS</b>. Nama merchant muncul = berhasil. Atur juga Fee %, digit kode unik, dan masa aktif order.</p>
-              <div class="tipbox">💡 <b>Tips:</b> pastikan yang diupload QRIS <b>statis</b> (bukan QR sekali pakai). Foto harus jelas / nggak blur.</div>
+              <div class="tipbox">💡 <b>Tips:</b> pastikan yang diunggah adalah QRIS <b>statis</b> (bukan QR sekali pakai). Foto harus jelas / tidak buram.</div>
               <button class="sec" onclick="go('qris')">Buka QRIS &amp; Order →</button>
             </div>
           </div>
@@ -545,9 +545,9 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <div class="stepnum">2</div>
             <div class="stepbody">
               <h4>📱 Setup HP Catcher (APK)</h4>
-              <p>Cara default deteksi pembayaran: aplikasi Android nangkep notifikasi "uang masuk" lalu kirim ke GatePay. Di menu <b>Kredensial &amp; APK</b>: Download APK → install → Login pakai akun GatePay → aktifkan <b>Akses Notifikasi</b> → tab Status → <b>Pilih Aplikasi</b> target (DANA/ShopeePay/dll).</p>
-              <div class="tipbox">💡 <b>Biar nggak mati sendiri:</b> aktifkan <b>Autostart</b> + set baterai "tanpa batasan" (khususnya HP Xiaomi/MIUI).</div>
-              <div class="warnbox">⚠ HP harus tetap nyala &amp; online supaya catcher jalan.</div>
+              <p>Cara default deteksi pembayaran: aplikasi Android menangkap notifikasi "uang masuk" lalu mengirimkannya ke GatePay. Di menu <b>Kredensial &amp; APK</b>: Unduh APK → instal → Login menggunakan akun GatePay → aktifkan <b>Akses Notifikasi</b> → tab Status → <b>Pilih Aplikasi</b> target (DANA/ShopeePay/dan lain-lain).</p>
+              <div class="tipbox">💡 <b>Agar tidak mati sendiri:</b> aktifkan <b>Autostart</b> + atur baterai ke "tanpa batasan" (khususnya HP Xiaomi/MIUI).</div>
+              <div class="warnbox">⚠ HP harus tetap menyala &amp; online agar catcher berjalan.</div>
               <button class="sec" onclick="go('apk')">Buka Kredensial &amp; APK →</button>
             </div>
           </div>
@@ -555,8 +555,8 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <div class="stepnum">3</div>
             <div class="stepbody">
               <h4>🧾 Buat Order &amp; Terima Bayar</h4>
-              <p>Di menu <b>QRIS &amp; Order</b>: isi nominal → <b>Buat Order + QR</b>. Bagikan link checkout / QR ke pelanggan. Pelanggan bayar <b>persis nominal unik</b> → order otomatis jadi <b>PAID</b>.</p>
-              <div class="tipbox">💡 Kode unik (angka kecil di ekor nominal) bikin tiap order beda, jadi sistem bisa cocokin pembayaran otomatis.</div>
+              <p>Di menu <b>QRIS &amp; Order</b>: isi nominal → <b>Buat Order + QR</b>. Bagikan link checkout / QR ke pelanggan. Pelanggan membayar <b>persis nominal unik</b> → order otomatis menjadi <b>PAID</b>.</p>
+              <div class="tipbox">💡 Kode unik (angka kecil di ekor nominal) membuat setiap order berbeda, sehingga sistem dapat mencocokkan pembayaran otomatis.</div>
               <button class="sec" onclick="go('qris')">Buat Order →</button>
             </div>
           </div>
@@ -568,8 +568,8 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <div class="stepnum">A</div>
             <div class="stepbody">
               <h4>🛍 Token ShopeePay Partner <span class="dim" style="font-size:11px">(tanpa HP)</span></h4>
-              <p>Khusus <b>ShopeePay Partner</b>. Dengan token cookie, pembayaran ShopeePay dikonfirmasi <b>server-side</b> tanpa HP. Cara ambil: buka <b>partner.shopee.co.id</b> (login) → <b>F12</b> → tab <b>Application</b> → <b>Cookies</b> → copy <b>Value</b> dari <code>__shopee_partner_website_x_token_live</code> (diawali <code>eyJ</code>) → paste di panel <b>ShopeePay Partner</b> (menu QRIS &amp; Order).</p>
-              <div class="warnbox">⚠ Token tidak resmi &amp; bisa expired. Kalau mati, catcher HP otomatis ambil alih. Ada risiko ToS akun ShopeePay.</div>
+              <p>Khusus <b>ShopeePay Partner</b>. Dengan token cookie, pembayaran ShopeePay dikonfirmasi <b>server-side</b> tanpa HP. Cara mengambil: buka <b>partner.shopee.co.id</b> (login) → <b>F12</b> → tab <b>Application</b> → <b>Cookies</b> → salin <b>Value</b> dari <code>__shopee_partner_website_x_token_live</code> (diawali <code>eyJ</code>) → tempel di panel <b>ShopeePay Partner</b> (menu QRIS &amp; Order).</p>
+              <div class="warnbox">⚠ Token tidak resmi &amp; dapat expired. Jika mati, catcher HP otomatis mengambil alih. Ada risiko ToS akun ShopeePay.</div>
               <button class="sec" onclick="go('qris')">Buka panel ShopeePay →</button>
             </div>
           </div>
@@ -577,7 +577,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <div class="stepnum">B</div>
             <div class="stepbody">
               <h4>🔔 Webhook</h4>
-              <p>Kalau punya sistem/toko sendiri: isi Webhook URL di menu <b>Docs &amp; Webhook</b>. GatePay nembak POST ke situ tiap order PAID (pakai HMAC buat verifikasi).</p>
+              <p>Jika memiliki sistem/toko sendiri: isi Webhook URL di menu <b>Docs &amp; Webhook</b>. GatePay mengirim POST ke sana setiap order PAID (menggunakan HMAC untuk verifikasi).</p>
               <button class="sec" onclick="go('hook')">Docs &amp; Webhook →</button>
             </div>
           </div>
@@ -585,7 +585,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <div class="stepnum">C</div>
             <div class="stepbody">
               <h4>🔐 Keamanan (2FA)</h4>
-              <p>Aktifkan <b>2FA</b> (Authenticator) di menu <b>Profil</b> buat pengaman login. API Key bisa di-regenerate di Kredensial &amp; APK kalau bocor.</p>
+              <p>Aktifkan <b>2FA</b> (Authenticator) di menu <b>Profil</b> untuk pengaman login. API Key dapat di-regenerate di Kredensial &amp; APK jika bocor.</p>
               <button class="sec" onclick="go('profile')">Buka Profil →</button>
             </div>
           </div>
@@ -594,14 +594,14 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
         <div class="panel">
           <h2>❓ Pertanyaan yang Sering Ditanya (FAQ)</h2>
           <div class="faq">
-            <details><summary>Order nggak otomatis PAID padahal udah bayar?</summary><div>Cek: (1) HP catcher nyala &amp; Akses Notifikasi aktif, (2) app pembayaran udah dipilih di target APK, (3) nominal dibayar <b>persis</b> nominal unik (jangan dibulatkan), (4) order belum expired. Cek juga menu <b>Logs</b> — kalau event masuk tapi order tetap pending, kemungkinan nominal beda.</div></details>
-            <details><summary>QRIS-nya nggak bisa dibayar / ditolak app e-wallet?</summary><div>Pastikan yang diupload <b>QRIS statis</b> (bukan QR dinamis/sekali pakai). GatePay generate ulang jadi dinamis dengan nominal. Kalau ShopeePay Partner, pastikan merchant aktif.</div></details>
-            <details><summary>Harus pakai HP terus? Bisa tanpa HP?</summary><div>Default butuh HP (catcher). <b>ShopeePay</b> bisa tanpa HP kalau pakai <b>token ShopeePay Partner</b>. DANA &amp; lainnya tetap butuh HP.</div></details>
-            <details><summary>Token ShopeePay statusnya "TOKEN MATI"?</summary><div>Token/cookie expired. Ambil cookie <b>__shopee_partner_website_x_token_live</b> yang baru dari partner.shopee.co.id (F12 → Application → Cookies), paste ulang. Selama mati, catcher HP tetap nangkep ShopeePay.</div></details>
-            <details><summary>App catcher sering mati sendiri di HP Xiaomi?</summary><div>MIUI agresif matiin app background. Aktifkan <b>Autostart</b> untuk GatePay Catcher + set baterai ke "Tanpa batasan / No restriction" + kunci app di recent apps.</div></details>
-            <details><summary>Bisa lebih dari 1 aplikasi pembayaran?</summary><div>Bisa. Di APK tab Status → <b>Pilih Aplikasi</b>, tambah beberapa (DANA, ShopeePay, dll). Semua notifnya ketangkep.</div></details>
-            <details><summary>Kode unik habis / "terlalu banyak order pending nominal sama"?</summary><div>Kode unik 1-99 per nominal. Kalau banyak order pending bernominal dasar sama, tunggu sebagian expired atau perbesar digit kode unik di pengaturan.</div></details>
-            <details><summary>Update APK gimana?</summary><div>Buka app-nya — kalau ada versi baru muncul notif "Update Tersedia" → Unduh via Browser → install. Nggak perlu kirim APK manual.</div></details>
+            <details><summary>Order tidak otomatis PAID padahal sudah membayar?</summary><div>Periksa: (1) HP catcher menyala &amp; Akses Notifikasi aktif, (2) aplikasi pembayaran sudah dipilih di target APK, (3) nominal dibayar <b>persis</b> nominal unik (jangan dibulatkan), (4) order belum expired. Periksa juga menu <b>Logs</b> — jika event masuk tetapi order tetap pending, kemungkinan nominal berbeda.</div></details>
+            <details><summary>QRIS-nya tidak dapat dibayar / ditolak aplikasi e-wallet?</summary><div>Pastikan yang diunggah <b>QRIS statis</b> (bukan QR dinamis/sekali pakai). GatePay membuat ulang menjadi dinamis dengan nominal. Jika ShopeePay Partner, pastikan merchant aktif.</div></details>
+            <details><summary>Harus selalu menggunakan HP? Bisa tanpa HP?</summary><div>Secara default membutuhkan HP (catcher). <b>ShopeePay</b> dapat tanpa HP jika menggunakan <b>token ShopeePay Partner</b>. DANA &amp; lainnya tetap membutuhkan HP.</div></details>
+            <details><summary>Token ShopeePay statusnya "TOKEN MATI"?</summary><div>Token/cookie expired. Ambil cookie <b>__shopee_partner_website_x_token_live</b> yang baru dari partner.shopee.co.id (F12 → Application → Cookies), tempel ulang. Selama mati, catcher HP tetap menangkap ShopeePay.</div></details>
+            <details><summary>Aplikasi catcher sering mati sendiri di HP Xiaomi?</summary><div>MIUI agresif mematikan aplikasi background. Aktifkan <b>Autostart</b> untuk GatePay Catcher + atur baterai ke "Tanpa batasan / No restriction" + kunci aplikasi di recent apps.</div></details>
+            <details><summary>Bisa lebih dari 1 aplikasi pembayaran?</summary><div>Bisa. Di APK tab Status → <b>Pilih Aplikasi</b>, tambahkan beberapa (DANA, ShopeePay, dan lain-lain). Semua notifikasinya tertangkap.</div></details>
+            <details><summary>Kode unik habis / "terlalu banyak order pending nominal sama"?</summary><div>Kode unik 1-99 per nominal. Jika banyak order pending bernominal dasar sama, tunggu sebagian expired atau perbesar digit kode unik di pengaturan.</div></details>
+            <details><summary>Bagaimana cara memperbarui APK?</summary><div>Buka aplikasinya — jika ada versi baru akan muncul notifikasi "Update Tersedia" → Unduh via Browser → instal. Tidak perlu mengirim APK manual.</div></details>
           </div>
         </div>
       </section>
@@ -611,11 +611,11 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
         <div class="grid2">
           <div class="panel">
             <h2>TIKET_BARU.MSG</h2>
-            <div class="dim" style="margin-bottom:8px">Ada kendala? Kirim tiket, nanti dibalas admin.</div>
-            <label>Subjek</label><input id="tk-subject" type="text" placeholder="mis. Pembayaran tidak kebaca">
+            <div class="dim" style="margin-bottom:8px">Ada kendala? Kirim tiket, akan dibalas oleh admin.</div>
+            <label>Subjek</label><input id="tk-subject" type="text" placeholder="mis. Pembayaran tidak terbaca">
             <label>Pesan</label>
             <div style="display:flex;gap:8px;align-items:stretch">
-              <textarea id="tk-msg" placeholder="jelasin masalahnya..." style="flex:1"></textarea>
+              <textarea id="tk-msg" placeholder="jelaskan masalahnya..." style="flex:1"></textarea>
               <label class="clipbtn" title="Lampirkan gambar (maks 1.5MB)">📎<input type="file" id="tk-file" accept="image/*" onchange="pickTkImg(this,'create')" hidden></label>
             </div>
             <img id="tk-prev" style="max-width:100px;margin-top:6px;display:none;border:2px solid var(--edge)">
@@ -658,7 +658,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <div class="cred"><div><div class="l">Status Akun</div><div class="v" id="p-status">-</div></div></div>
             <div class="cred"><div><div class="l">Tanggal Gabung</div><div class="v" id="p-joined">-</div></div></div>
             <label style="margin-top:12px">Nama Tampilan</label>
-            <input id="p-name" type="text" placeholder="nama toko / usaha kamu">
+            <input id="p-name" type="text" placeholder="nama toko / usaha Anda">
             <button onclick="saveProfile()">Simpan Nama</button>
             <div class="msg" id="promsg"></div>
             <button class="sec" onclick="logout()" style="margin-top:14px">⎋ Keluar dari Akun</button>
@@ -666,7 +666,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
 
           <div class="panel">
             <h2>PASSWORD.SYS</h2>
-            <div class="dim" style="margin-bottom:8px">Ganti password login kamu.</div>
+            <div class="dim" style="margin-bottom:8px">Ganti password login Anda.</div>
             <label>Password Lama</label><input id="oldpw" type="password" placeholder="password sekarang">
             <label>Password Baru</label><input id="newpw" type="password" placeholder="minimal 6 karakter">
             <button onclick="changePw()">Ganti Password</button>
@@ -674,21 +674,21 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
 
             <div style="border-top:2px solid var(--edge);margin:16px 0 0"></div>
             <h2 style="margin-left:-18px;margin-right:-18px;margin-top:16px">AUTH_2FA.SYS</h2>
-            <div class="dim" style="margin-bottom:8px">Autentikator (Google Authenticator / Authy) — kode 6 digit tiap login. Buat akun lebih aman.</div>
-            <div id="fa-status" class="mono dim" style="margin-bottom:8px">cek status…</div>
+            <div class="dim" style="margin-bottom:8px">Autentikator (Google Authenticator / Authy) — kode 6 digit setiap login. Agar akun lebih aman.</div>
+            <div id="fa-status" class="mono dim" style="margin-bottom:8px">memeriksa status…</div>
             <div id="fa-off" style="display:none"><button onclick="fa2Setup()">🔐 Aktifkan 2FA</button></div>
             <div id="fa-setup" style="display:none">
               <div class="dim">1. Scan QR ini di app authenticator:</div>
               <canvas id="fa-qr" style="background:#fff;padding:8px;margin:8px 0;max-width:180px;border:2px solid var(--edge-dark)"></canvas>
               <div class="cred"><div><div class="l">Atau kode manual</div><div class="v" id="fa-secret">-</div></div><button class="sec" onclick="cp('fa-secret')">Copy</button></div>
-              <label>2. Masukin 6 digit dari app</label>
+              <label>2. Masukkan 6 digit dari aplikasi</label>
               <input id="fa-code" inputmode="numeric" maxlength="6" placeholder="123456">
               <button onclick="fa2Verify()">Verifikasi &amp; Aktifkan</button>
               <div class="msg" id="fa-msg"></div>
             </div>
             <div id="fa-on" style="display:none">
-              <div class="msg ok" style="display:block">✓ 2FA aktif — login butuh kode authenticator</div>
-              <label>Nonaktifkan — masukin kode dulu</label>
+              <div class="msg ok" style="display:block">✓ 2FA aktif — login membutuhkan kode authenticator</div>
+              <label>Nonaktifkan — masukkan kode terlebih dahulu</label>
               <input id="fa-dcode" inputmode="numeric" maxlength="6" placeholder="123456">
               <button class="sec" onclick="fa2Disable()">Nonaktifkan 2FA</button>
               <div class="msg" id="fa-dmsg"></div>
@@ -701,7 +701,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       <section class="view" id="v-events">
         <div class="panel">
           <h2>DEVICE_EVENTS.LOG</h2>
-          <div class="dim" style="margin-bottom:10px">Semua notifikasi yang tertangkap perangkat kamu (termasuk hasil <b>Uji Kirim</b> dari APK). Hanya log milik akunmu sendiri.</div>
+          <div class="dim" style="margin-bottom:10px">Semua notifikasi yang tertangkap perangkat Anda (termasuk hasil <b>Uji Kirim</b> dari APK). Hanya log milik akun Anda sendiri.</div>
           <table><thead><tr><th>Event</th><th>Nominal</th><th>Status</th><th>Raw</th><th>Waktu</th></tr></thead>
           <tbody id="etbody"><tr><td colspan=5 class=dim style="text-align:center;padding:20px">Belum ada event</td></tr></tbody></table>
           <div class="pager">
@@ -716,7 +716,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       <section class="view" id="v-admin">
         <div class="panel" style="max-width:420px">
           <h2>ADMIN.EXE</h2>
-          <div class="dim" style="margin-bottom:8px">Kamu punya akses admin — kelola semua merchant, statistik global, & monitoring device.</div>
+          <div class="dim" style="margin-bottom:8px">Anda memiliki akses admin — kelola semua merchant, statistik global, & monitoring device.</div>
           <a href="/admin"><button>Buka Dashboard Admin →</button></a>
         </div>
       </section>
@@ -752,7 +752,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       var r=await fetch('/api/'+(mode==='login'?'login':'register'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       var j=await r.json();
       if(!r.ok){
-        if(j.needs_2fa){ $('fa2-wrap').classList.remove('hidden'); $('fa2').focus(); return msg('amsg','err',j.error||'Masukin kode 2FA'); }
+        if(j.needs_2fa){ $('fa2-wrap').classList.remove('hidden'); $('fa2').focus(); return msg('amsg','err',j.error||'Masukkan kode 2FA'); }
         return msg('amsg','err',j.error||'gagal');
       }
       localStorage.setItem('gp_sess', JSON.stringify(j));
@@ -824,11 +824,11 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   }
 
   async function regenApiKey(){
-    if(!confirm('Ganti API key baru? API key lama langsung tidak berlaku — integrasi yang pakai key lama harus di-update.')) return;
+    if(!confirm('Ganti API key baru? API key lama langsung tidak berlaku — integrasi yang menggunakan key lama harus di-update.')) return;
     try{
       var r=await fetch('/api/merchant/regenerate-key',{method:'POST',headers:{'x-api-key':key()}});
       var j=await r.json();
-      if(r.ok && j.api_key){ var s=sess()||{}; s.api_key=j.api_key; localStorage.setItem('gp_sess',JSON.stringify(s)); $('c-api').textContent=j.api_key; msg('keymsg','ok','API key baru dibuat ✓ — update di integrasi kamu'); }
+      if(r.ok && j.api_key){ var s=sess()||{}; s.api_key=j.api_key; localStorage.setItem('gp_sess',JSON.stringify(s)); $('c-api').textContent=j.api_key; msg('keymsg','ok','API key baru dibuat ✓ — perbarui di integrasi Anda'); }
       else msg('keymsg','err',j.error||'gagal');
     }catch(e){ msg('keymsg','err',String(e)); }
   }
@@ -845,7 +845,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
 
   // ── QRIS decode ──
   function decodeQr(){
-    var f=$('qrfile').files[0]; if(!f) return msg('qmsg','err','Pilih file QR dulu');
+    var f=$('qrfile').files[0]; if(!f) return msg('qmsg','err','Pilih file QR terlebih dahulu');
     var img=new Image();
     img.onload=function(){
       var scale=Math.min(1,1000/Math.max(img.width,img.height));
@@ -855,9 +855,9 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       try{
         var d=ctx.getImageData(0,0,w,h);
         var code=jsQR(d.data,w,h,{inversionAttempts:'attemptBoth'});
-        if(code&&code.data){ $('qris').value=code.data; $('qrprev').src=img.src; $('qrprev').style.display='block'; msg('qmsg','ok','QR ke-decode ✓ — cek lalu Simpan'); }
-        else msg('qmsg','err','QR tidak kebaca. Coba foto lebih jelas / crop.');
-      }catch(e){ msg('qmsg','err','Gagal baca gambar: '+e); }
+        if(code&&code.data){ $('qris').value=code.data; $('qrprev').src=img.src; $('qrprev').style.display='block'; msg('qmsg','ok','QR berhasil di-decode ✓ — periksa lalu Simpan'); }
+        else msg('qmsg','err','QR tidak terbaca. Coba foto lebih jelas / crop.');
+      }catch(e){ msg('qmsg','err','Gagal membaca gambar: '+e); }
     };
     img.onerror=function(){ msg('qmsg','err','File bukan gambar valid'); };
     img.src=URL.createObjectURL(f);
@@ -881,7 +881,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
         if(j.has_qris){ $('qstat').textContent='✓ QRIS aktif: '+(j.merchant_name||'-'); $('qstat').style.color='var(--ok)'; $('noqris').style.display='none'; $('clearqrisbtn').style.display='block'; }
         else { $('qstat').textContent='○ Belum ada QRIS statis (terputus)'; $('qstat').style.color='var(--bad,#b0362a)'; $('noqris').style.display='block'; $('clearqrisbtn').style.display='none'; }
         // profil
-        $('p-qris').textContent=j.qris_name||'(belum set QRIS)';
+        $('p-qris').textContent=j.qris_name||'(QRIS belum diatur)';
         $('p-status').innerHTML=j.active?'<span style="color:var(--ok)">● Aktif</span>':'<span style="color:var(--bad,#b0362a)">○ Suspend</span>';
         $('p-joined').textContent=fmtDate(j.created_at);
         if($('p-name')&&!$('p-name').value) $('p-name').value=j.name||'';
@@ -900,9 +900,9 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     }catch(e){ msg('smsg','err',String(e)); }
   }
   async function clearQris(){
-    if(!confirm('Hapus QRIS tersimpan? Order tidak bisa dibuat sampai upload QRIS lagi.')) return;
+    if(!confirm('Hapus QRIS tersimpan? Order tidak dapat dibuat sampai QRIS diunggah lagi.')) return;
     try{ var r=await fetch('/api/merchant/qris/clear',{method:'POST',headers:{'x-api-key':key()}});
-      if(r.ok){ $('qris').value=''; $('qrprev').style.display='none'; msg('qmsg','ok','QRIS dihapus — status terputus, aman dari ketimpa'); loadSettings(); }
+      if(r.ok){ $('qris').value=''; $('qrprev').style.display='none'; msg('qmsg','ok','QRIS dihapus — status terputus, aman dari tertimpa'); loadSettings(); }
       else msg('qmsg','err','gagal hapus');
     }catch(e){ msg('qmsg','err',String(e)); }
   }
@@ -912,10 +912,10 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     try{ var j=await (await fetch('/api/merchant/shopee',{headers:{'x-api-key':key()},cache:'no-store'})).json();
       var el=$('sp-status'); var cb=$('sp-clearbtn');
       if(j.enabled){
-        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● TOKEN MATI — ambil cookie baru lalu simpan ulang. Sementara ShopeePay pakai APK catcher.'; }
+        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● TOKEN MATI — ambil cookie baru lalu simpan ulang. Sementara itu ShopeePay menggunakan APK catcher.'; }
         else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG — ShopeePay dikonfirmasi server-side (tanpa HP). Token: '+(j.token_preview||'-'); }
         if(cb) cb.style.display='inline-block';
-      } else { el.className='spstat off'; el.innerHTML='○ Belum terhubung — ShopeePay pakai APK catcher (default).'; if(cb) cb.style.display='none'; }
+      } else { el.className='spstat off'; el.innerHTML='○ Belum terhubung — ShopeePay menggunakan APK catcher (default).'; if(cb) cb.style.display='none'; }
     }catch(e){}
   }
   async function saveShopee(){
@@ -926,9 +926,9 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     }catch(e){ msg('sp-msg','err',String(e)); }
   }
   async function clearShopee(){
-    if(!confirm('Hapus token ShopeePay? ShopeePay balik ke APK catcher (default).')) return;
+    if(!confirm('Hapus token ShopeePay? ShopeePay kembali ke APK catcher (default).')) return;
     try{ var r=await fetch('/api/merchant/shopee/clear',{method:'POST',headers:{'x-api-key':key()}});
-      if(r.ok){ msg('sp-msg','ok','Token dihapus — pakai APK catcher'); loadShopee(); } else msg('sp-msg','err','gagal hapus');
+      if(r.ok){ msg('sp-msg','ok','Token dihapus — menggunakan APK catcher'); loadShopee(); } else msg('sp-msg','err','gagal hapus');
     }catch(e){ msg('sp-msg','err',String(e)); }
   }
   async function clearHook(){
@@ -960,7 +960,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       $('rbreak').textContent='base      : '+idr(j.base_amount)+'\\nfee '+(j.fee_percent||0)+'%    : '+idr(j.fee_amount||0)+'\\nkode unik : '+(j.unique_code||0)+'\\n─────────────────\\nTOTAL     : '+idr(j.unique_amount);
       $('ramt').textContent=idr(j.unique_amount); $('rlink').href=j.checkout_url; $('rlinkwrap').style.display='block';
       if(j.qris){ new QRious({element:$('qrcanvas'),value:j.qris,size:400,level:'M'}); $('qrcanvas').style.display='block'; $('qrph').style.display='none'; }
-      else msg('omsg','err','Order dibuat tapi QRIS belum ada — upload QRIS dulu di menu QRIS & Order.');
+      else msg('omsg','err','Order dibuat tetapi QRIS belum ada — unggah QRIS terlebih dahulu di menu QRIS & Order.');
       setTimeout(tick,800);
     }catch(e){ msg('omsg','err',String(e)); }
   }
@@ -977,7 +977,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   }
   function msgLine(mm){
     var role=mm.sender_role||(mm.sender==='admin'?'admin':'user'); var mine=role==='user'; var name=mm.sender_name||'';
-    var lbl=mine?'Kamu':(role.charAt(0).toUpperCase()+role.slice(1)+(name?' ('+name+')':''));
+    var lbl=mine?'Anda':(role.charAt(0).toUpperCase()+role.slice(1)+(name?' ('+name+')':''));
     var img=mm.image?'<img src="'+mm.image+'" style="max-width:200px;display:block;margin-top:6px;border:2px solid var(--edge);cursor:pointer" onclick="window.open(this.src)">':'';
     return '<div style="margin-bottom:8px;text-align:'+(mine?'right':'left')+'"><div style="display:inline-block;max-width:82%;padding:8px 10px;border:2px solid var(--edge);background:'+(mine?'#dbe7fb':'#fff6d9')+';text-align:left"><div class=dim style="font-size:10px;margin-bottom:2px">'+escj(lbl)+' · '+agoj(mm.created_at)+'</div>'+escj(mm.body)+img+'</div></div>';
   }
@@ -1047,7 +1047,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function ordersRows(){ return filteredOrders().map(o=>({id:o.id,reference:o.reference||'',amount:o.unique_amount,base:o.base_amount,status:dispStatus(o),created_at:new Date((o.created_at||0)*1000).toLocaleString('id-ID')})); }
   function exportOrders(fmt){
     $('expmenu').classList.remove('on');
-    var rows=ordersRows(); if(!rows.length){ alert('Tidak ada data buat di-export'); return; }
+    var rows=ordersRows(); if(!rows.length){ alert('Tidak ada data untuk di-export'); return; }
     var keys=['id','reference','amount','base','status','created_at'];
     if(fmt==='json'){ dl('gatepay-orders.json',JSON.stringify(rows,null,2),'application/json'); return; }
     if(fmt==='csv'){ var ec=v=>'"'+String(v).replace(/"/g,'""')+'"';
@@ -1057,10 +1057,10 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     var tr=rows.map(r=>'<tr>'+keys.map(k=>'<td>'+escj(r[k])+'</td>').join('')+'</tr>').join('');
     var doc='<!DOCTYPE html><html><head><meta charset=utf-8><title>GatePay Orders</title><style>body{font-family:Verdana,sans-serif;padding:20px;color:#23262e}h2{font-family:sans-serif}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:6px 8px;text-align:left}th{background:#26379d;color:#fff}</style></head><body><h2>GatePay — Orders ('+rows.length+')</h2><table><thead><tr>'+th+'</tr></thead><tbody>'+tr+'</tbody></table></body></html>';
     if(fmt==='html'){ dl('gatepay-orders.html',doc,'text/html'); return; }
-    if(fmt==='pdf'){ var w=window.open('','_blank'); if(w){ w.document.write(doc); w.document.close(); setTimeout(function(){ w.focus(); w.print(); },350); } else alert('Popup diblokir — izinkan popup buat export PDF'); }
+    if(fmt==='pdf'){ var w=window.open('','_blank'); if(w){ w.document.write(doc); w.document.close(); setTimeout(function(){ w.focus(); w.print(); },350); } else alert('Popup diblokir — izinkan popup untuk export PDF'); }
   }
   async function cancelOrder(id){
-    if(!confirm('Batalin order ini? Nominal uniknya jadi bebas dipakai order lain.')) return;
+    if(!confirm('Batalkan order ini? Nominal uniknya menjadi bebas digunakan order lain.')) return;
     try{ await fetch('/api/orders/'+id+'/cancel',{method:'POST',headers:{'x-api-key':key()}}); tick(); }catch(e){}
   }
   function renderOrders(){
