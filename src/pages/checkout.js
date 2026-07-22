@@ -25,7 +25,7 @@ export function renderCheckout({ order, qris, embed }) {
   }
   *{box-sizing:border-box;border-radius:0!important}
   body{margin:0;font-family:Verdana,Tahoma,Geneva,sans-serif;color:var(--text);font-size:14px;
-    background:repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 44px),repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 44px),linear-gradient(135deg,var(--desk-a),var(--desk-b) 52%,var(--desk-c));background-attachment:fixed;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px}
+    background:repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 44px),repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 44px),linear-gradient(135deg,var(--desk-a),var(--desk-b) 52%,var(--desk-c));background-attachment:scroll;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px}
   .card{width:100%;max-width:420px;background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:3px 3px 0 var(--edge)}
   .top{background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;font-weight:700;border-bottom:2px solid var(--edge-dark)}
   .top .logo{font-size:14px;font-family:'Michroma',sans-serif}

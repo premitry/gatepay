@@ -18,7 +18,7 @@ export function renderAdmin() {
   }
   *{box-sizing:border-box;border-radius:0!important;margin:0;padding:0}
   body{font-family:Verdana,Tahoma,Geneva,sans-serif;color:var(--text);font-size:14px;line-height:1.65;
-    background:repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 44px),repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 44px),linear-gradient(135deg,var(--desk-a),var(--desk-b) 52%,var(--desk-c));background-attachment:fixed;min-height:100vh}
+    background:repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 44px),repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 44px),linear-gradient(135deg,var(--desk-a),var(--desk-b) 52%,var(--desk-c));background-attachment:scroll;min-height:100vh}
   a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
   h1,.logo,.panel h2{font-family:'Michroma',sans-serif;font-weight:400}
   .mono{font-family:'Share Tech Mono',Consolas,monospace}

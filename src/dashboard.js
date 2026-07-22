@@ -26,7 +26,7 @@ export function renderDashboard() {
       repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 44px),
       repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 44px),
       linear-gradient(135deg,var(--desk-a),var(--desk-b) 52%,var(--desk-c));
-    background-attachment:fixed;min-height:100vh;
+    background-attachment:scroll;min-height:100vh;
   }
   a{color:var(--link);text-decoration:none}
   a:hover{text-decoration:underline}
