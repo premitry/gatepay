@@ -388,9 +388,6 @@ export function renderDashboard() {
             <input id="amt" type="number" placeholder="10000" oninput="estOrder()">
             <label>Reference (opsional)</label>
             <input id="ref" type="text" placeholder="INV-001">
-            <label>Redirect URL setelah bayar (opsional)</label>
-            <input id="redir" type="text" placeholder="https://toko-anda.com/terima-kasih">
-            <div class="dim" style="font-size:11px;margin-top:2px">Pelanggan dialihkan ke sini setelah pembayaran berhasil. Kosong = pakai default di Pengaturan (kiri).</div>
             <button onclick="createOrder()" style="margin-top:8px">Buat Order + QR</button>
             <div class="msg" id="omsg"></div>
             <div class="res show" id="ores">
@@ -1044,7 +1041,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   async function createOrder(){
     var amt=parseInt($('amt').value,10); if(!amt||amt<=0) return msg('omsg','err','Nominal harus > 0');
     try{
-      var r=await fetch('/api/orders',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({base_amount:amt,reference:$('ref').value.trim()||undefined,redirect_url:($('redir')&&$('redir').value.trim())||undefined})});
+      var r=await fetch('/api/orders',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({base_amount:amt,reference:$('ref').value.trim()||undefined})});
       var j=await r.json(); if(!r.ok) return msg('omsg','err',j.error||'gagal');
       msg('omsg','ok','Order dibuat: '+j.id);
       $('rbreak').textContent='base      : '+idr(j.base_amount)+'\\nfee '+(j.fee_percent||0)+'%    : '+idr(j.fee_amount||0)+'\\nkode unik : '+(j.unique_code||0)+'\\n─────────────────\\nTOTAL     : '+idr(j.unique_amount);
