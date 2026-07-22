@@ -867,7 +867,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     try{
       var r=await fetch('/api/merchant/qris',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({qris:$('qris').value.trim()})});
       var j=await r.json();
-      if(r.ok){ msg('qmsg','ok','QRIS tersimpan: '+(j.merchant_name||'-')+' ('+(j.city||'-')+')'); loadSettings(); }
+      if(r.ok){ msg('qmsg','ok','QRIS tersimpan: '+(j.merchant_name||'-')+' ('+(j.city||'-')+')'); loadSettings(); loadShopee(); }
       else msg('qmsg','err',j.error||'gagal');
     }catch(e){ msg('qmsg','err',String(e)); }
   }
@@ -902,7 +902,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   async function clearQris(){
     if(!confirm('Hapus QRIS tersimpan? Order tidak dapat dibuat sampai QRIS diunggah lagi.')) return;
     try{ var r=await fetch('/api/merchant/qris/clear',{method:'POST',headers:{'x-api-key':key()}});
-      if(r.ok){ $('qris').value=''; $('qrprev').style.display='none'; msg('qmsg','ok','QRIS dihapus — status terputus, aman dari tertimpa'); loadSettings(); }
+      if(r.ok){ $('qris').value=''; $('qrprev').style.display='none'; msg('qmsg','ok','QRIS dihapus — status terputus, aman dari tertimpa'); loadSettings(); loadShopee(); }
       else msg('qmsg','err','gagal hapus');
     }catch(e){ msg('qmsg','err',String(e)); }
   }
