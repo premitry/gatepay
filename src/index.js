@@ -100,6 +100,18 @@ async function ensureTtlColumn(DB) {
   try { await DB.prepare('ALTER TABLE merchants ADD COLUMN order_ttl INTEGER').run(); } catch {}
   _ttlReady = true;
 }
+
+// Token ShopeePay (opsional) — jalur deteksi server-side tambahan, default OFF.
+// shopee_token: token internal dari portal ShopeePay Partner (diawali "B:").
+// shopee_token_status: 'ok' | 'dead' (buat alert kalau token expired).
+let _shopeeReady = false;
+async function ensureShopeeColumns(DB) {
+  if (_shopeeReady) return;
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN shopee_token TEXT').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN shopee_token_status TEXT').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN shopee_checked_at INTEGER').run(); } catch {}
+  _shopeeReady = true;
+}
 const DEFAULT_TTL = 900; // 15 menit
 
 // Tabel tiket support (tiket + pesan thread) — lazy create
@@ -530,6 +542,48 @@ app.get('/api/merchant/qris', async (c) => {
   return json(c, { has_qris: true, ...qrisInfo(merchant.qris_static) });
 });
 
+// ─────────────────────────────────────────────────────────
+// Token ShopeePay (OPSIONAL) — jalur deteksi server-side tambahan.
+// Default deteksi tetap lewat APK catcher; token ini cuma buat yang mau
+// ShopeePay-nya nggak bergantung HP. Simpan / hapus / cek status.
+// ─────────────────────────────────────────────────────────
+app.get('/api/merchant/shopee', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  await ensureShopeeColumns(c.env.DB);
+  const m = await c.env.DB.prepare('SELECT shopee_token, shopee_token_status, shopee_checked_at FROM merchants WHERE id = ?')
+    .bind(merchant.id).first();
+  const tok = m && m.shopee_token ? String(m.shopee_token) : '';
+  return json(c, {
+    enabled: !!tok,
+    token_preview: tok ? tok.slice(0, 6) + '…' + tok.slice(-4) : null,
+    status: m ? (m.shopee_token_status || (tok ? 'ok' : null)) : null,
+    checked_at: m ? m.shopee_checked_at || null : null,
+  });
+});
+
+app.post('/api/merchant/shopee', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  await ensureShopeeColumns(c.env.DB);
+  const body = await c.req.json().catch(() => ({}));
+  const token = String(body.token || '').trim();
+  if (!token) return json(c, { error: 'token kosong' }, 400);
+  if (token.length > 4096) return json(c, { error: 'token terlalu panjang' }, 400);
+  await c.env.DB.prepare("UPDATE merchants SET shopee_token = ?, shopee_token_status = 'ok', shopee_checked_at = ? WHERE id = ?")
+    .bind(token, now(), merchant.id).run();
+  return json(c, { ok: true, enabled: true });
+});
+
+app.post('/api/merchant/shopee/clear', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  await ensureShopeeColumns(c.env.DB);
+  await c.env.DB.prepare('UPDATE merchants SET shopee_token = NULL, shopee_token_status = NULL, shopee_checked_at = NULL WHERE id = ?')
+    .bind(merchant.id).run();
+  return json(c, { ok: true, enabled: false });
+});
+
 // Setting merchant: fee_percent + unique_digits
 app.get('/api/merchant/settings', async (c) => {
   const merchant = await requireMerchant(c);
@@ -795,15 +849,78 @@ app.get('/pay/:id', async (c) => {
   return page(c, renderCheckout({ order, qris, embed }));
 });
 
+// ─────────────────────────────────────────────────────────
+// Jalur ShopeePay OPSIONAL (server-side) — deteksi tanpa HP.
+// SHOPEE_CFG diisi dari capture request asli portal ShopeePay Partner.
+// Selama null → fungsi no-op (nggak nebak-nebak); APK catcher tetap jalan.
+// ─────────────────────────────────────────────────────────
+const SHOPEE_CFG = null;
+// Bentuk nanti (diisi setelah capture):
+// const SHOPEE_CFG = {
+//   url: 'https://shopeepay.shopee.co.id/.../get-transaction-list',
+//   method: 'POST',
+//   headers: (token) => ({ 'content-type': 'application/json', /* cookie/auth dari capture */ }),
+//   body: (token) => JSON.stringify({ token, /* field dari capture */ }),
+//   parse: (data) => (data.transactions||[]).map(x => ({ amount:x.amount, status:x.status, id:x.id, sender:x.issuer, time:x.create_time })),
+// };
+
+async function checkShopeePay(env, merchant, order) {
+  if (!SHOPEE_CFG || !merchant.shopee_token) return { matched: false };
+  try {
+    const res = await fetch(SHOPEE_CFG.url, {
+      method: SHOPEE_CFG.method || 'POST',
+      headers: SHOPEE_CFG.headers(merchant.shopee_token),
+      body: (SHOPEE_CFG.method === 'GET') ? undefined : SHOPEE_CFG.body(merchant.shopee_token),
+    });
+    if (res.status === 401 || res.status === 403) return { matched: false, tokenDead: true };
+    if (!res.ok) return { matched: false };
+    const data = await res.json().catch(() => null);
+    const txns = data ? (SHOPEE_CFG.parse(data) || []) : [];
+    const hit = txns.find((x) => Math.round(Number(x.amount)) === order.unique_amount && String(x.status).toLowerCase() === 'success');
+    if (hit) return { matched: true, txnId: String(hit.id || ''), sender: hit.sender || 'ShopeePay' };
+    return { matched: false };
+  } catch {
+    return { matched: false };
+  }
+}
+
+async function settleShopeeMatch(env, order, hit) {
+  const eventId = 'sp_' + (hit.txnId || (order.id + '_' + order.unique_amount));
+  const existing = await env.DB.prepare('SELECT id FROM events WHERE id = ?').bind(eventId).first();
+  if (existing) return eventId;
+  const t = now();
+  await env.DB.prepare("UPDATE orders SET status='paid', paid_at=?, paid_event_id=? WHERE id=? AND status='pending'")
+    .bind(t, eventId, order.id).run();
+  await env.DB.prepare(
+    `INSERT INTO events (id, device_id, merchant_id, source, amount, sender, raw_text, received_at, matched_order_id, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(eventId, 'shopee_token', order.merchant_id, 'shopee', order.unique_amount, hit.sender || 'ShopeePay',
+    'ShopeePay match (server-side)', t, order.id, 'matched', t).run();
+  return eventId;
+}
+
 // Status order buat polling checkout (publik, hanya status)
 app.get('/pay/:id/status', async (c) => {
-  const order = await c.env.DB.prepare('SELECT id, status, expires_at FROM orders WHERE id = ?')
+  const order = await c.env.DB.prepare(
+    `SELECT o.*, m.shopee_token, m.shopee_token_status FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id WHERE o.id = ?`,
+  )
     .bind(c.req.param('id'))
     .first();
   if (!order) return json(c, { error: 'not found' }, 404);
   if (order.status === 'pending' && order.expires_at <= now()) {
     await c.env.DB.prepare("UPDATE orders SET status='expired' WHERE id=?").bind(order.id).run();
     order.status = 'expired';
+  }
+  // Jalur ShopeePay opsional — cuma kalau token diisi & SHOPEE_CFG siap (kalau nggak, no-op)
+  if (order.status === 'pending' && order.shopee_token && SHOPEE_CFG) {
+    const r = await checkShopeePay(c.env, order, order);
+    if (r.matched) {
+      const eid = await settleShopeeMatch(c.env, order, r);
+      c.executionCtx.waitUntil(fireCallback(c.env, order, eid));
+      order.status = 'paid';
+    } else if (r.tokenDead && order.shopee_token_status !== 'dead') {
+      await c.env.DB.prepare("UPDATE merchants SET shopee_token_status='dead' WHERE id=?").bind(order.merchant_id).run();
+    }
   }
   return json(c, { status: order.status });
 });

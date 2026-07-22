@@ -333,6 +333,20 @@ export function renderDashboard() {
             </div>
           </div>
         </div>
+
+        <div class="panel" style="margin-top:14px">
+          <h2>SHOPEEPAY_TOKEN.OPT · Opsional</h2>
+          <div class="dim" style="margin-bottom:8px">Opsional, khusus ShopeePay. Isi token portal ShopeePay Partner supaya pembayaran ShopeePay bisa dikonfirmasi <b>server-side (tanpa HP)</b>. Kosongkan → tetap pakai APK catcher (default). DANA &amp; lainnya tetap butuh APK.</div>
+          <div id="sp-status" class="dim" style="font-family:'Share Tech Mono',monospace;margin-bottom:8px"></div>
+          <label>Token ShopeePay (diawali "B:")</label>
+          <textarea id="sp-token" placeholder="B:xxxxx… (ambil dari DevTools portal ShopeePay Partner)"></textarea>
+          <div style="display:flex;gap:8px">
+            <button onclick="saveShopee()">Simpan Token</button>
+            <button class="sec" id="sp-clearbtn" onclick="clearShopee()" style="display:none">🗑 Hapus Token</button>
+          </div>
+          <div class="msg" id="sp-msg"></div>
+          <div class="dim" style="font-size:11px;margin-top:6px">⚠ Token internal (tidak resmi) — bisa expired &amp; perlu di-refresh. Ada risiko ToS akun ShopeePay. APK catcher tetap jadi cadangan otomatis kalau token mati.</div>
+        </div>
       </section>
 
       <!-- KREDENSIAL & APK -->
@@ -585,6 +599,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     $('ptitle').textContent=TITLES[v]||'';
     curView=v;
     if(v==='tiket'){ closeTicket(); loadTickets(); } // selalu balik ke list pas masuk menu tiket
+    if(v==='qris') loadShopee();
     if(v==='profile') fa2Load();
     toggleMnav(false);
   }
@@ -717,6 +732,30 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       if(r.ok){ $('qris').value=''; $('qrprev').style.display='none'; msg('qmsg','ok','QRIS dihapus — status terputus, aman dari ketimpa'); loadSettings(); }
       else msg('qmsg','err','gagal hapus');
     }catch(e){ msg('qmsg','err',String(e)); }
+  }
+  // ── Token ShopeePay (opsional) ──
+  async function loadShopee(){
+    try{ var j=await (await fetch('/api/merchant/shopee',{headers:{'x-api-key':key()},cache:'no-store'})).json();
+      var el=$('sp-status'); var cb=$('sp-clearbtn');
+      if(j.enabled){
+        var st=j.status==='dead'?'<span style="color:var(--red)">● TOKEN MATI — refresh token baru</span>':'<span style="color:var(--ok)">● Aktif</span>';
+        el.innerHTML='Token: '+(j.token_preview||'-')+' · '+st;
+        if(cb) cb.style.display='inline-block';
+      } else { el.innerHTML='Belum ada token — ShopeePay pakai APK catcher (default).'; if(cb) cb.style.display='none'; }
+    }catch(e){}
+  }
+  async function saveShopee(){
+    var t=$('sp-token').value.trim();
+    if(!t) return msg('sp-msg','err','Token kosong');
+    try{ var r=await fetch('/api/merchant/shopee',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({token:t})});
+      var j=await r.json(); if(r.ok){ msg('sp-msg','ok','Token tersimpan ✓ — ShopeePay kini dikonfirmasi server-side juga'); $('sp-token').value=''; loadShopee(); } else msg('sp-msg','err',j.error||'gagal');
+    }catch(e){ msg('sp-msg','err',String(e)); }
+  }
+  async function clearShopee(){
+    if(!confirm('Hapus token ShopeePay? ShopeePay balik ke APK catcher (default).')) return;
+    try{ var r=await fetch('/api/merchant/shopee/clear',{method:'POST',headers:{'x-api-key':key()}});
+      if(r.ok){ msg('sp-msg','ok','Token dihapus — pakai APK catcher'); loadShopee(); } else msg('sp-msg','err','gagal hapus');
+    }catch(e){ msg('sp-msg','err',String(e)); }
   }
   async function clearHook(){
     if(!confirm('Hapus webhook tersimpan?')) return;
