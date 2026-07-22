@@ -94,6 +94,14 @@ export function renderDocs() {
   -d '{"qris": "00020101021126...6304ABCD"}'</code></pre>
     <div class="tip">💡 Isi <code>qris</code> = teks string QRIS statis (bukan gambar). Bisa di-decode dari foto QR pakai app scanner apa saja, atau lewat dashboard.</div>
 
+    <h2 id="deteksi">Deteksi Pembayaran</h2>
+    <p>GatePay tau order kebayar lewat dua cara (bisa jalan bareng, saling backup):</p>
+    <ul>
+      <li><b>APK Catcher (default, universal)</b> — aplikasi Android nangkep notifikasi "uang masuk" (DANA, ShopeePay, OVO, dll) lalu kirim ke GatePay. Butuh HP nyala. Setup lewat menu <b>Kredensial &amp; APK</b> di dashboard.</li>
+      <li><b>Token ShopeePay Partner (opsional, tanpa HP)</b> — khusus <b>ShopeePay Partner</b>. GatePay cek mutasi transaksi ShopeePay langsung dari server pakai cookie token akunmu, jadi pembayaran ShopeePay kekonfirmasi tanpa HP. E-wallet lain tetap butuh APK. Aktifkan di dashboard menu <b>QRIS &amp; Order → panel ShopeePay Partner</b>.</li>
+    </ul>
+    <div class="tip">⚠️ Token ShopeePay Partner itu tidak resmi (pakai cookie sesi portal <code>partner.shopee.co.id</code>) — bisa expired &amp; ada risiko ToS. Kalau token mati, APK catcher otomatis jadi cadangan. Panduan ambil token ada di menu <b>Tutorial</b> dashboard.</div>
+
     <h2 id="create">Buat Order</h2>
     <p><span class="method post">POST</span><code>/api/orders</code></p>
     <table>

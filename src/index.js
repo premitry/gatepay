@@ -570,6 +570,14 @@ app.post('/api/merchant/shopee', async (c) => {
   const token = String(body.token || '').trim();
   if (!token) return json(c, { error: 'token kosong' }, 400);
   if (token.length > 4096) return json(c, { error: 'token terlalu panjang' }, 400);
+  if (!token.startsWith('eyJ') && !token.startsWith('B:')) {
+    return json(c, { error: 'Format salah. Paste nilai cookie __shopee_partner_website_x_token_live (diawali "eyJ") dari portal ShopeePay Partner.' }, 400);
+  }
+  // pastikan token bisa di-decode ke token B: (kalau cookie JWT)
+  const bt = spBtoken(token);
+  if (!bt || !bt.startsWith('B:')) {
+    return json(c, { error: 'Token tidak bisa dibaca (decode gagal). Pastikan copy Value cookie-nya lengkap & tidak terpotong.' }, 400);
+  }
   await c.env.DB.prepare("UPDATE merchants SET shopee_token = ?, shopee_token_status = 'ok', shopee_checked_at = ? WHERE id = ?")
     .bind(token, now(), merchant.id).run();
   return json(c, { ok: true, enabled: true });

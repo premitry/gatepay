@@ -114,6 +114,17 @@ export function renderDashboard() {
   /* panel = window */
   .panel{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:2px 2px 0 var(--edge);padding:0 18px 18px;margin-bottom:16px}
   .panel h2{font-family:'Michroma';font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#fff;margin:0 -18px 16px;padding:9px 16px;background:linear-gradient(90deg,var(--title-a),var(--title-b));border-bottom:2px solid var(--edge-dark)}
+  .tut{font-size:13px;line-height:1.65;color:var(--text)}
+  .tut p{margin:0 0 8px}
+  .tut ol,.tut ul{margin:6px 0 8px;padding-left:22px}
+  .tut li{margin-bottom:5px}
+  .tut code,.faq code{background:#e7e7d8;border:1px solid var(--edge);padding:1px 4px;font-family:'Share Tech Mono',monospace;font-size:12px}
+  .faq details{border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:8px;background:#fff}
+  .faq summary{cursor:pointer;padding:9px 12px;font-weight:700;font-size:13px;background:var(--chrome-2);list-style:none}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary:before{content:'▸ ';color:var(--title-a)}
+  .faq details[open] summary:before{content:'▾ '}
+  .faq details>div{padding:10px 12px;font-size:13px;line-height:1.6;border-top:1px solid var(--edge)}
 
   .res{margin-top:12px;padding:12px;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
   .res{display:none}.res.show{display:block}
@@ -224,6 +235,7 @@ export function renderDashboard() {
       <div class="navi" data-view="apk" onclick="go('apk')"><span class="ic">🔑</span><span class="lbl">Kredensial &amp; APK</span></div>
       <div class="navi" data-view="hook" onclick="go('hook')"><span class="ic">📖</span><span class="lbl">Docs &amp; Webhook</span></div>
       <div class="grp">Bantuan</div>
+      <div class="navi" data-view="tutor" onclick="go('tutor')"><span class="ic">📚</span><span class="lbl">Tutorial</span></div>
       <div class="navi" data-view="tiket" onclick="go('tiket')" style="position:relative"><span class="ic">🎫</span><span class="lbl">Tiket Support</span><span id="tk-dot" style="display:none;position:absolute;top:6px;right:8px;width:9px;height:9px;background:#b0362a;border:1px solid #fff"></span></div>
       <div class="grp hidden" id="grp-akun">Admin</div>
       <div class="navi" data-view="events" onclick="go('events')"><span class="ic">📋</span><span class="lbl">Logs</span></div>
@@ -335,11 +347,11 @@ export function renderDashboard() {
         </div>
 
         <div class="panel" style="margin-top:14px">
-          <h2>SHOPEEPAY_TOKEN.OPT · Opsional</h2>
+          <h2>SHOPEEPAY PARTNER · Token Opsional</h2>
           <div class="dim" style="margin-bottom:8px">Opsional, khusus ShopeePay. Isi token portal ShopeePay Partner supaya pembayaran ShopeePay dikonfirmasi <b>server-side (tanpa HP)</b>. Kosongkan → tetap pakai APK catcher (default). DANA &amp; lainnya tetap butuh APK.</div>
           <div class="dim" style="font-size:11px;margin-bottom:8px;background:#eef;border:2px solid var(--edge);padding:8px">Cara ambil: buka <b>partner.shopee.co.id</b> (login) → F12 → tab <b>Application → Cookies</b> → cari <b>__shopee_partner_website_x_token_live</b> → copy <b>Value</b>-nya (diawali <code>eyJ</code>) → paste di bawah.</div>
           <div id="sp-status" class="dim" style="font-family:'Share Tech Mono',monospace;margin-bottom:8px"></div>
-          <label>Cookie token ShopeePay (diawali "eyJ")</label>
+          <label>Cookie token ShopeePay Partner (diawali "eyJ")</label>
           <textarea id="sp-token" placeholder="eyJhbGciOi… (nilai cookie __shopee_partner_website_x_token_live)"></textarea>
           <div style="display:flex;gap:8px">
             <button onclick="saveShopee()">Simpan Token</button>
@@ -431,6 +443,96 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
 5. Notif kebaca -> order jadi PAID
 6. Webhook ke notify_url kamu (lihat panel atas) + cek via GET status</pre>
           <p class="dim" style="font-size:12px">Versi lengkap dengan contoh verifikasi webhook: <a href="/docs" target="_blank">buka /docs ↗</a></p>
+        </div>
+      </section>
+
+      <!-- TUTORIAL -->
+      <section class="view" id="v-tutor">
+        <div class="panel">
+          <h2>TUTORIAL.HELP · Panduan Lengkap</h2>
+          <div class="dim" style="margin-bottom:10px">Panduan semua fitur & pengaturan GatePay dari awal sampai jalan. Ikuti urut dari atas.</div>
+          <div class="dim" style="background:#eef;border:2px solid var(--edge);padding:8px;font-size:12px">Alur singkat: <b>1)</b> Upload QRIS statis → <b>2)</b> Setup HP catcher (izin notif) → <b>3)</b> Buat order → <b>4)</b> Pelanggan scan &amp; bayar → <b>5)</b> Order otomatis PAID.</div>
+        </div>
+
+        <div class="panel">
+          <h2>1 · QRIS Statis (wajib)</h2>
+          <div class="tut">
+            <p>GatePay bikin QR dinamis (nominal unik) dari <b>QRIS statis</b> punyamu. Tanpa ini, order nggak bisa dibuat.</p>
+            <ol>
+              <li>Buka menu <b>QRIS &amp; Order</b>.</li>
+              <li>Upload foto QRIS statis (DANA Bisnis / ShopeePay Partner / dll) → klik <b>Decode QR</b>, atau paste teks QRIS-nya (diawali <code>00020101...</code>).</li>
+              <li>Klik <b>Simpan QRIS</b>. Nama merchant muncul = berhasil.</li>
+              <li>Atur <b>Fee (%)</b>, <b>Digit kode unik</b> (1-2), dan <b>Masa aktif</b> (menit) → <b>Simpan Pengaturan</b>.</li>
+            </ol>
+            <p class="dim">Kode unik disisipkan di digit terakhir nominal supaya tiap order beda &amp; bisa dicocokin otomatis.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>2 · Setup HP Catcher (APK)</h2>
+          <div class="tut">
+            <p>APK nangkep notifikasi "uang masuk" di HP lalu kirim ke GatePay. Ini <b>cara default</b> deteksi pembayaran (semua e-wallet).</p>
+            <ol>
+              <li>Menu <b>Kredensial &amp; APK</b> → <b>Download APK</b> → install di HP (izinkan "install aplikasi tak dikenal").</li>
+              <li>Buka app → <b>Login</b> pakai akun GatePay-mu (Device ID &amp; Secret keisi otomatis).</li>
+              <li>Aktifkan <b>Akses Notifikasi</b> (kalau muncul "Restricted setting" → Info Aplikasi → izinkan setelan dibatasi; letaknya beda tiap HP).</li>
+              <li>Di tab <b>Status</b> → <b>Pilih Aplikasi</b> target (mis. DANA, ShopeePay).</li>
+              <li>Biar nggak dibunuh sistem: aktifkan <b>Autostart</b> + matikan optimasi baterai buat app ini (khususnya Xiaomi/MIUI).</li>
+            </ol>
+            <p class="dim">HP harus tetap nyala &amp; online supaya catcher jalan.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>3 · Buat Order &amp; Bayar</h2>
+          <div class="tut">
+            <ol>
+              <li>Menu <b>QRIS &amp; Order</b> → isi <b>Nominal</b> (+ reference opsional) → <b>Buat Order + QR</b>.</li>
+              <li>Bagikan link checkout ke pelanggan (atau tampilkan QR-nya).</li>
+              <li>Pelanggan bayar <b>persis nominal unik</b> → catcher/token nangkep → order jadi <b>PAID</b> otomatis.</li>
+            </ol>
+            <p class="dim">Order yang lewat masa aktif otomatis jadi <b>expired</b>. Bisa juga dibuat via API <code>POST /api/orders</code> (lihat Docs).</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>4 · Token ShopeePay Partner <span class="dim" style="font-size:12px">(opsional, tanpa HP)</span></h2>
+          <div class="tut">
+            <p>Khusus <b>ShopeePay Partner</b>. Dengan token ini, pembayaran ShopeePay dikonfirmasi <b>server-side</b> — nggak butuh HP. E-wallet lain tetap butuh catcher.</p>
+            <ol>
+              <li>Buka <b>partner.shopee.co.id</b> di browser laptop → login.</li>
+              <li>Tekan <b>F12</b> → tab <b>Application</b> → <b>Cookies</b> → pilih <code>https://partner.shopee.co.id</code>.</li>
+              <li>Cari cookie <b>__shopee_partner_website_x_token_live</b> → klik → copy <b>Value</b>-nya (panjang, diawali <code>eyJ</code>).</li>
+              <li>Balik ke GatePay → menu <b>QRIS &amp; Order</b> → panel <b>SHOPEEPAY_TOKEN</b> → paste → <b>Simpan Token</b>.</li>
+            </ol>
+            <p class="dim">⚠ Token internal (tidak resmi ShopeePay). Bisa <b>expired</b> — kalau mati, statusnya jadi merah &amp; catcher HP otomatis ambil alih. Ambil cookie baru lalu paste ulang. Ada risiko ToS akun.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>5 · Webhook &amp; Keamanan (opsional)</h2>
+          <div class="tut">
+            <ul>
+              <li><b>Webhook</b>: menu <b>Docs &amp; Webhook</b> → isi URL. GatePay nembak POST ke situ tiap order PAID (verifikasi HMAC — lihat Docs).</li>
+              <li><b>Masa aktif order</b>: atur di QRIS &amp; Order (1-1440 menit).</li>
+              <li><b>2FA</b>: menu <b>Profil</b> → aktifkan Authenticator (scan QR) buat pengaman login.</li>
+              <li><b>API Key</b>: menu Kredensial &amp; APK. Bisa di-<b>regenerate</b> kalau bocor (integrasi lama harus di-update).</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>❓ Pertanyaan yang Sering Ditanya (FAQ)</h2>
+          <div class="faq">
+            <details><summary>Order nggak otomatis PAID padahal udah bayar?</summary><div>Cek: (1) HP catcher nyala &amp; Akses Notifikasi aktif, (2) app pembayaran udah dipilih di target APK, (3) nominal dibayar <b>persis</b> nominal unik (jangan dibulatkan), (4) order belum expired. Cek juga menu <b>Logs</b> — kalau event masuk tapi order tetap pending, kemungkinan nominal beda.</div></details>
+            <details><summary>QRIS-nya nggak bisa dibayar / ditolak app e-wallet?</summary><div>Pastikan yang diupload <b>QRIS statis</b> (bukan QR dinamis/sekali pakai). GatePay generate ulang jadi dinamis dengan nominal. Kalau ShopeePay Partner, pastikan merchant aktif.</div></details>
+            <details><summary>Harus pakai HP terus? Bisa tanpa HP?</summary><div>Default butuh HP (catcher). <b>ShopeePay</b> bisa tanpa HP kalau pakai <b>token ShopeePay Partner</b>. DANA &amp; lainnya tetap butuh HP.</div></details>
+            <details><summary>Token ShopeePay statusnya "TOKEN MATI"?</summary><div>Token/cookie expired. Ambil cookie <b>__shopee_partner_website_x_token_live</b> yang baru dari partner.shopee.co.id (F12 → Application → Cookies), paste ulang. Selama mati, catcher HP tetap nangkep ShopeePay.</div></details>
+            <details><summary>App catcher sering mati sendiri di HP Xiaomi?</summary><div>MIUI agresif matiin app background. Aktifkan <b>Autostart</b> untuk GatePay Catcher + set baterai ke "Tanpa batasan / No restriction" + kunci app di recent apps.</div></details>
+            <details><summary>Bisa lebih dari 1 aplikasi pembayaran?</summary><div>Bisa. Di APK tab Status → <b>Pilih Aplikasi</b>, tambah beberapa (DANA, ShopeePay, dll). Semua notifnya ketangkep.</div></details>
+            <details><summary>Kode unik habis / "terlalu banyak order pending nominal sama"?</summary><div>Kode unik 1-99 per nominal. Kalau banyak order pending bernominal dasar sama, tunggu sebagian expired atau perbesar digit kode unik di pengaturan.</div></details>
+            <details><summary>Update APK gimana?</summary><div>Buka app-nya — kalau ada versi baru muncul notif "Update Tersedia" → Unduh via Browser → install. Nggak perlu kirim APK manual.</div></details>
+          </div>
         </div>
       </section>
 
@@ -590,7 +692,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function logout(){ localStorage.removeItem('gp_sess'); location.reload(); }
 
   // ── shell / navigation ──
-  const TITLES={dash:'Dashboard',qris:'QRIS & Order',apk:'Kredensial & APK',hook:'Docs & Webhook',tiket:'Tiket Support',profile:'Profil',events:'Logs',admin:'Admin'};
+  const TITLES={dash:'Dashboard',qris:'QRIS & Order',apk:'Kredensial & APK',hook:'Docs & Webhook',tutor:'Tutorial',tiket:'Tiket Support',profile:'Profil',events:'Logs',admin:'Admin'};
   function navTo(v){
     if(!TITLES[v]) v='dash';
     var s=sess(); if(v==='admin' && !(s&&s.is_admin)) v='dash';
