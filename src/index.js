@@ -854,15 +854,56 @@ app.get('/pay/:id', async (c) => {
 // SHOPEE_CFG diisi dari capture request asli portal ShopeePay Partner.
 // Selama null → fungsi no-op (nggak nebak-nebak); APK catcher tetap jalan.
 // ─────────────────────────────────────────────────────────
-const SHOPEE_CFG = null;
-// Bentuk nanti (diisi setelah capture):
-// const SHOPEE_CFG = {
-//   url: 'https://shopeepay.shopee.co.id/.../get-transaction-list',
-//   method: 'POST',
-//   headers: (token) => ({ 'content-type': 'application/json', /* cookie/auth dari capture */ }),
-//   body: (token) => JSON.stringify({ token, /* field dari capture */ }),
-//   parse: (data) => (data.transactions||[]).map(x => ({ amount:x.amount, status:x.status, id:x.id, sender:x.issuer, time:x.create_time })),
-// };
+// Ambil token "B:" dari nilai tersimpan. User simpan cookie JWT (eyJ...) yang
+// di dalamnya ada token B:; kalau user langsung simpan "B:" ya dipakai apa adanya.
+function spBtoken(stored) {
+  const s = String(stored || '').trim();
+  if (s.startsWith('B:')) return s;
+  if (s.startsWith('eyJ')) {
+    try {
+      const p = s.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const pad = p + '==='.slice((p.length + 3) % 4);
+      return JSON.parse(atob(pad)).token || '';
+    } catch { return ''; }
+  }
+  return s;
+}
+
+const SHOPEE_CFG = {
+  url: 'https://shopeepay.shopee.co.id/merchant/v1/partner-web/get-transaction-list',
+  method: 'POST',
+  headers: (token) => ({
+    'accept': 'application/json, text/plain, */*',
+    'content-type': 'application/json',
+    'origin': 'https://partner.shopee.co.id',
+    'referer': 'https://partner.shopee.co.id/',
+    'x-timestamp-ms': String(Date.now()),
+    ...(String(token).trim().startsWith('eyJ') ? { 'cookie': '__shopee_partner_website_x_token_live=' + String(token).trim() } : {}),
+  }),
+  body: (token) => {
+    const s = now();
+    return JSON.stringify({
+      data: {
+        metadata: { token: spBtoken(token), language: 'id', timezone: 'Asia/Jakarta' },
+        pageSize: 20,
+        filter: { startTime: s - 86400, endTime: s + 300, serviceList: [1, 3] },
+        sorter: { field: 'createTime', order: 'descend' },
+        next_position: '',
+      },
+    });
+  },
+  // status 3 = sukses (uang masuk). amount string rupiah.
+  parse: (data) => (((data && data.data && data.data.list) || []).map((x) => ({
+    amount: Number(x.amount),
+    status: x.status === 3 ? 'success' : String(x.status),
+    id: x.transactionId,
+    sender: x.storeName || 'ShopeePay',
+    time: x.createTime,
+  }))),
+};
+
+// Throttle per-order (best-effort dalam 1 isolate) — biar nggak spam ShopeePay tiap 3 detik.
+const _spThrottle = new Map();
 
 async function checkShopeePay(env, merchant, order) {
   if (!SHOPEE_CFG || !merchant.shopee_token) return { matched: false };
@@ -912,7 +953,10 @@ app.get('/pay/:id/status', async (c) => {
     order.status = 'expired';
   }
   // Jalur ShopeePay opsional — cuma kalau token diisi & SHOPEE_CFG siap (kalau nggak, no-op)
-  if (order.status === 'pending' && order.shopee_token && SHOPEE_CFG) {
+  // Throttle ~9 detik/order biar nggak nembak ShopeePay tiap polling 3 detik.
+  const spLast = _spThrottle.get(order.id) || 0;
+  if (order.status === 'pending' && order.shopee_token && SHOPEE_CFG && Date.now() - spLast >= 9000) {
+    _spThrottle.set(order.id, Date.now());
     const r = await checkShopeePay(c.env, order, order);
     if (r.matched) {
       const eid = await settleShopeeMatch(c.env, order, r);

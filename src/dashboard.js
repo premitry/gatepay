@@ -336,10 +336,11 @@ export function renderDashboard() {
 
         <div class="panel" style="margin-top:14px">
           <h2>SHOPEEPAY_TOKEN.OPT · Opsional</h2>
-          <div class="dim" style="margin-bottom:8px">Opsional, khusus ShopeePay. Isi token portal ShopeePay Partner supaya pembayaran ShopeePay bisa dikonfirmasi <b>server-side (tanpa HP)</b>. Kosongkan → tetap pakai APK catcher (default). DANA &amp; lainnya tetap butuh APK.</div>
+          <div class="dim" style="margin-bottom:8px">Opsional, khusus ShopeePay. Isi token portal ShopeePay Partner supaya pembayaran ShopeePay dikonfirmasi <b>server-side (tanpa HP)</b>. Kosongkan → tetap pakai APK catcher (default). DANA &amp; lainnya tetap butuh APK.</div>
+          <div class="dim" style="font-size:11px;margin-bottom:8px;background:#eef;border:2px solid var(--edge);padding:8px">Cara ambil: buka <b>partner.shopee.co.id</b> (login) → F12 → tab <b>Application → Cookies</b> → cari <b>__shopee_partner_website_x_token_live</b> → copy <b>Value</b>-nya (diawali <code>eyJ</code>) → paste di bawah.</div>
           <div id="sp-status" class="dim" style="font-family:'Share Tech Mono',monospace;margin-bottom:8px"></div>
-          <label>Token ShopeePay (diawali "B:")</label>
-          <textarea id="sp-token" placeholder="B:xxxxx… (ambil dari DevTools portal ShopeePay Partner)"></textarea>
+          <label>Cookie token ShopeePay (diawali "eyJ")</label>
+          <textarea id="sp-token" placeholder="eyJhbGciOi… (nilai cookie __shopee_partner_website_x_token_live)"></textarea>
           <div style="display:flex;gap:8px">
             <button onclick="saveShopee()">Simpan Token</button>
             <button class="sec" id="sp-clearbtn" onclick="clearShopee()" style="display:none">🗑 Hapus Token</button>
