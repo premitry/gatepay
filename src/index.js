@@ -98,6 +98,7 @@ let _ttlReady = false;
 async function ensureTtlColumn(DB) {
   if (_ttlReady) return;
   try { await DB.prepare('ALTER TABLE merchants ADD COLUMN order_ttl INTEGER').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN default_redirect TEXT').run(); } catch {}
   _ttlReady = true;
 }
 
@@ -112,6 +113,14 @@ async function ensureShopeeColumns(DB) {
   try { await DB.prepare('ALTER TABLE merchants ADD COLUMN shopee_checked_at INTEGER').run(); } catch {}
   try { await DB.prepare('ALTER TABLE merchants ADD COLUMN shopee_merchant TEXT').run(); } catch {}
   _shopeeReady = true;
+}
+
+// redirect_url per order — halaman tujuan setelah pembayaran berhasil (return URL).
+let _redirReady = false;
+async function ensureOrderRedirect(DB) {
+  if (_redirReady) return;
+  try { await DB.prepare('ALTER TABLE orders ADD COLUMN redirect_url TEXT').run(); } catch {}
+  _redirReady = true;
 }
 const DEFAULT_TTL = 900; // 15 menit
 
@@ -385,6 +394,23 @@ app.post('/api/orders', async (c) => {
     return json(c, { error: 'base_amount harus berupa angka lebih besar dari 0' }, 400);
   }
 
+  // redirect_url opsional — pelanggan dialihkan ke sini setelah pembayaran berhasil
+  await ensureOrderRedirect(c.env.DB);
+  let redirectUrl = null;
+  if (body.redirect_url != null && String(body.redirect_url).trim() !== '') {
+    const u = String(body.redirect_url).trim();
+    if (!/^https?:\/\//i.test(u) || u.length > 500) {
+      return json(c, { error: 'redirect_url harus berupa URL http(s) yang valid (maks 500 karakter)' }, 400);
+    }
+    redirectUrl = u;
+  }
+  // fallback ke redirect default merchant (dari Pengaturan) kalau order tidak menyebutkan
+  if (!redirectUrl) {
+    await ensureTtlColumn(c.env.DB);
+    const mm = await c.env.DB.prepare('SELECT default_redirect FROM merchants WHERE id = ?').bind(merchant.id).first().catch(() => null);
+    if (mm && mm.default_redirect) redirectUrl = mm.default_redirect;
+  }
+
   const ttl = parseInt(body.ttl_seconds ?? merchant.order_ttl ?? c.env.ORDER_TTL_SECONDS ?? DEFAULT_TTL, 10);
   const t = now();
   const expires = t + (Number.isFinite(ttl) && ttl > 0 ? ttl : DEFAULT_TTL);
@@ -407,10 +433,10 @@ app.post('/api/orders', async (c) => {
 
   const id = rid('ord');
   await c.env.DB.prepare(
-    `INSERT INTO orders (id, merchant_id, reference, base_amount, unique_amount, fee_amount, fee_percent, status, expires_at, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+    `INSERT INTO orders (id, merchant_id, reference, base_amount, unique_amount, fee_amount, fee_percent, status, expires_at, created_at, redirect_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
   )
-    .bind(id, merchant.id, body.reference ?? null, base, uniqueAmount, feeAmount, feePct, expires, t)
+    .bind(id, merchant.id, body.reference ?? null, base, uniqueAmount, feeAmount, feePct, expires, t, redirectUrl)
     .run();
 
   // Generate QRIS dinamis dari QRIS statis merchant (kalau ada)
@@ -436,6 +462,7 @@ app.post('/api/orders', async (c) => {
     reference: body.reference ?? null,
     qris,
     checkout_url: `${origin}/pay/${id}`,
+    redirect_url: redirectUrl,
     expires_at: expires,
     expires_in: ttl,
   });
@@ -622,6 +649,7 @@ app.get('/api/merchant/settings', async (c) => {
     notify_url: merchant.notify_url || '',
     callback_secret: merchant.callback_secret || '',
     order_ttl: merchant.order_ttl || DEFAULT_TTL,
+    default_redirect: merchant.default_redirect || '',
     // profil
     username: merchant.username || '',
     name: merchant.name || '',
@@ -674,10 +702,19 @@ app.post('/api/merchant/settings', async (c) => {
     if (!Number.isFinite(ttl) || ttl < 60 || ttl > 86400) return json(c, { error: 'order_ttl harus bernilai 60 - 86400 detik' }, 400);
   }
 
-  await c.env.DB.prepare('UPDATE merchants SET fee_percent = ?, unique_digits = ?, notify_url = ?, order_ttl = ? WHERE id = ?')
-    .bind(fee, digits, notifyUrl, ttl, merchant.id)
+  // default_redirect opsional — URL tujuan setelah bayar (kepakai kalau order tidak menyebutkan)
+  let defRedirect = merchant.default_redirect || null;
+  if (body.default_redirect !== undefined) {
+    const u = String(body.default_redirect || '').trim();
+    if (u === '') defRedirect = null;
+    else if (/^https?:\/\/.+/i.test(u) && u.length <= 500) defRedirect = u;
+    else return json(c, { error: 'default_redirect harus berupa URL http(s) yang valid (maks 500 karakter)' }, 400);
+  }
+
+  await c.env.DB.prepare('UPDATE merchants SET fee_percent = ?, unique_digits = ?, notify_url = ?, order_ttl = ?, default_redirect = ? WHERE id = ?')
+    .bind(fee, digits, notifyUrl, ttl, defRedirect, merchant.id)
     .run();
-  return json(c, { ok: true, fee_percent: fee, unique_digits: digits, notify_url: notifyUrl || '', order_ttl: ttl });
+  return json(c, { ok: true, fee_percent: fee, unique_digits: digits, notify_url: notifyUrl || '', order_ttl: ttl, default_redirect: defRedirect || '' });
 });
 
 // Ganti password sendiri (butuh password lama)
@@ -852,6 +889,7 @@ app.post('/api/tickets/:id/reply', async (c) => {
 // GET /pay/:id
 // ─────────────────────────────────────────────────────────
 app.get('/pay/:id', async (c) => {
+  await ensureOrderRedirect(c.env.DB);
   const order = await c.env.DB.prepare(
     `SELECT o.*, m.qris_static, m.qris_merchant_name, m.name as merchant_name
      FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id WHERE o.id = ?`,

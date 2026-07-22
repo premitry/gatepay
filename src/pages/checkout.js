@@ -51,6 +51,8 @@ export function renderCheckout({ order, qris, embed }) {
   .foot{text-align:center;font-size:11px;color:var(--dim);padding:10px;font-family:'Share Tech Mono',monospace}
   .checkwrap{text-align:center;padding:20px}
   .bigcheck{width:64px;height:64px;background:var(--ok);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;margin-bottom:10px;border:3px solid;border-color:var(--hi) #0a5c4c #0a5c4c var(--hi)}
+  .rdc{margin-top:16px;font-size:13px;color:var(--dim)}.rdc b{color:var(--accent);font-variant-numeric:tabular-nums}
+  .rbtn{display:inline-block;margin-top:10px;padding:11px 20px;background:linear-gradient(180deg,#4a86c8,#26379d);color:#fff;font-weight:700;text-decoration:none;border:2px solid;border-color:#7fb0e0 #141f5c #141f5c #7fb0e0;font-size:13px}
   body.embed{background:var(--chrome);padding:0;display:block}
   body.embed .card{max-width:none;width:100%;min-height:100vh;box-shadow:none;border:0}
   .xbtn{background:transparent;border:0;color:#fff;font-family:'Share Tech Mono',monospace;font-size:15px;font-weight:700;cursor:pointer;line-height:1;padding:2px 4px}
@@ -64,6 +66,9 @@ export function renderCheckout({ order, qris, embed }) {
         <div class="bigcheck">✓</div>
         <div style="font-size:20px;font-weight:800">Pembayaran Berhasil</div>
         <div style="color:var(--dim);font-size:14px;margin-top:4px">${rupiah(order.unique_amount)} · ${merchant}</div>
+        ${order.redirect_url && !embed ? `
+        <div class="rdc">Anda akan dialihkan kembali dalam <b id="rdcn">5</b> detik…</div>
+        <a class="rbtn" id="rgo" href="#">Kembali sekarang →</a>` : ''}
       </div>` : expired ? `
       <div class="merch">Merchant</div><div class="mname">${merchant}</div>
       <div class="status dead">Order ${esc(order.status)} — silakan buat order baru</div>
@@ -87,6 +92,17 @@ export function renderCheckout({ order, qris, embed }) {
   </div>
   <div class="foot">Diproses aman oleh GatePay</div>
 </div>
+${paid && order.redirect_url && !embed ? `<script>
+  (function(){
+    var rurl=${JSON.stringify(order.redirect_url || '')};
+    if(!rurl) return;
+    var sep=rurl.indexOf('?')>=0?'&':'?';
+    var dest=rurl+sep+'order_id='+encodeURIComponent(${JSON.stringify(String(order.reference || order.id))})+'&status=paid&amount='+${order.unique_amount};
+    var go=document.getElementById('rgo'); if(go) go.href=dest;
+    var n=5, el=document.getElementById('rdcn');
+    var iv=setInterval(function(){ n--; if(el) el.textContent=n; if(n<=0){ clearInterval(iv); location.href=dest; } },1000);
+  })();
+</script>` : ''}
 ${embed ? `<script>
   (function(){
     function send(status){

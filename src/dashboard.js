@@ -362,7 +362,10 @@ export function renderDashboard() {
               <div style="flex:1"><label>Aktif (menit)</label><input id="ttlmin" type="number" min="1" max="1440" placeholder="15"></div>
             </div>
             <div class="dim" style="font-size:11px;margin-top:4px">Fee ditambah di atas nominal, kode unik disisipkan di digit terakhir. Masa aktif = berapa lama QRIS/order berlaku sebelum expired (1-1440 menit).</div>
-            <button class="sec" onclick="saveSettings()">Simpan Pengaturan</button>
+            <label style="margin-top:8px">Redirect URL default setelah bayar (opsional)</label>
+            <input id="defredir" type="text" placeholder="https://toko-anda.com/terima-kasih">
+            <div class="dim" style="font-size:11px;margin-top:2px">Dipakai untuk semua order yang tidak menyebutkan redirect sendiri.</div>
+            <button class="sec" onclick="saveSettings()" style="margin-top:8px">Simpan Pengaturan</button>
             <div class="msg" id="smsg"></div>
           </div>
 
@@ -373,7 +376,10 @@ export function renderDashboard() {
             <input id="amt" type="number" placeholder="10000" oninput="estOrder()">
             <label>Reference (opsional)</label>
             <input id="ref" type="text" placeholder="INV-001">
-            <button onclick="createOrder()">Buat Order + QR</button>
+            <label>Redirect URL setelah bayar (opsional)</label>
+            <input id="redir" type="text" placeholder="https://toko-anda.com/terima-kasih">
+            <div class="dim" style="font-size:11px;margin-top:2px">Pelanggan dialihkan ke sini setelah pembayaran berhasil. Kosong = pakai default di Pengaturan (kiri).</div>
+            <button onclick="createOrder()" style="margin-top:8px">Buat Order + QR</button>
             <div class="msg" id="omsg"></div>
             <div class="res show" id="ores">
               <div class="dim" id="rbreak" style="font-size:12px;margin-bottom:8px"></div>
@@ -877,6 +883,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     try{ var r=await fetch('/api/merchant/settings',{headers:{'x-api-key':key()}}); var j=await r.json();
       if(r.ok){ $('fee').value=j.fee_percent??0; $('digits').value=j.unique_digits??2; $('notify').value=j.notify_url||''; $('c-cbsec').textContent=j.callback_secret||'-';
         if($('ttlmin')) $('ttlmin').value=Math.round((j.order_ttl||900)/60);
+        if($('defredir')) $('defredir').value=j.default_redirect||'';
         estOrder();
         if(j.has_qris){ $('qstat').textContent='✓ QRIS aktif: '+(j.merchant_name||'-'); $('qstat').style.color='var(--ok)'; $('noqris').style.display='none'; $('clearqrisbtn').style.display='block'; }
         else { $('qstat').textContent='○ Belum ada QRIS statis (terputus)'; $('qstat').style.color='var(--bad,#b0362a)'; $('noqris').style.display='block'; $('clearqrisbtn').style.display='none'; }
@@ -895,7 +902,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   }
   async function saveSettings(){
     var ttlMin=parseInt($('ttlmin').value,10)||15; var ttlSec=Math.min(86400,Math.max(60,ttlMin*60));
-    try{ var r=await fetch('/api/merchant/settings',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({fee_percent:parseFloat($('fee').value)||0,unique_digits:parseInt($('digits').value,10)||2,order_ttl:ttlSec})});
+    try{ var r=await fetch('/api/merchant/settings',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({fee_percent:parseFloat($('fee').value)||0,unique_digits:parseInt($('digits').value,10)||2,order_ttl:ttlSec,default_redirect:($('defredir')?$('defredir').value.trim():'')})});
       var j=await r.json(); if(r.ok) msg('smsg','ok','Fee '+j.fee_percent+'% · kode '+j.unique_digits+' digit · aktif '+Math.round((j.order_ttl||900)/60)+' menit tersimpan'); else msg('smsg','err',j.error||'gagal');
     }catch(e){ msg('smsg','err',String(e)); }
   }
@@ -957,7 +964,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   async function createOrder(){
     var amt=parseInt($('amt').value,10); if(!amt||amt<=0) return msg('omsg','err','Nominal harus > 0');
     try{
-      var r=await fetch('/api/orders',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({base_amount:amt,reference:$('ref').value.trim()||undefined})});
+      var r=await fetch('/api/orders',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({base_amount:amt,reference:$('ref').value.trim()||undefined,redirect_url:($('redir')&&$('redir').value.trim())||undefined})});
       var j=await r.json(); if(!r.ok) return msg('omsg','err',j.error||'gagal');
       msg('omsg','ok','Order dibuat: '+j.id);
       $('rbreak').textContent='base      : '+idr(j.base_amount)+'\\nfee '+(j.fee_percent||0)+'%    : '+idr(j.fee_amount||0)+'\\nkode unik : '+(j.unique_code||0)+'\\n─────────────────\\nTOTAL     : '+idr(j.unique_amount);

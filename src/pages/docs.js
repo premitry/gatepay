@@ -109,11 +109,13 @@ export function renderDocs() {
       <tr><td><code>base_amount</code></td><td>number</td><td>Harga asli (rupiah). Wajib.</td></tr>
       <tr><td><code>reference</code></td><td>string</td><td>Nomor invoice/order Anda. Opsional.</td></tr>
       <tr><td><code>ttl_seconds</code></td><td>number</td><td>Masa berlaku order ini (detik). Default mengikuti setelan <b>Masa Aktif</b> merchant (dashboard → QRIS &amp; Order), fallback 900 (15 mnt).</td></tr>
+      <tr><td><code>redirect_url</code></td><td>string</td><td>Opsional. URL http(s) tujuan pelanggan setelah pembayaran berhasil (halaman terima kasih / order). Halaman checkout menampilkan hitungan mundur lalu mengalihkan otomatis. Jika kosong, memakai <b>Redirect default</b> merchant (dashboard → QRIS &amp; Order).</td></tr>
     </table>
     <pre><code>curl -X POST https://gatepay.biz.id/api/orders \\
   -H "x-api-key: sk_live_xxx" \\
   -H "content-type: application/json" \\
-  -d '{"base_amount": 10000, "reference": "INV-001"}'</code></pre>
+  -d '{"base_amount": 10000, "reference": "INV-001", "redirect_url": "https://toko-anda.com/terima-kasih"}'</code></pre>
+    <div class="tip">💡 Saat dialihkan, GatePay menambahkan query: <code>?order_id=...&amp;status=paid&amp;amount=...</code> ke redirect_url Anda, sehingga halaman toko tahu order mana yang terbayar.</div>
     <p>Response:</p>
     <pre><code>{
   "id": "ord_xxx",
