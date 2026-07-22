@@ -914,7 +914,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       if(j.enabled){
         var nm=j.merchant?escj(j.merchant):null;
         // catatan kecil kalau QRIS tersimpan bukan ShopeePay (tetap jalan via catcher, di belakang layar)
-        var note=(j.has_qris && !j.qris_is_shopee)?'<br><span style="font-weight:400;font-size:11px;color:var(--accent)">QRIS tersimpan bukan ShopeePay — pembayaran tetap terdeteksi lewat APK catcher.</span>':'';
+        var note=(j.has_qris && !j.qris_is_shopee)?'<br><span style="font-weight:400;font-size:11px;color:var(--accent)">⚠ QRIS tersimpan bukan ShopeePay — pembayaran tetap terdeteksi lewat APK catcher.</span>':'';
         if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● TOKEN MATI'+(nm?' ('+nm+')':'')+' — ambil cookie baru lalu simpan ulang. Sementara itu ShopeePay menggunakan APK catcher.'; if(iw) iw.style.display='block'; }
         else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG'+(nm?' — <b>'+nm+'</b>':'')+'<br><span style="font-weight:400;font-size:11px">ShopeePay dikonfirmasi server-side (tanpa HP).</span>'+note; if(iw) iw.style.display='none'; }
         if(cb) cb.style.display='inline-block';
