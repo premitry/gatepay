@@ -400,6 +400,7 @@ export function renderDashboard() {
           </div>
           <button class="sec" id="sp-clearbtn" onclick="clearShopee()" style="display:none">🗑 Hapus Token</button>
           <div class="msg" id="sp-msg"></div>
+          <div class="warnbox" id="sp-qriswarn" style="display:none"></div>
           <div class="dim" style="font-size:11px;margin-top:6px">⚠ Token dapat expired. Jika mati, APK catcher otomatis mengambil alih.</div>
         </div>
       </section>
@@ -910,20 +911,22 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function goTutorShopee(){ go('tutor'); setTimeout(function(){ var d=$('tut-shopee'); if(d){ d.open=true; d.scrollIntoView({behavior:'smooth',block:'start'}); } },140); }
   async function loadShopee(){
     try{ var j=await (await fetch('/api/merchant/shopee',{headers:{'x-api-key':key()},cache:'no-store'})).json();
-      var el=$('sp-status'); var cb=$('sp-clearbtn'); var iw=$('sp-inputwrap');
+      var el=$('sp-status'); var cb=$('sp-clearbtn'); var iw=$('sp-inputwrap'); var wq=$('sp-qriswarn');
       if(j.enabled){
         var nm=j.merchant?escj(j.merchant):null;
         if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● TOKEN MATI'+(nm?' ('+nm+')':'')+' — ambil cookie baru lalu simpan ulang. Sementara itu ShopeePay menggunakan APK catcher.'; if(iw) iw.style.display='block'; }
         else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG'+(nm?' — <b>'+nm+'</b>':'')+'<br><span style="font-weight:400;font-size:11px">ShopeePay dikonfirmasi server-side (tanpa HP).</span>'; if(iw) iw.style.display='none'; }
         if(cb) cb.style.display='inline-block';
-      } else { el.className='spstat off'; el.innerHTML='○ Belum terhubung — ShopeePay menggunakan APK catcher (default).'; if(cb) cb.style.display='none'; if(iw) iw.style.display='block'; }
+        // peringatan kalau QRIS tersimpan bukan ShopeePay → token tidak terpakai
+        if(wq){ if(j.has_qris && !j.qris_is_shopee){ wq.style.display='block'; wq.innerHTML='⚠ QRIS tersimpan Anda <b>bukan ShopeePay</b>, jadi token ini belum terpakai. Token ShopeePay hanya berguna jika QRIS yang Anda upload berasal dari ShopeePay Partner (akun yang sama).'; } else wq.style.display='none'; }
+      } else { el.className='spstat off'; el.innerHTML='○ Belum terhubung — ShopeePay menggunakan APK catcher (default).'; if(cb) cb.style.display='none'; if(iw) iw.style.display='block'; if(wq) wq.style.display='none'; }
     }catch(e){}
   }
   async function saveShopee(){
     var t=$('sp-token').value.trim();
     if(!t) return msg('sp-msg','err','Token kosong');
     try{ var r=await fetch('/api/merchant/shopee',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({token:t})});
-      var j=await r.json(); if(r.ok){ msg('sp-msg','ok','Token tersimpan ✓'+(j.merchant?' — '+j.merchant:'')); $('sp-token').value=''; loadShopee(); } else msg('sp-msg','err',j.error||'Gagal');
+      var j=await r.json(); if(r.ok){ msg('sp-msg','ok','Token tersimpan ✓'+(j.merchant?' — '+j.merchant:'')); $('sp-token').value=''; loadShopee(); setTimeout(function(){ var e=$('sp-msg'); if(e) e.innerHTML=''; },4500); } else msg('sp-msg','err',j.error||'Gagal');
     }catch(e){ msg('sp-msg','err',String(e)); }
   }
   async function clearShopee(){

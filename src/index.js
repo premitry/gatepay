@@ -570,6 +570,8 @@ app.get('/api/merchant/shopee', async (c) => {
     status: m ? (m.shopee_token_status || (tok ? 'ok' : null)) : null,
     checked_at: m ? m.shopee_checked_at || null : null,
     merchant: mname,
+    has_qris: !!merchant.qris_static,
+    qris_is_shopee: /SHOPEE/i.test(merchant.qris_static || ''),
   });
 });
 
@@ -950,14 +952,21 @@ async function checkShopeePay(env, merchant, order) {
 }
 
 // Probe token saat disimpan: validasi live + ambil nama merchant. Return {ok, merchant}.
+// Pakai window luas (180 hari) supaya nama merchant tetap kebaca walau tak ada transaksi baru.
 async function shopeeProbe(token) {
   if (!SHOPEE_CFG) return { ok: true, merchant: null };
   try {
-    const res = await fetch(SHOPEE_CFG.url, {
-      method: SHOPEE_CFG.method || 'POST',
-      headers: SHOPEE_CFG.headers(token),
-      body: (SHOPEE_CFG.method === 'GET') ? undefined : SHOPEE_CFG.body(token),
+    const s = now();
+    const body = JSON.stringify({
+      data: {
+        metadata: { token: spBtoken(token), language: 'id', timezone: 'Asia/Jakarta' },
+        pageSize: 5,
+        filter: { startTime: s - 180 * 86400, endTime: s + 300, serviceList: [1, 3] },
+        sorter: { field: 'createTime', order: 'descend' },
+        next_position: '',
+      },
     });
+    const res = await fetch(SHOPEE_CFG.url, { method: 'POST', headers: SHOPEE_CFG.headers(token), body });
     if (!res.ok) return { ok: false };
     const data = await res.json().catch(() => null);
     if (!data || data.code !== 0) return { ok: false };
