@@ -715,12 +715,12 @@ app.get('/api/merchant/gopay', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   await ensureGopayColumns(c.env.DB);
-  const m = await c.env.DB.prepare('SELECT gopay_refresh, gopay_token_status, gopay_checked_at, gopay_merchant FROM merchants WHERE id = ?')
+  const m = await c.env.DB.prepare('SELECT gopay_email, gopay_token_status, gopay_checked_at, gopay_merchant FROM merchants WHERE id = ?')
     .bind(merchant.id).first();
-  const enabled = !!(m && m.gopay_refresh);
+  const enabled = !!(m && m.gopay_email && m.gopay_email !== 'gobiz');
   return json(c, {
     enabled,
-    email_preview: null,
+    email_preview: enabled ? maskEmail(m.gopay_email) : null,
     status: m ? (m.gopay_token_status || (enabled ? 'ok' : null)) : null,
     checked_at: m ? m.gopay_checked_at || null : null,
     merchant: m ? m.gopay_merchant || null : null,
@@ -734,29 +734,18 @@ app.post('/api/merchant/gopay', async (c) => {
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   await ensureGopayColumns(c.env.DB);
   const body = await c.req.json().catch(() => ({}));
-  let refresh = String(body.refresh_token || '').trim();
-  if (!refresh) return json(c, { error: 'refresh_token tidak boleh kosong' }, 400);
-  // Auto-strip: kalau user copy "refresh_token=xxx" dari cookie/DevTools, ambil xxx saja.
-  // Juga kalau copy full JSON, coba parse.
-  if (refresh.includes('=') && !refresh.startsWith('eyJ')) {
-    const parts = refresh.split('=');
-    if (parts.length >= 2) refresh = parts.slice(1).join('=').trim();
-    try { refresh = decodeURIComponent(refresh); } catch {}
-  }
-  if (refresh.startsWith('{')) {
-    try { const j = JSON.parse(refresh); if (j.refresh_token) refresh = String(j.refresh_token); } catch {}
-  }
-  refresh = refresh.replace(/^["']|["']$/g, '').trim(); // hilangkan quote di awal/akhir
-  if (refresh.length > 4096) return json(c, { error: 'refresh_token terlalu panjang' }, 400);
-  // Uji-coba unique_id user (kalau dikasih) — GoBiz kadang mengikat token ke unique_id.
-  const suppliedUid = body.unique_id ? String(body.unique_id).trim() : null;
-  // Validasi live: tukar refresh_token dgn access_token baru
-  let sess, rawErr = null;
+  const email = String(body.email || '').trim().toLowerCase();
+  const password = String(body.password || '');
+  if (!email || !password) return json(c, { error: 'Email dan password wajib diisi' }, 400);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(c, { error: 'Format email tidak valid' }, 400);
+  if (password.length > 200) return json(c, { error: 'Password terlalu panjang' }, 400);
+  // Login via password grant → dapat access_token + refresh_token
+  let sess;
   try {
-    sess = await gopayRefresh(refresh, suppliedUid);
+    sess = await gopayLogin(email, password);
   } catch (e) {
-    rawErr = e && e.message ? e.message : 'error';
-    return json(c, { error: 'Refresh gagal: ' + rawErr + '. Kemungkinan: (1) yang dicopy bukan refresh_token asli — ambil dari tab Network → response endpoint /goid/token, (2) token sudah expired, atau (3) token terikat unique_id browser (butuh field x-uniqueid).' }, 400);
+    const msg = e && e.message ? e.message : 'error';
+    return json(c, { error: 'Login gagal: ' + msg }, 400);
   }
   // Resolve merchant_id + nama
   let mname = null, mid = null;
@@ -764,13 +753,14 @@ app.post('/api/merchant/gopay', async (c) => {
     const rr = await gopayResolveMerchant(sess.access_token, sess.unique_id);
     mid = rr.merchant_id; mname = rr.merchant_name;
   } catch (e) {
-    return json(c, { error: 'Login berhasil tetapi gagal mengambil merchant. Akun harus terdaftar sebagai GoPay Merchant.' }, 400);
+    return json(c, { error: 'Login berhasil, tetapi gagal mengambil merchant. Akun harus terdaftar sebagai GoPay Merchant.' }, 400);
   }
   const expires = now() + Number(sess.expires_in || 3600);
-  const encRef = await encField(c.env, sess.refresh_token);
-  const encTok = await encField(c.env, sess.access_token);
-  await c.env.DB.prepare("UPDATE merchants SET gopay_email = ?, gopay_password = NULL, gopay_token = ?, gopay_refresh = ?, gopay_expires = ?, gopay_token_status = 'ok', gopay_checked_at = ?, gopay_merchant = ?, gopay_merchant_id = ?, gopay_unique_id = ? WHERE id = ?")
-    .bind(mname || 'gobiz', encTok, encRef, expires, now(), mname, mid, sess.unique_id, merchant.id).run();
+  const encPwd = await encField(c.env, password);
+  const encRef = sess.refresh_token ? await encField(c.env, sess.refresh_token) : null;
+  const encTok = sess.access_token ? await encField(c.env, sess.access_token) : null;
+  await c.env.DB.prepare("UPDATE merchants SET gopay_email = ?, gopay_password = ?, gopay_token = ?, gopay_refresh = ?, gopay_expires = ?, gopay_token_status = 'ok', gopay_checked_at = ?, gopay_merchant = ?, gopay_merchant_id = ?, gopay_unique_id = ? WHERE id = ?")
+    .bind(email, encPwd, encTok, encRef, expires, now(), mname, mid, sess.unique_id, merchant.id).run();
   return json(c, { ok: true, enabled: true, merchant: mname });
 });
 
@@ -1141,16 +1131,26 @@ function gpAuthHeaders(uniqueId, accessToken) {
     'Accept-Language': 'id',
     'Authentication-Type': 'go-id',
     'Authorization': accessToken ? `Bearer ${accessToken}` : 'Bearer',
+    'Connection': 'keep-alive',
     'Content-Type': 'application/json',
     'Gojek-Country-Code': 'ID',
     'Gojek-Timezone': 'Asia/Jakarta',
     'Origin': 'https://portal.gofoodmerchant.co.id',
     'Referer': 'https://portal.gofoodmerchant.co.id/',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36',
-    'X-AppVersion': 'platform-v3.107.0-94ce5d57',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'cross-site',
+    'Sec-GPC': '1',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36',
+    'X-AppVersion': 'platform-v3.111.0-1708bc9a',
+    'X-PhoneMake': 'Windows 10 64-bit',
+    'X-PhoneModel': 'Chrome 150.0.0.0 on Windows 10 64-bit',
     'X-Platform': 'Web',
     'X-User-Locale': 'en-US',
     'X-User-Type': 'merchant',
+    'sec-ch-ua': '"Not;A=Brand";v="8", "Chromium";v="150", "Brave";v="150"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
     'x-DeviceOS': 'Web',
     'x-appId': 'go-biz-web-dashboard',
     'x-uniqueid': uniqueId,
@@ -1288,21 +1288,35 @@ async function gopayProbe(email, password) {
 }
 
 async function gopayEnsureToken(env, merchant) {
-  if (!merchant.gopay_refresh) return null;
-  const grace = 300; // refresh 5 menit sebelum expired
+  if (!merchant.gopay_email) return null;
+  const grace = 300;
   if (merchant.gopay_token && merchant.gopay_expires && merchant.gopay_expires > now() + grace) {
     return { access_token: merchant.gopay_token, unique_id: merchant.gopay_unique_id, merchant_id: merchant.gopay_merchant_id };
   }
-  // Refresh access_token pakai refresh_token
-  try {
-    const r = await gopayRefresh(merchant.gopay_refresh, merchant.gopay_unique_id);
-    const exp = now() + Number(r.expires_in || 3600);
-    const eTok = await encField(env, r.access_token);
-    const eRef = await encField(env, r.refresh_token);
-    await env.DB.prepare("UPDATE merchants SET gopay_token=?, gopay_refresh=?, gopay_expires=?, gopay_unique_id=?, gopay_token_status='ok' WHERE id=?")
-      .bind(eTok, eRef, exp, r.unique_id, merchant.id).run();
-    return { access_token: r.access_token, unique_id: r.unique_id, merchant_id: merchant.gopay_merchant_id };
-  } catch {}
+  // Coba refresh_token dulu (lebih cepat)
+  if (merchant.gopay_refresh) {
+    try {
+      const r = await gopayRefresh(merchant.gopay_refresh, merchant.gopay_unique_id);
+      const exp = now() + Number(r.expires_in || 3600);
+      const eTok = await encField(env, r.access_token);
+      const eRef = await encField(env, r.refresh_token);
+      await env.DB.prepare("UPDATE merchants SET gopay_token=?, gopay_refresh=?, gopay_expires=?, gopay_unique_id=?, gopay_token_status='ok' WHERE id=?")
+        .bind(eTok, eRef, exp, r.unique_id, merchant.id).run();
+      return { access_token: r.access_token, unique_id: r.unique_id, merchant_id: merchant.gopay_merchant_id };
+    } catch {}
+  }
+  // Fallback: login ulang pakai password (kalau refresh gagal)
+  if (merchant.gopay_password) {
+    try {
+      const s = await gopayLogin(merchant.gopay_email, merchant.gopay_password, merchant.gopay_unique_id);
+      const exp = now() + Number(s.expires_in || 3600);
+      const eTok = await encField(env, s.access_token);
+      const eRef = s.refresh_token ? await encField(env, s.refresh_token) : null;
+      await env.DB.prepare("UPDATE merchants SET gopay_token=?, gopay_refresh=?, gopay_expires=?, gopay_unique_id=?, gopay_token_status='ok' WHERE id=?")
+        .bind(eTok, eRef, exp, s.unique_id, merchant.id).run();
+      return { access_token: s.access_token, unique_id: s.unique_id, merchant_id: merchant.gopay_merchant_id };
+    } catch {}
+  }
   await env.DB.prepare("UPDATE merchants SET gopay_token_status='dead' WHERE id=?").bind(merchant.id).run();
   return null;
 }
@@ -1414,7 +1428,7 @@ async function settleShopeeMatch(env, order, hit) {
 // Status order buat polling checkout (publik, hanya status)
 app.get('/pay/:id/status', async (c) => {
   const order = await c.env.DB.prepare(
-    `SELECT o.*, m.shopee_token, m.shopee_token_status, m.gopay_email, m.gopay_password, m.gopay_token, m.gopay_refresh, m.gopay_expires, m.gopay_token_status, m.gopay_unique_id, m.gopay_merchant_id
+    `SELECT o.*, m.shopee_token, m.shopee_token_status, m.gopay_email, m.gopay_password, m.gopay_token, m.gopay_refresh, m.gopay_expires, m.gopay_token_status, m.gopay_unique_id, m.gopay_merchant_id, m.gopay_merchant
      FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id WHERE o.id = ?`,
   )
     .bind(c.req.param('id'))
@@ -1441,11 +1455,12 @@ app.get('/pay/:id/status', async (c) => {
   }
   // Jalur GoPay opsional — sama polanya
   const gpLast = _gpThrottle.get(order.id) || 0;
-  if (order.status === 'pending' && order.gopay_refresh && Date.now() - gpLast >= 9000) {
+  if (order.status === 'pending' && order.gopay_email && order.gopay_email !== 'gobiz' && Date.now() - gpLast >= 9000) {
     _gpThrottle.set(order.id, Date.now());
     const gpTok = await decField(c.env, order.gopay_token);
     const gpRef = await decField(c.env, order.gopay_refresh);
-    const r = await checkGoPay(c.env, { id: order.merchant_id, gopay_token: gpTok, gopay_refresh: gpRef, gopay_expires: order.gopay_expires, gopay_unique_id: order.gopay_unique_id, gopay_merchant_id: order.gopay_merchant_id }, order);
+    const gpPwd = await decField(c.env, order.gopay_password);
+    const r = await checkGoPay(c.env, { id: order.merchant_id, gopay_email: order.gopay_email, gopay_password: gpPwd, gopay_token: gpTok, gopay_refresh: gpRef, gopay_expires: order.gopay_expires, gopay_unique_id: order.gopay_unique_id, gopay_merchant_id: order.gopay_merchant_id }, order);
     if (r.matched) {
       const eid = await settleGopayMatch(c.env, order, r);
       c.executionCtx.waitUntil(fireCallback(c.env, order, eid));
