@@ -423,20 +423,18 @@ export function renderDashboard() {
           </div>
 
           <div class="panel">
-            <h2>GOPAY MERCHANT · Login Opsional</h2>
+            <h2>GOPAY MERCHANT · Token Opsional</h2>
             <div class="dim" style="margin-bottom:8px">Konfirmasi pembayaran GoPay <b>tanpa HP</b>. Kosongkan → menggunakan APK catcher (default).</div>
             <div id="gp-status" class="spstat" style="margin-bottom:10px"></div>
             <div id="gp-inputwrap">
-              <a class="lnk" onclick="goTutorGopay()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara setup akun GoPay Merchant → buka Tutorial</a>
-              <label>Email akun GoPay Merchant</label>
-              <input id="gp-email" type="email" placeholder="[email protected]" autocomplete="off">
-              <label style="margin-top:6px">Password</label>
-              <input id="gp-pass" type="password" placeholder="••••••••" autocomplete="new-password">
+              <a class="lnk" onclick="goTutorGopay()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara mengambil refresh_token → buka Tutorial</a>
+              <label>Refresh Token GoBiz</label>
+              <textarea id="gp-refresh" placeholder="tempel nilai refresh_token dari DevTools portal GoBiz…" rows="2" style="height:46px;min-height:46px;resize:vertical"></textarea>
               <div style="margin-top:6px"><button onclick="saveGopay()">Simpan &amp; Hubungkan</button></div>
             </div>
             <button class="sec" id="gp-clearbtn" onclick="clearGopay()" style="display:none">🗑 Putuskan</button>
             <div class="msg" id="gp-msg"></div>
-            <div class="dim" style="font-size:11px;margin-top:6px">⚠ Kredensial dienkripsi AES-GCM &amp; hanya dipakai untuk login otomatis ke portal GoBiz. Token GoPay pendek → sistem auto-refresh. <a href="/privasi" target="_blank">Baca risiko selengkapnya ↗</a></div>
+            <div class="dim" style="font-size:11px;margin-top:6px">⚠ Refresh_token dienkripsi AES-GCM. GatePay auto-refresh sendiri, jadi paste sekali dan awet lama. <a href="/privasi" target="_blank">Baca risiko selengkapnya ↗</a></div>
           </div>
         </div>
       </section>
@@ -620,13 +618,13 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <div class="stepnum">B</div>
             <div class="stepbody">
               <h4>🟢 GoPay Merchant <span class="dim" style="font-size:11px">(tanpa HP)</span></h4>
-              <p>Khusus <b>GoPay Merchant</b> (GoBiz). Cukup masukkan <b>email</b> &amp; <b>password</b> akun GoPay Merchant Anda — GatePay login otomatis ke portal GoBiz, mengambil mutasi, lalu mencocokkan dengan order. Sistem <b>auto-refresh</b> saat token GoPay habis (jadi hands-off).</p>
+              <p>Khusus <b>GoPay Merchant</b> (GoBiz). Tempel <b>refresh_token</b> dari portal GoBiz — GatePay otomatis mengambil access_token, memeriksa mutasi, dan mencocokkan dengan order. Refresh_token biasanya awet lama (mingguan-bulanan) dan diperbarui otomatis tiap dipakai, jadi <b>paste sekali &amp; awet</b>.</p>
               <ol>
-                <li>Pastikan Anda sudah memiliki akun <b>GoPay Merchant</b>. Login/daftar di <a href="https://portal.gofoodmerchant.co.id/" target="_blank" rel="noopener">portal.gofoodmerchant.co.id ↗</a> atau <a href="https://gobiz.co.id/" target="_blank" rel="noopener">gobiz.co.id ↗</a>.</li>
-                <li>Buka menu <b>QRIS &amp; Order</b> → panel <b>GoPay Merchant</b>.</li>
-                <li>Masukkan email &amp; password → <b>Simpan &amp; Hubungkan</b>.</li>
+                <li>Login ke portal <a href="https://portal.gofoodmerchant.co.id/" target="_blank" rel="noopener">portal.gofoodmerchant.co.id ↗</a> (via password atau OTP).</li>
+                <li>Tekan <b>F12</b> → tab <b>Application</b> → <b>Local Storage</b> → cari key yang mengandung <code>refresh_token</code> (biasanya di storage <code>portal.gofoodmerchant.co.id</code>), <b>atau</b> tab <b>Network</b> → cari request ke <code>api.gobiz.co.id/goid/token</code> → di <b>Response</b> ambil nilai field <code>refresh_token</code>.</li>
+                <li>Salin nilainya, lalu buka menu <b>QRIS &amp; Order</b> → panel <b>GoPay Merchant</b> → tempel → <b>Simpan &amp; Hubungkan</b>.</li>
               </ol>
-              <div class="warnbox">⚠ Menggunakan API internal GoBiz (tidak resmi). Kredensial disimpan aman dan hanya dipakai untuk login otomatis. Ada risiko ToS akun GoPay.</div>
+              <div class="warnbox">⚠ Menggunakan API internal GoBiz (tidak resmi). Refresh_token dienkripsi AES-GCM. Jika token mati, catcher HP otomatis mengambil alih. Ada risiko ToS akun GoPay.</div>
               <button class="sec" onclick="go('qris')">Buka panel GoPay →</button>
             </div>
           </div>
@@ -1002,17 +1000,17 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       if(j.enabled){
         var nm=j.merchant?escj(j.merchant):null;
         var note=(j.has_qris && !j.qris_is_gopay)?'<br><span style="font-weight:400;font-size:11px;color:var(--accent)">⚠ QRIS tersimpan bukan GoPay — pembayaran tetap terdeteksi lewat APK catcher.</span>':'';
-        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● KONEKSI GAGAL'+(nm?' ('+nm+')':'')+' — email/password mungkin berubah. Sementara itu GoPay menggunakan APK catcher.'; if(iw) iw.style.display='block'; }
-        else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG'+(nm?' — <b>'+nm+'</b>':'')+'<br><span style="font-weight:400;font-size:11px">GoPay dikonfirmasi server-side (tanpa HP). Akun: '+escj(j.email_preview||'-')+'</span>'+note; if(iw) iw.style.display='none'; }
+        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● TOKEN MATI'+(nm?' ('+nm+')':'')+' — ambil refresh_token baru dari portal GoBiz lalu tempel ulang. Sementara itu GoPay menggunakan APK catcher.'; if(iw) iw.style.display='block'; }
+        else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG'+(nm?' — <b>'+nm+'</b>':'')+'<br><span style="font-weight:400;font-size:11px">GoPay dikonfirmasi server-side (tanpa HP).</span>'+note; if(iw) iw.style.display='none'; }
         if(cb) cb.style.display='inline-block';
       } else { el.className='spstat off'; el.innerHTML='○ Belum terhubung — GoPay menggunakan APK catcher (default).'; if(cb) cb.style.display='none'; if(iw) iw.style.display='block'; }
     }catch(e){}
   }
   async function saveGopay(){
-    var em=$('gp-email').value.trim(), pw=$('gp-pass').value;
-    if(!em||!pw) return msg('gp-msg','err','Email dan password wajib diisi');
-    try{ var r=await fetch('/api/merchant/gopay',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({email:em,password:pw})});
-      var j=await r.json(); if(r.ok){ msg('gp-msg','ok','Terhubung ✓'+(j.merchant?' — '+j.merchant:'')); $('gp-email').value=''; $('gp-pass').value=''; loadGopay(); setTimeout(function(){ var e=$('gp-msg'); if(e) e.innerHTML=''; },4500); } else msg('gp-msg','err',j.error||'Gagal');
+    var t=$('gp-refresh').value.trim();
+    if(!t) return msg('gp-msg','err','refresh_token tidak boleh kosong');
+    try{ var r=await fetch('/api/merchant/gopay',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({refresh_token:t})});
+      var j=await r.json(); if(r.ok){ msg('gp-msg','ok','Terhubung ✓'+(j.merchant?' — '+j.merchant:'')); $('gp-refresh').value=''; loadGopay(); setTimeout(function(){ var e=$('gp-msg'); if(e) e.innerHTML=''; },4500); } else msg('gp-msg','err',j.error||'Gagal');
     }catch(e){ msg('gp-msg','err',String(e)); }
   }
   async function clearGopay(){
