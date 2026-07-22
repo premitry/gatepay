@@ -110,6 +110,7 @@ async function ensureShopeeColumns(DB) {
   try { await DB.prepare('ALTER TABLE merchants ADD COLUMN shopee_token TEXT').run(); } catch {}
   try { await DB.prepare('ALTER TABLE merchants ADD COLUMN shopee_token_status TEXT').run(); } catch {}
   try { await DB.prepare('ALTER TABLE merchants ADD COLUMN shopee_checked_at INTEGER').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN shopee_merchant TEXT').run(); } catch {}
   _shopeeReady = true;
 }
 const DEFAULT_TTL = 900; // 15 menit
@@ -551,14 +552,24 @@ app.get('/api/merchant/shopee', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   await ensureShopeeColumns(c.env.DB);
-  const m = await c.env.DB.prepare('SELECT shopee_token, shopee_token_status, shopee_checked_at FROM merchants WHERE id = ?')
+  const m = await c.env.DB.prepare('SELECT shopee_token, shopee_token_status, shopee_checked_at, shopee_merchant FROM merchants WHERE id = ?')
     .bind(merchant.id).first();
   const tok = m && m.shopee_token ? String(m.shopee_token) : '';
+  let mname = m ? m.shopee_merchant || null : null;
+  // Backfill nama merchant sekali kalau token aktif tapi nama belum tersimpan
+  if (tok && !mname && (m.shopee_token_status || 'ok') === 'ok' && SHOPEE_CFG) {
+    const probe = await shopeeProbe(tok);
+    if (probe.ok && probe.merchant) {
+      mname = probe.merchant;
+      await c.env.DB.prepare('UPDATE merchants SET shopee_merchant = ? WHERE id = ?').bind(mname, merchant.id).run();
+    }
+  }
   return json(c, {
     enabled: !!tok,
     token_preview: tok ? tok.slice(0, 6) + '…' + tok.slice(-4) : null,
     status: m ? (m.shopee_token_status || (tok ? 'ok' : null)) : null,
     checked_at: m ? m.shopee_checked_at || null : null,
+    merchant: mname,
   });
 });
 
@@ -578,16 +589,21 @@ app.post('/api/merchant/shopee', async (c) => {
   if (!bt || !bt.startsWith('B:')) {
     return json(c, { error: 'Token tidak dapat dibaca (proses decode gagal). Pastikan Anda menyalin Value cookie secara lengkap dan tidak terpotong.' }, 400);
   }
-  await c.env.DB.prepare("UPDATE merchants SET shopee_token = ?, shopee_token_status = 'ok', shopee_checked_at = ? WHERE id = ?")
-    .bind(token, now(), merchant.id).run();
-  return json(c, { ok: true, enabled: true });
+  // Validasi live ke ShopeePay + ambil nama merchant
+  const probe = await shopeeProbe(token);
+  if (!probe.ok) {
+    return json(c, { error: 'Token tidak valid atau sudah expired. Ambil cookie baru dari portal ShopeePay Partner, lalu tempel lagi.' }, 400);
+  }
+  await c.env.DB.prepare("UPDATE merchants SET shopee_token = ?, shopee_token_status = 'ok', shopee_checked_at = ?, shopee_merchant = ? WHERE id = ?")
+    .bind(token, now(), probe.merchant || null, merchant.id).run();
+  return json(c, { ok: true, enabled: true, merchant: probe.merchant || null });
 });
 
 app.post('/api/merchant/shopee/clear', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   await ensureShopeeColumns(c.env.DB);
-  await c.env.DB.prepare('UPDATE merchants SET shopee_token = NULL, shopee_token_status = NULL, shopee_checked_at = NULL WHERE id = ?')
+  await c.env.DB.prepare('UPDATE merchants SET shopee_token = NULL, shopee_token_status = NULL, shopee_checked_at = NULL, shopee_merchant = NULL WHERE id = ?')
     .bind(merchant.id).run();
   return json(c, { ok: true, enabled: false });
 });
@@ -930,6 +946,26 @@ async function checkShopeePay(env, merchant, order) {
     return { matched: false };
   } catch {
     return { matched: false };
+  }
+}
+
+// Probe token saat disimpan: validasi live + ambil nama merchant. Return {ok, merchant}.
+async function shopeeProbe(token) {
+  if (!SHOPEE_CFG) return { ok: true, merchant: null };
+  try {
+    const res = await fetch(SHOPEE_CFG.url, {
+      method: SHOPEE_CFG.method || 'POST',
+      headers: SHOPEE_CFG.headers(token),
+      body: (SHOPEE_CFG.method === 'GET') ? undefined : SHOPEE_CFG.body(token),
+    });
+    if (!res.ok) return { ok: false };
+    const data = await res.json().catch(() => null);
+    if (!data || data.code !== 0) return { ok: false };
+    const list = (data.data && data.data.list) || [];
+    const merchant = list.length ? (list[0].merchantName || list[0].storeName || null) : null;
+    return { ok: true, merchant };
+  } catch {
+    return { ok: false };
   }
 }
 

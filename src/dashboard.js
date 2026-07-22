@@ -392,13 +392,13 @@ export function renderDashboard() {
           <h2>SHOPEEPAY PARTNER · Token Opsional</h2>
           <div class="dim" style="margin-bottom:8px">Konfirmasi pembayaran ShopeePay <b>tanpa HP</b>. Kosongkan → menggunakan APK catcher (default).</div>
           <div id="sp-status" class="spstat" style="margin-bottom:10px"></div>
-          <a class="lnk" onclick="goTutorShopee()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara mengambil token → buka Tutorial</a>
-          <label>Cookie token (diawali "eyJ")</label>
-          <textarea id="sp-token" placeholder="eyJhbGciOi…"></textarea>
-          <div style="display:flex;gap:8px">
-            <button onclick="saveShopee()">Simpan Token</button>
-            <button class="sec" id="sp-clearbtn" onclick="clearShopee()" style="display:none">🗑 Hapus</button>
+          <div id="sp-inputwrap">
+            <a class="lnk" onclick="goTutorShopee()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara mengambil token → buka Tutorial</a>
+            <label>Cookie token (diawali "eyJ")</label>
+            <textarea id="sp-token" placeholder="eyJhbGciOi…" rows="2" style="height:46px;min-height:46px;resize:vertical"></textarea>
+            <div style="margin-top:6px"><button onclick="saveShopee()">Simpan Token</button></div>
           </div>
+          <button class="sec" id="sp-clearbtn" onclick="clearShopee()" style="display:none">🗑 Hapus Token</button>
           <div class="msg" id="sp-msg"></div>
           <div class="dim" style="font-size:11px;margin-top:6px">⚠ Token dapat expired. Jika mati, APK catcher otomatis mengambil alih.</div>
         </div>
@@ -910,19 +910,20 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function goTutorShopee(){ go('tutor'); setTimeout(function(){ var d=$('tut-shopee'); if(d){ d.open=true; d.scrollIntoView({behavior:'smooth',block:'start'}); } },140); }
   async function loadShopee(){
     try{ var j=await (await fetch('/api/merchant/shopee',{headers:{'x-api-key':key()},cache:'no-store'})).json();
-      var el=$('sp-status'); var cb=$('sp-clearbtn');
+      var el=$('sp-status'); var cb=$('sp-clearbtn'); var iw=$('sp-inputwrap');
       if(j.enabled){
-        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● TOKEN MATI — ambil cookie baru lalu simpan ulang. Sementara itu ShopeePay menggunakan APK catcher.'; }
-        else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG — ShopeePay dikonfirmasi server-side (tanpa HP). Token: '+(j.token_preview||'-'); }
+        var nm=j.merchant?escj(j.merchant):null;
+        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● TOKEN MATI'+(nm?' ('+nm+')':'')+' — ambil cookie baru lalu simpan ulang. Sementara itu ShopeePay menggunakan APK catcher.'; if(iw) iw.style.display='block'; }
+        else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG'+(nm?' — <b>'+nm+'</b>':'')+'<br><span style="font-weight:400;font-size:11px">ShopeePay dikonfirmasi server-side (tanpa HP).</span>'; if(iw) iw.style.display='none'; }
         if(cb) cb.style.display='inline-block';
-      } else { el.className='spstat off'; el.innerHTML='○ Belum terhubung — ShopeePay menggunakan APK catcher (default).'; if(cb) cb.style.display='none'; }
+      } else { el.className='spstat off'; el.innerHTML='○ Belum terhubung — ShopeePay menggunakan APK catcher (default).'; if(cb) cb.style.display='none'; if(iw) iw.style.display='block'; }
     }catch(e){}
   }
   async function saveShopee(){
     var t=$('sp-token').value.trim();
     if(!t) return msg('sp-msg','err','Token kosong');
     try{ var r=await fetch('/api/merchant/shopee',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({token:t})});
-      var j=await r.json(); if(r.ok){ msg('sp-msg','ok','Token tersimpan ✓ — ShopeePay kini dikonfirmasi server-side juga'); $('sp-token').value=''; loadShopee(); } else msg('sp-msg','err',j.error||'gagal');
+      var j=await r.json(); if(r.ok){ msg('sp-msg','ok','Token tersimpan ✓'+(j.merchant?' — '+j.merchant:'')); $('sp-token').value=''; loadShopee(); } else msg('sp-msg','err',j.error||'Gagal');
     }catch(e){ msg('sp-msg','err',String(e)); }
   }
   async function clearShopee(){
