@@ -855,7 +855,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       try{
         var d=ctx.getImageData(0,0,w,h);
         var code=jsQR(d.data,w,h,{inversionAttempts:'attemptBoth'});
-        if(code&&code.data){ $('qris').value=code.data; $('qrprev').src=img.src; $('qrprev').style.display='block'; msg('qmsg','ok','QR berhasil di-decode ✓ — periksa lalu Simpan'); }
+        if(code&&code.data){ $('qris').value=code.data; msg('qmsg','ok','QR berhasil di-decode ✓ — periksa lalu Simpan'); }
         else msg('qmsg','err','QR tidak terbaca. Coba foto lebih jelas / crop.');
       }catch(e){ msg('qmsg','err','Gagal membaca gambar: '+e); }
     };
