@@ -250,6 +250,10 @@ export function renderDashboard() {
       <label>Password</label>
       <input id="p" type="password" placeholder="password" autocomplete="current-password">
       <div id="fa2-wrap" class="hidden"><label>Kode 2FA (authenticator)</label><input id="fa2" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code"></div>
+      <label id="tos-wrap" class="hidden" style="display:none;flex-direction:row;align-items:flex-start;gap:8px;font-size:12px;color:var(--dim);margin-top:10px;text-transform:none;letter-spacing:0;font-weight:400;cursor:pointer">
+        <input id="tos" type="checkbox" style="width:auto;margin:2px 0 0;flex:0 0 auto">
+        <span>Dengan mendaftar, saya menyetujui <a href="/privasi" target="_blank">Ketentuan Layanan &amp; Kebijakan Privasi</a>, termasuk risiko integrasi opsional (ShopeePay/GoPay).</span>
+      </label>
       <button id="authbtn" onclick="doAuth()">Masuk</button>
       <div class="msg" id="amsg"></div>
       <div class="dim" style="font-size:11px;margin-top:14px" id="reghint"></div>
@@ -415,7 +419,7 @@ export function renderDashboard() {
             </div>
             <button class="sec" id="sp-clearbtn" onclick="clearShopee()" style="display:none">🗑 Hapus Token</button>
             <div class="msg" id="sp-msg"></div>
-            <div class="dim" style="font-size:11px;margin-top:6px">⚠ Token dapat expired. Jika mati, APK catcher otomatis mengambil alih.</div>
+            <div class="dim" style="font-size:11px;margin-top:6px">⚠ Token dapat expired. Jika mati, APK catcher otomatis mengambil alih. Token dienkripsi AES-GCM. <a href="/privasi" target="_blank">Baca risiko selengkapnya ↗</a></div>
           </div>
 
           <div class="panel">
@@ -432,7 +436,7 @@ export function renderDashboard() {
             </div>
             <button class="sec" id="gp-clearbtn" onclick="clearGopay()" style="display:none">🗑 Putuskan</button>
             <div class="msg" id="gp-msg"></div>
-            <div class="dim" style="font-size:11px;margin-top:6px">⚠ Kredensial disimpan aman &amp; hanya dipakai untuk login otomatis ke portal GoBiz. Token GoPay pendek → sistem auto-refresh.</div>
+            <div class="dim" style="font-size:11px;margin-top:6px">⚠ Kredensial dienkripsi AES-GCM &amp; hanya dipakai untuk login otomatis ke portal GoBiz. Token GoPay pendek → sistem auto-refresh. <a href="/privasi" target="_blank">Baca risiko selengkapnya ↗</a></div>
           </div>
         </div>
       </section>
@@ -601,7 +605,13 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
             <div class="stepnum">A</div>
             <div class="stepbody">
               <h4>🛍 Token ShopeePay Partner <span class="dim" style="font-size:11px">(tanpa HP)</span></h4>
-              <p>Khusus <b>ShopeePay Partner</b>. Dengan token cookie, pembayaran ShopeePay dikonfirmasi <b>server-side</b> tanpa HP. Cara mengambil: buka <b>partner.shopee.co.id</b> (login) → <b>F12</b> → tab <b>Application</b> → <b>Cookies</b> → salin <b>Value</b> dari <code>__shopee_partner_website_x_token_live</code> (diawali <code>eyJ</code>) → tempel di panel <b>ShopeePay Partner</b> (menu QRIS &amp; Order).</p>
+              <p>Khusus <b>ShopeePay Partner</b>. Dengan token cookie, pembayaran ShopeePay dikonfirmasi <b>server-side</b> tanpa HP. Cara mengambil:</p>
+              <ol>
+                <li>Buka portal <a href="https://partner.shopee.co.id/" target="_blank" rel="noopener">partner.shopee.co.id ↗</a> lalu login.</li>
+                <li>Tekan <b>F12</b> → tab <b>Application</b> → <b>Cookies</b> → pilih <code>https://partner.shopee.co.id</code>.</li>
+                <li>Salin <b>Value</b> dari cookie <code>__shopee_partner_website_x_token_live</code> (diawali <code>eyJ</code>).</li>
+                <li>Tempel di panel <b>ShopeePay Partner</b> (menu QRIS &amp; Order) → <b>Simpan Token</b>.</li>
+              </ol>
               <div class="warnbox">⚠ Token tidak resmi &amp; dapat expired. Jika mati, catcher HP otomatis mengambil alih. Ada risiko ToS akun ShopeePay.</div>
               <button class="sec" onclick="go('qris')">Buka panel ShopeePay →</button>
             </div>
@@ -612,7 +622,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
               <h4>🟢 GoPay Merchant <span class="dim" style="font-size:11px">(tanpa HP)</span></h4>
               <p>Khusus <b>GoPay Merchant</b> (GoBiz). Cukup masukkan <b>email</b> &amp; <b>password</b> akun GoPay Merchant Anda — GatePay login otomatis ke portal GoBiz, mengambil mutasi, lalu mencocokkan dengan order. Sistem <b>auto-refresh</b> saat token GoPay habis (jadi hands-off).</p>
               <ol>
-                <li>Pastikan Anda memiliki akun <b>GoPay Merchant</b> (bisa daftar di GoBiz).</li>
+                <li>Pastikan Anda sudah memiliki akun <b>GoPay Merchant</b>. Login/daftar di <a href="https://portal.gofoodmerchant.co.id/" target="_blank" rel="noopener">portal.gofoodmerchant.co.id ↗</a> atau <a href="https://gobiz.co.id/" target="_blank" rel="noopener">gobiz.co.id ↗</a>.</li>
                 <li>Buka menu <b>QRIS &amp; Order</b> → panel <b>GoPay Merchant</b>.</li>
                 <li>Masukkan email &amp; password → <b>Simpan &amp; Hubungkan</b>.</li>
               </ol>
@@ -788,11 +798,13 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
 
   let mode='login';
   function switchTab(m){ mode=m; $('tab-login').className=m==='login'?'active':''; $('tab-reg').className=m==='reg'?'active':'';
-    $('authbtn').textContent=m==='login'?'Masuk':'Daftar'; $('reghint').textContent=m==='reg'?'Username 3-20 karakter (huruf/angka/_). Password min 6.':''; }
+    $('authbtn').textContent=m==='login'?'Masuk':'Daftar'; $('reghint').textContent=m==='reg'?'Username 3-20 karakter (huruf/angka/_). Password min 6.':'';
+    var tw=$('tos-wrap'); if(tw){ tw.style.display=(m==='reg')?'flex':'none'; if(m!=='reg'){ var t=$('tos'); if(t) t.checked=false; } } }
 
   async function doAuth(){
     var u=$('u').value.trim().toLowerCase(), p=$('p').value;
     if(!u||!p) return msg('amsg','err','Isi username & password');
+    if(mode==='reg' && !$('tos').checked) return msg('amsg','err','Anda harus menyetujui Ketentuan Layanan & Kebijakan Privasi');
     var payload={username:u,password:p};
     if(mode==='login' && !$('fa2-wrap').classList.contains('hidden')) payload.totp=$('fa2').value.trim();
     try{

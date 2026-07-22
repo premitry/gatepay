@@ -156,7 +156,7 @@ export function renderLanding() {
 
 <footer><div class="wrap">
   <div class="logo" style="font-size:14px"><span class="mark">G</span>GatePay</div>
-  <div>© 2026 GatePay · <a href="/docs">Docs</a> · <a href="/dashboard">Dashboard</a></div>
+  <div>© 2026 GatePay · <a href="/docs">Docs</a> · <a href="/dashboard">Dashboard</a> · <a href="/privasi">Ketentuan &amp; Privasi</a></div>
 </div></footer>
 </body></html>`;
 }
