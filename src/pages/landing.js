@@ -76,7 +76,8 @@ export function renderLanding() {
   .seclist{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;max-width:720px;margin:0 auto}
   .seci{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--text)}
   .seci .ck{color:var(--ok);font-weight:900;flex:0 0 auto}
-  .faq{max-width:760px;margin:0 auto}
+  #faq .wrap{max-width:720px}
+  .faq{margin:0}
   .faq details{background:var(--chrome);border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:6px}
   .faq summary{cursor:pointer;padding:9px 12px;font-weight:700;font-size:13px;list-style:none}
   .faq summary::-webkit-details-marker{display:none}
