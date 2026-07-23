@@ -375,6 +375,27 @@ async function requireMerchant(c) {
 // ─────────────────────────────────────────────────────────
 app.get('/health', (c) => json(c, { ok: true, ts: now() }));
 
+// Statistik global publik (agregat lintas semua merchant — tanpa data per-akun)
+app.get('/api/public/stats', async (c) => {
+  const t = now();
+  const wibMidnight = Math.floor((t + 7 * 3600) / 86400) * 86400 - 7 * 3600;
+  const row = await c.env.DB.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM orders WHERE status='paid') AS paid,
+       (SELECT COALESCE(SUM(base_amount),0) FROM orders WHERE status='paid') AS revenue,
+       (SELECT COUNT(*) FROM orders WHERE status='paid' AND paid_at >= ?) AS today,
+       (SELECT COUNT(*) FROM orders WHERE status='pending' AND expires_at > ?) AS pending,
+       (SELECT COUNT(*) FROM merchants) AS merchants`,
+  ).bind(wibMidnight, t).first().catch(() => null);
+  return c.body(JSON.stringify({
+    paid: row ? row.paid || 0 : 0,
+    revenue: row ? row.revenue || 0 : 0,
+    today: row ? row.today || 0 : 0,
+    pending: row ? row.pending || 0 : 0,
+    merchants: row ? row.merchants || 0 : 0,
+  }), 200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=30' });
+});
+
 // ─────────────────────────────────────────────────────────
 // Auth: register (daftar) + login (username/password)
 // ─────────────────────────────────────────────────────────

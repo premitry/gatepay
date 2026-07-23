@@ -99,6 +99,12 @@ export function renderLanding() {
   .faq summary:before{content:'▸ ';color:var(--title-a)}
   .faq details[open] summary:before{content:'▾ '}
   .faq details>div{padding:0 14px 12px;font-size:13px;color:var(--dim);line-height:1.6}
+  .gstats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--term-bg);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark)}
+  .gstat{padding:20px 14px;text-align:center;border-right:1px solid rgba(255,255,255,.12)}
+  .gstat:last-child{border-right:0}
+  .gn{font-family:'Michroma';font-size:22px;color:#8fe3f7;text-shadow:0 0 8px rgba(143,227,247,.4)}
+  .gl{font-size:11px;color:#aeb8e0;text-transform:uppercase;letter-spacing:.05em;margin-top:6px}
+  @media(max-width:640px){.gstats{grid-template-columns:1fr 1fr}.gstat{border-bottom:1px solid rgba(255,255,255,.12)}}
   .cta-box{background:var(--chrome);text-align:center}
   .cta-box .bd2{padding:44px 24px}
   .cta-box h2{font-size:24px;margin-bottom:12px;color:#12235c}
@@ -160,6 +166,21 @@ export function renderLanding() {
   </div>
   <div class="foot-note">Konfirmasi otomatis dalam hitungan detik.* Nominal dikunci di QRIS agar tidak salah bayar.</div>
 </div></header>
+
+<section id="statistik"><div class="wrap">
+  <div class="win out">
+    <div class="tt">STATISTIK_GLOBAL.LIVE</div>
+    <div class="bd2">
+      <div class="sec-title" style="margin-bottom:18px"><h2>Total di Seluruh GatePay</h2><p>Agregat semua merchant — diperbarui langsung.</p></div>
+      <div class="gstats">
+        <div class="gstat"><div class="gn" id="g-rev">—</div><div class="gl">Total Transaksi</div></div>
+        <div class="gstat"><div class="gn" id="g-today">—</div><div class="gl">Sukses Hari Ini</div></div>
+        <div class="gstat"><div class="gn" id="g-paid">—</div><div class="gl">Total Sukses</div></div>
+        <div class="gstat"><div class="gn" id="g-merch">—</div><div class="gl">Merchant Terdaftar</div></div>
+      </div>
+    </div>
+  </div>
+</div></section>
 
 <section id="cara-kerja"><div class="wrap">
   <div class="win out">
@@ -337,5 +358,17 @@ export function renderLanding() {
     <div>GatePay bukan bank / PJP / agregator resmi. Dana masuk langsung ke akun Anda.</div>
   </div>
 </div></footer>
+<script>
+  (function(){
+    function idr(n){ return 'Rp ' + (Number(n)||0).toLocaleString('id-ID'); }
+    fetch('/api/public/stats',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+      var set=function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
+      set('g-rev', idr(d.revenue));
+      set('g-today', (Number(d.today)||0).toLocaleString('id-ID'));
+      set('g-paid', (Number(d.paid)||0).toLocaleString('id-ID'));
+      set('g-merch', (Number(d.merchants)||0).toLocaleString('id-ID'));
+    }).catch(function(){});
+  })();
+</script>
 </body></html>`;
 }
