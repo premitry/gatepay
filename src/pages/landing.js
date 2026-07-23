@@ -76,9 +76,9 @@ export function renderLanding() {
   .seclist{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;max-width:720px;margin:0 auto}
   .seci{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--text)}
   .seci .ck{color:var(--ok);font-weight:900;flex:0 0 auto}
-  .faq{margin:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;align-items:start}
-  .faq details{background:var(--chrome);border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:6px}
-  .faq summary{cursor:pointer;padding:9px 12px;font-weight:700;font-size:13px;list-style:none}
+  .faq{margin:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;align-items:start}
+  .faq details{background:var(--chrome);border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:0}
+  .faq summary{cursor:pointer;padding:7px 11px;font-weight:700;font-size:12.5px;list-style:none}
   .faq summary::-webkit-details-marker{display:none}
   .faq summary:before{content:'▸ ';color:var(--title-a)}
   .faq details[open] summary:before{content:'▾ '}
