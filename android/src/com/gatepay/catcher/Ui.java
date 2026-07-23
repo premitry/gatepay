@@ -10,6 +10,7 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.view.Gravity;
 import android.view.View;
@@ -96,12 +97,30 @@ public final class Ui {
     }
 
     // ── Wallpaper desktop: gradient biru-toska + grid tipis ──
+    public static class GridDrawable extends Drawable {
+        private final Paint p = new Paint();
+        private final int step;
+        public GridDrawable(int stepPx) {
+            this.step = Math.max(8, stepPx);
+            p.setColor(0x30FFFFFF);
+            p.setStrokeWidth(1f);
+        }
+        @Override public void draw(Canvas c) {
+            Rect b = getBounds();
+            for (int x = b.left; x <= b.right; x += step) c.drawLine(x, b.top, x, b.bottom, p);
+            for (int y = b.top; y <= b.bottom; y += step) c.drawLine(b.left, y, b.right, y, p);
+        }
+        @Override public void setAlpha(int a) {}
+        @Override public void setColorFilter(ColorFilter cf) {}
+        @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
+    }
+
     public static Drawable desktop() {
         GradientDrawable g = new GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             new int[]{0xFF7FC6C9, 0xFF8EA8DC, 0xFF6F87C8});
         g.setCornerRadius(0f);
-        return g;
+        return new LayerDrawable(new Drawable[]{ g, new GridDrawable(44) });
     }
 
     // ── Window bertitle-bar ──
