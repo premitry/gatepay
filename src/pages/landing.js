@@ -35,12 +35,15 @@ export function renderLanding() {
   .btn.primary{background:linear-gradient(180deg,#4a86c8,#26379d);color:#fff;border-color:#7fb0e0 #141f5c #141f5c #7fb0e0}
   .btn.primary:active{border-color:#141f5c #7fb0e0 #7fb0e0 #141f5c}
   /* hero */
-  .hero{padding:64px 0 48px;text-align:center}
-  .badge{display:inline-block;padding:5px 14px;background:var(--term-bg);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);font-size:11px;color:var(--term-ok);margin-bottom:24px;letter-spacing:.06em;font-family:'Share Tech Mono',monospace}
-  h1{font-size:40px;line-height:1.15;margin-bottom:20px;color:#12235c;text-shadow:1px 1px 0 rgba(255,255,255,.5)}
+  .hero{padding:56px 0 44px;text-align:center}
+  .badge{display:inline-block;padding:5px 14px;background:var(--term-bg);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);font-size:11px;color:var(--term-ok);margin-bottom:40px;letter-spacing:.06em;font-family:'Share Tech Mono',monospace}
+  h1{font-size:42px;line-height:.98;margin:0 auto;max-width:900px;color:#12235c;text-shadow:1px 1px 0 rgba(255,255,255,.5)}
   h1 .hl{color:var(--accent)}
-  .sub{font-size:16px;color:#1c2740;max-width:620px;margin:0 auto 30px;font-family:Verdana,sans-serif}
-  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .hrule{width:80px;height:3px;margin:28px auto;background:#22d3ee;box-shadow:0 0 10px rgba(34,211,238,.85),0 0 3px rgba(34,211,238,1)}
+  .sub{font-size:16px;color:#1c2740;max-width:620px;margin:0 auto;line-height:1.7;font-family:Verdana,sans-serif}
+  .sub2{font-size:16px;color:#1c2740;max-width:620px;margin:18px auto 0;line-height:1.7;font-family:Verdana,sans-serif}
+  .hlb{color:var(--title-a);font-weight:700}
+  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:32px}
   .cta .btn{padding:13px 26px;font-size:14px}
   .stats{display:flex;margin:52px auto 0;max-width:640px;background:var(--chrome)}
   .stat{flex:1;padding:18px;border-right:2px solid var(--edge)}
@@ -48,10 +51,6 @@ export function renderLanding() {
   .stat .n{font-size:18px;font-family:'Michroma';color:var(--title-a)}
   .stat .l{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
   section{padding:24px 0}
-  .hlx{color:var(--title-a);font-weight:700}
-  .chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:22px auto 0;max-width:560px}
-  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text);background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge);padding:7px 12px}
-  .chip .d{width:8px;height:8px;background:var(--ok)}
   .win{background:var(--chrome);margin-bottom:0}
   .win .tt{background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;font-family:'Michroma';font-size:11px;padding:8px 14px;border-bottom:2px solid var(--edge-dark)}
   .win .bd2{padding:28px 24px}
@@ -87,13 +86,10 @@ export function renderLanding() {
 
 <header class="hero"><div class="wrap">
   <div class="badge">▮ GATEPAY · QRIS PAYMENT GATEWAY · INDONESIA</div>
-  <h1>Terima &amp; konfirmasi pembayaran <span class="hl">QRIS</span><br>secara otomatis.</h1>
-  <p class="sub">GatePay mengubah QRIS statis Anda menjadi QRIS dinamis bernominal terkunci, lalu mengonfirmasi setiap pembayaran yang masuk secara otomatis — dari <span class="hlx">notifikasi perangkat</span> hingga langsung dari akun <span class="hlx">ShopeePay Partner</span> dan <span class="hlx">GoPay Merchant</span> Anda. Tanpa pengecekan manual, tanpa salah nominal.</p>
-  <div class="chips">
-    <span class="chip"><span class="d"></span>📱 Notifikasi Perangkat</span>
-    <span class="chip"><span class="d"></span>🛍 ShopeePay Partner</span>
-    <span class="chip"><span class="d"></span>🟢 GoPay Merchant</span>
-  </div>
+  <h1>Terima &amp; konfirmasi<br>pembayaran <span class="hl">QRIS otomatis.</span></h1>
+  <div class="hrule"></div>
+  <p class="sub">Ubah QRIS statis menjadi QRIS dinamis dengan <span class="hlb">nominal unik</span> dan konfirmasi pembayaran <span class="hlb">otomatis</span>.</p>
+  <p class="sub2">Mendukung <span class="hlb">ShopeePay Partner</span>, <span class="hlb">GoPay Merchant</span>, dan <span class="hlb">notifikasi perangkat</span>.</p>
   <div class="cta">
     <a class="btn primary" href="/dashboard">Mulai Sekarang →</a>
     <a class="btn" href="/docs">Lihat Dokumentasi</a>
@@ -103,7 +99,6 @@ export function renderLanding() {
     <div class="stat"><div class="n">Real-time</div><div class="l">Konfirmasi otomatis</div></div>
     <div class="stat"><div class="n">ShopeePay + GoPay</div><div class="l">Deteksi server-side</div></div>
   </div>
-  <div class="warn">&gt; Nominal unik digunakan untuk pencocokan otomatis di setiap jalur konfirmasi.</div>
 </div></header>
 
 <section><div class="wrap">
