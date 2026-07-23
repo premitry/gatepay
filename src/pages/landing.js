@@ -49,23 +49,15 @@ export function renderLanding() {
   .cta .btn{padding:13px 26px;font-size:14px}
   .subcta{margin-top:12px;font-size:12px;color:#1c2740}
   .subcta b{color:var(--title-a)}
-  /* hero product mockup */
-  .mock{max-width:620px;margin:34px auto 0;background:var(--chrome)}
-  .mock .mtt{background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;font-family:'Share Tech Mono';font-size:11px;padding:7px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--edge-dark)}
-  .mock .mbody{display:grid;grid-template-columns:1fr 1fr;gap:0}
-  .mock .mL{padding:18px;text-align:center;border-right:2px solid var(--edge)}
-  .mock .mR{padding:18px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:8px}
-  .mq{width:128px;height:128px;margin:0 auto 10px;background:repeating-linear-gradient(0deg,#141f5c 0 6px,#fff 6px 12px),repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 6px,transparent 6px 12px);border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
-  .mlab{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
-  .mamt{font-family:'Share Tech Mono';font-size:26px;font-weight:700;color:var(--accent)}
-  .mrow{display:flex;align-items:center;gap:8px;font-size:13px}
-  .mdot{width:10px;height:10px;flex:0 0 auto}
-  .mdot.ok{background:var(--ok)}.mdot.blue{background:var(--title-b)}
-  .mrow.done{color:var(--ok);font-weight:700}
-  .mnote{font-size:11px;color:var(--dim);font-family:'Share Tech Mono';margin-top:2px}
-  .foot-note{max-width:620px;margin:12px auto 0;font-size:11px;color:#20304f;font-style:italic}
   section{padding:24px 0}
-  .win{background:var(--chrome);margin-bottom:0}
+  /* statistik global tanpa kotak */
+  .gstats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;max-width:860px;margin:0 auto}
+  .gstat{padding:14px 12px;text-align:center;border-right:2px solid rgba(84,81,74,.35)}
+  .gstat:last-child{border-right:0}
+  .gn{font-family:'Michroma';font-size:24px;color:#12235c;text-shadow:1px 1px 0 rgba(255,255,255,.5)}
+  .gl{font-size:11px;color:#1c2740;text-transform:uppercase;letter-spacing:.05em;margin-top:6px}
+  /* windows */
+  .win{background:var(--chrome)}
   .win .tt{background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;font-family:'Michroma';font-size:11px;padding:8px 14px;border-bottom:2px solid var(--edge-dark)}
   .win .bd2{padding:28px 24px}
   .sec-title{text-align:center;margin-bottom:26px}
@@ -81,30 +73,16 @@ export function renderLanding() {
   .feat .ic{font-size:22px;margin-bottom:10px}
   .feat h3{font-size:14px;margin-bottom:6px}
   .feat p{color:var(--dim);font-size:13px}
-  /* use case */
-  .ucs{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
-  .uc{display:inline-flex;align-items:center;gap:8px;background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge);padding:11px 16px;font-size:13px;font-weight:700}
-  /* security */
   .seclist{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;max-width:720px;margin:0 auto}
   .seci{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--text)}
   .seci .ck{color:var(--ok);font-weight:900;flex:0 0 auto}
-  /* pricing */
-  .price{text-align:center}
-  .price .big{font-family:'Michroma';font-size:34px;color:var(--ok);margin:6px 0}
-  .price .pl{color:var(--dim);font-size:13px;margin-bottom:18px}
-  /* faq */
   .faq details{background:var(--chrome);border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:8px}
   .faq summary{cursor:pointer;padding:11px 14px;font-weight:700;font-size:14px;list-style:none}
   .faq summary::-webkit-details-marker{display:none}
   .faq summary:before{content:'▸ ';color:var(--title-a)}
   .faq details[open] summary:before{content:'▾ '}
   .faq details>div{padding:0 14px 12px;font-size:13px;color:var(--dim);line-height:1.6}
-  .gstats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--term-bg);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark)}
-  .gstat{padding:20px 14px;text-align:center;border-right:1px solid rgba(255,255,255,.12)}
-  .gstat:last-child{border-right:0}
-  .gn{font-family:'Michroma';font-size:22px;color:#8fe3f7;text-shadow:0 0 8px rgba(143,227,247,.4)}
-  .gl{font-size:11px;color:#aeb8e0;text-transform:uppercase;letter-spacing:.05em;margin-top:6px}
-  @media(max-width:640px){.gstats{grid-template-columns:1fr 1fr}.gstat{border-bottom:1px solid rgba(255,255,255,.12)}}
+  .foot-note{text-align:center;margin:16px auto 0;font-size:11px;color:#20304f;font-style:italic;max-width:760px}
   .cta-box{background:var(--chrome);text-align:center}
   .cta-box .bd2{padding:44px 24px}
   .cta-box h2{font-size:24px;margin-bottom:12px;color:#12235c}
@@ -118,14 +96,14 @@ export function renderLanding() {
   .fbrand p{font-size:12px;color:var(--dim);margin-top:8px;max-width:240px;line-height:1.6}
   .fbot{border-top:1px solid var(--edge);padding-top:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
   @media(max-width:820px){.fcols{grid-template-columns:1fr 1fr}}
-  @media(max-width:720px){.steps,.feats{grid-template-columns:1fr}.mock .mbody{grid-template-columns:1fr}.mock .mL{border-right:0;border-bottom:2px solid var(--edge)}.seclist{grid-template-columns:1fr}}
+  @media(max-width:720px){.steps,.feats{grid-template-columns:1fr}.seclist{grid-template-columns:1fr}}
+  @media(max-width:640px){.gstats{grid-template-columns:1fr 1fr}.gstat{border-bottom:2px solid rgba(84,81,74,.25)}}
 </style></head><body id="top">
 <nav><div class="wrap">
   <div class="logo"><span class="mark">G</span>GatePay</div>
   <div class="nav-links">
     <a class="nlink" href="#cara-kerja">Cara Kerja</a>
     <a class="nlink" href="#fitur">Fitur</a>
-    <a class="nlink" href="#harga">Harga</a>
     <a class="btn" href="/docs">Docs</a>
     <a class="btn primary" href="/dashboard">Dashboard</a>
   </div>
@@ -146,39 +124,15 @@ export function renderLanding() {
     <a class="btn" href="/snap-demo" target="_blank">Coba Demo Pembayaran</a>
   </div>
   <div class="subcta"><b>Gratis</b> · Tanpa kartu kredit · Setup ±5 menit · <b>Wajib sudah memiliki QRIS merchant</b></div>
-
-  <!-- Mockup produk: hasil akhir checkout -->
-  <div class="mock out">
-    <div class="mtt"><span>CHECKOUT.EXE — /pay/ord_9f2a</span><span>QRIS</span></div>
-    <div class="mbody">
-      <div class="mL">
-        <div class="mq"></div>
-        <div class="mlab">Bayar persis</div>
-        <div class="mamt">Rp 10.237</div>
-      </div>
-      <div class="mR">
-        <div class="mrow done"><span class="mdot ok"></span>✓ Pembayaran berhasil</div>
-        <div class="mrow"><span class="mdot blue"></span>Order <b>ord_9f2a</b> → <b>PAID</b></div>
-        <div class="mrow"><span class="mdot blue"></span>Webhook terkirim <b>200 OK</b></div>
-        <div class="mnote">&gt; dicocokkan dari kode unik ...237</div>
-      </div>
-    </div>
-  </div>
-  <div class="foot-note">Konfirmasi otomatis dalam hitungan detik.* Nominal dikunci di QRIS agar tidak salah bayar.</div>
 </div></header>
 
 <section id="statistik"><div class="wrap">
-  <div class="win out">
-    <div class="tt">STATISTIK_GLOBAL.LIVE</div>
-    <div class="bd2">
-      <div class="sec-title" style="margin-bottom:18px"><h2>Total di Seluruh GatePay</h2><p>Agregat semua merchant — diperbarui langsung.</p></div>
-      <div class="gstats">
-        <div class="gstat"><div class="gn" id="g-rev">—</div><div class="gl">Total Transaksi</div></div>
-        <div class="gstat"><div class="gn" id="g-today">—</div><div class="gl">Sukses Hari Ini</div></div>
-        <div class="gstat"><div class="gn" id="g-paid">—</div><div class="gl">Total Sukses</div></div>
-        <div class="gstat"><div class="gn" id="g-merch">—</div><div class="gl">Merchant Terdaftar</div></div>
-      </div>
-    </div>
+  <div class="sec-title" style="margin-bottom:14px"><h2>Total di Seluruh GatePay</h2><p>Agregat semua merchant — diperbarui langsung.</p></div>
+  <div class="gstats">
+    <div class="gstat"><div class="gn" id="g-rev">—</div><div class="gl">Total Transaksi</div></div>
+    <div class="gstat"><div class="gn" id="g-today">—</div><div class="gl">Sukses Hari Ini</div></div>
+    <div class="gstat"><div class="gn" id="g-paid">—</div><div class="gl">Total Sukses</div></div>
+    <div class="gstat"><div class="gn" id="g-merch">—</div><div class="gl">Merchant Terdaftar</div></div>
   </div>
 </div></section>
 
@@ -223,25 +177,23 @@ export function renderLanding() {
         <div class="feat"><div class="ic">🛍</div><h3>ShopeePay Partner</h3><p>Konfirmasi langsung dari akun ShopeePay Partner Anda secara server-side — tanpa perangkat tambahan.</p></div>
         <div class="feat"><div class="ic">🟢</div><h3>GoPay Merchant</h3><p>Konfirmasi langsung dari akun GoPay Merchant (GoBiz) Anda secara server-side — tanpa perangkat tambahan.</p></div>
       </div>
-      <div class="foot-note" style="text-align:center;margin-top:16px">* Kecepatan bergantung pada notifikasi aplikasi atau koneksi akun merchant. Integrasi ShopeePay/GoPay menggunakan API internal (tidak resmi) — <a href="/privasi">baca risikonya</a>.</div>
+      <div class="foot-note">* Kecepatan bergantung pada notifikasi aplikasi atau koneksi akun merchant. Integrasi ShopeePay/GoPay menggunakan API internal (tidak resmi) — <a href="/privasi">baca risikonya</a>.</div>
     </div>
   </div>
 </div></section>
 
-<section id="usecase"><div class="wrap">
+<section id="penyedia"><div class="wrap">
   <div class="win out">
-    <div class="tt">USE_CASE.TXT</div>
+    <div class="tt">PENYEDIA_QRIS.TXT</div>
     <div class="bd2">
-      <div class="sec-title"><h2>Cocok untuk</h2><p>Terima pembayaran otomatis untuk berbagai jenis usaha.</p></div>
-      <div class="ucs">
-        <span class="uc">🤖 Bot Telegram</span>
-        <span class="uc">💾 Produk Digital</span>
-        <span class="uc">📱 Top-up &amp; Voucher</span>
-        <span class="uc">🎟 Membership</span>
-        <span class="uc">🧾 Invoice Otomatis</span>
-        <span class="uc">🛒 Toko Online</span>
-        <span class="uc">☁️ SaaS</span>
+      <div class="sec-title"><h2>Penyedia QRIS yang Didukung</h2><p>Bekerja dengan QRIS statis dari penyedia mana pun. Belum punya? Daftar merchant di salah satu berikut.</p></div>
+      <div class="feats" style="grid-template-columns:repeat(2,1fr)">
+        <div class="feat"><div class="ic">💙</div><h3>DANA Bisnis</h3><p>QRIS statis dari akun DANA Bisnis Anda.</p></div>
+        <div class="feat"><div class="ic">🛍</div><h3>ShopeePay Partner</h3><p>QRIS merchant dari portal ShopeePay Partner.</p></div>
+        <div class="feat"><div class="ic">🟢</div><h3>GoPay Merchant (GoBiz)</h3><p>QRIS dari akun GoPay Merchant di GoBiz.</p></div>
+        <div class="feat"><div class="ic">🏦</div><h3>Bank / PSP Berlisensi</h3><p>QRIS dari BCA, BRI, Mandiri, atau penyedia jasa pembayaran (PSP) berlisensi QRIS lainnya.</p></div>
       </div>
+      <div class="foot-note">Detail aplikasi &amp; package name yang didukung ada di <a href="/docs">dokumentasi</a>.</div>
     </div>
   </div>
 </div></section>
@@ -263,30 +215,15 @@ export function renderLanding() {
   </div>
 </div></section>
 
-<section id="penyedia"><div class="wrap">
-  <div class="win out">
-    <div class="tt">PENYEDIA_QRIS.TXT</div>
+<section><div class="wrap">
+  <div class="cta-box out">
     <div class="bd2">
-      <div class="sec-title"><h2>Penyedia QRIS yang Didukung</h2><p>Bekerja dengan QRIS statis dari penyedia mana pun. Belum punya? Daftar merchant di salah satu berikut.</p></div>
-      <div class="feats" style="grid-template-columns:repeat(2,1fr)">
-        <div class="feat"><div class="ic">💙</div><h3>DANA Bisnis</h3><p>QRIS statis dari akun DANA Bisnis Anda.</p></div>
-        <div class="feat"><div class="ic">🛍</div><h3>ShopeePay Partner</h3><p>QRIS merchant dari portal ShopeePay Partner.</p></div>
-        <div class="feat"><div class="ic">🟢</div><h3>GoPay Merchant (GoBiz)</h3><p>QRIS dari akun GoPay Merchant di GoBiz.</p></div>
-        <div class="feat"><div class="ic">🏦</div><h3>Bank / PSP Berlisensi</h3><p>QRIS dari BCA, BRI, Mandiri, atau penyedia jasa pembayaran (PSP) berlisensi QRIS lainnya.</p></div>
+      <h2>Siap menerima pembayaran QRIS otomatis?</h2>
+      <p>Upload QRIS Anda dan buat order pertama dalam hitungan menit — gratis.</p>
+      <div class="cta" style="margin-top:0">
+        <a class="btn primary" href="/dashboard" style="padding:13px 30px;font-size:14px">Buka Dashboard →</a>
+        <a class="btn" href="/snap-demo" target="_blank">Coba Demo</a>
       </div>
-      <div class="foot-note" style="text-align:center;margin-top:16px">Detail aplikasi &amp; package name yang didukung ada di <a href="/docs">dokumentasi</a>.</div>
-    </div>
-  </div>
-</div></section>
-
-<section id="harga"><div class="wrap">
-  <div class="win out">
-    <div class="tt">HARGA.TXT</div>
-    <div class="bd2 price">
-      <div class="sec-title" style="margin-bottom:6px"><h2>Harga</h2></div>
-      <div class="big">Gratis</div>
-      <div class="pl">Tanpa biaya bulanan · tanpa kartu kredit · tanpa potongan transaksi.<br>Dana masuk langsung ke akun e-wallet/bank Anda — GatePay hanya mencocokkan &amp; mengonfirmasi.</div>
-      <a class="btn primary" href="/dashboard" style="padding:13px 30px;font-size:14px">Mulai Sekarang →</a>
     </div>
   </div>
 </div></section>
@@ -307,19 +244,6 @@ export function renderLanding() {
   </div>
 </div></section>
 
-<section><div class="wrap">
-  <div class="cta-box out">
-    <div class="bd2">
-      <h2>Siap menerima pembayaran QRIS otomatis?</h2>
-      <p>Upload QRIS Anda dan buat order pertama dalam hitungan menit — gratis.</p>
-      <div class="cta" style="margin-top:0">
-        <a class="btn primary" href="/dashboard" style="padding:13px 30px;font-size:14px">Buka Dashboard →</a>
-        <a class="btn" href="/snap-demo" target="_blank">Coba Demo</a>
-      </div>
-    </div>
-  </div>
-</div></section>
-
 <footer><div class="wrap">
   <div class="fcols">
     <div class="fcol fbrand">
@@ -330,9 +254,8 @@ export function renderLanding() {
       <h4>Produk</h4>
       <a href="#cara-kerja">Cara Kerja</a>
       <a href="#fitur">Fitur</a>
-      <a href="#usecase">Use Case</a>
+      <a href="#metode">Metode Konfirmasi</a>
       <a href="/snap-demo" target="_blank">Demo</a>
-      <a href="#harga">Harga</a>
     </div>
     <div class="fcol">
       <h4>Developer</h4>
