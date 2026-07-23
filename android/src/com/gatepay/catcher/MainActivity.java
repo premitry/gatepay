@@ -1,154 +1,795 @@
 package com.gatepay.catcher;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Intent;
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
+import android.content.SharedPreferences;
+import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.StateListDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.text.TextUtils;
+import android.text.SpannableStringBuilder;
+import android.text.Spannable;
+import android.text.style.ForegroundColorSpan;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-/** UI konfigurasi — gaya GatePay (dark + hijau + kotak siku), programmatic. */
-public class MainActivity extends Activity {
-    private EditText eUrl, eDevId, eSecret, ePkgs;
-    private TextView statusView;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
-    // palet (samain sama web)
-    static final int BG = 0xFF0F1115;
-    static final int CARD = 0xFF171A21;
-    static final int CARD2 = 0xFF1E222B;
-    static final int BD = 0xFF2B3038;
-    static final int GREEN = 0xFF3DDC97;
-    static final int GREENINK = 0xFF04120B;
-    static final int TX = 0xFFEEF0F4;
-    static final int DIM = 0xFF9AA3B2;
+/** UI GatePay Catcher - tema Y2K retro desktop. 3 tab + taskbar. */
+public class MainActivity extends Activity {
+
+    private LinearLayout contentHost;
+    private TextView[] tabBtns = new TextView[3];
+    private TextView taskStatus;
+    private int currentTab = 0;
+    private Dialog wizard;
+    private Dialog curDialog;
+    private int histFilter = 0; // 0=semua 1=sent 2=failed
+    private String histQuery = "";
+
+    private static final String[] TAB_LABELS = { "STATUS", "RIWAYAT", "SETELAN" };
 
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
-        getWindow().getDecorView().setBackgroundColor(BG);
-
-        // Config via ADB intent extras (zero-typing):
-        // adb shell am start -n com.gatepay.catcher/.MainActivity \
-        //   --es url <..> --es devid <..> --es secret <..> --es pkgs <..>
         applyIntentConfig(getIntent());
 
-        ScrollView sv = new ScrollView(this);
-        sv.setBackgroundColor(BG);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(20);
-        root.setPadding(pad, pad, pad, pad);
-        sv.addView(root);
+        root.setBackground(Ui.desktop());
+        root.setFitsSystemWindows(true);
 
-        // ── Header ──
-        LinearLayout header = new LinearLayout(this);
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(0, dp(4), 0, dp(4));
-        TextView mark = new TextView(this);
-        mark.setText("G");
-        mark.setTextColor(GREENINK);
-        mark.setTextSize(18);
-        mark.setTypeface(mark.getTypeface(), android.graphics.Typeface.BOLD);
-        mark.setGravity(Gravity.CENTER);
-        mark.setBackgroundColor(GREEN);
-        int m = dp(34);
-        mark.setWidth(m);
-        mark.setHeight(m);
-        header.addView(mark);
-        TextView title = new TextView(this);
-        title.setText("  GatePay Catcher");
-        title.setTextColor(TX);
-        title.setTextSize(20);
-        title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
-        header.addView(title);
-        root.addView(header);
+        ScrollView sv = new ScrollView(this);
+        sv.setLayoutParams(new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        contentHost = new LinearLayout(this);
+        contentHost.setOrientation(LinearLayout.VERTICAL);
+        int p = dp(12);
+        contentHost.setPadding(p, p, p, p);
+        sv.addView(contentHost);
+        root.addView(sv);
 
-        TextView subtitle = new TextView(this);
-        subtitle.setText("Penangkap notifikasi pembayaran");
-        subtitle.setTextColor(DIM);
-        subtitle.setTextSize(13);
-        subtitle.setPadding(0, dp(2), 0, dp(16));
-        root.addView(subtitle);
+        root.addView(buildTaskbar());
 
-        // ── Status card ──
-        statusView = new TextView(this);
-        statusView.setTextSize(13);
-        statusView.setPadding(dp(14), dp(12), dp(14), dp(12));
-        root.addView(statusView);
-        spacer(root, 16);
-
-        // ── Fields ──
-        eUrl = field(root, "Server URL", Config.serverUrl(this));
-        eDevId = field(root, "Device ID", Config.deviceId(this));
-        eDevId.setHint("copy dari dashboard kamu");
-        eDevId.setHintTextColor(0xFF5A6472);
-        eSecret = field(root, "Device Secret", Config.deviceSecret(this));
-        eSecret.setHint("copy dari dashboard kamu");
-        eSecret.setHintTextColor(0xFF5A6472);
-        ePkgs = field(root, "Target Packages (pisah koma)", Config.targetPackages(this));
-        ePkgs.setHint("id.dana,ovo.id,com.gojek.app");
-        ePkgs.setHintTextColor(0xFF5A6472);
-
-        spacer(root, 8);
-
-        // ── Buttons ──
-        root.addView(primaryBtn("Simpan Konfigurasi", new View.OnClickListener() {
-            public void onClick(View v) { save(); toast("Konfigurasi tersimpan"); refreshStatus(); }
-        }));
-        spacer(root, 8);
-        root.addView(outlineBtn("Buka Notification Access", new View.OnClickListener() {
-            public void onClick(View v) { startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); }
-        }));
-        spacer(root, 8);
-        root.addView(outlineBtn("Kirim Test Event", new View.OnClickListener() {
-            public void onClick(View v) {
-                save();
-                long amt = 1000 + (long) (Math.random() * 9000);
-                long ts = System.currentTimeMillis() / 1000;
-                String eid = "test_" + System.currentTimeMillis();
-                String json = "{\"event_id\":\"" + eid + "\",\"source\":\"notification\",\"amount\":"
-                    + amt + ",\"sender\":\"TEST\",\"raw_text\":\"Test event Rp" + amt
-                    + "\",\"received_at\":" + ts + "}";
-                Sender.send(MainActivity.this, json);
-                toast("Test event Rp" + amt + " dikirim");
-            }
-        }));
-
-        spacer(root, 18);
-        TextView help = new TextView(this);
-        help.setText("Notif dari aplikasi target (mis. DANA) otomatis tertangkap & dikirim ke server. Bisa lebih dari satu aplikasi — pisahkan dengan koma.");
-        help.setTextColor(DIM);
-        help.setTextSize(12);
-        root.addView(help);
-
-        setContentView(sv);
-        refreshStatus();
+        setContentView(root);
+        showTab(0);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        refreshStatus();
+        if (wizard != null && isNlsGranted()) { wizard.dismiss(); wizard = null; }
+        showTab(currentTab);
     }
 
-    private void refreshStatus() {
-        boolean granted = isNlsGranted();
-        GradientDrawable bg = box(granted ? 0xFF123A2A : 0xFF2A1416, granted ? GREEN : 0xFFFF5C5C);
-        statusView.setBackground(bg);
-        statusView.setTextColor(granted ? GREEN : 0xFFFF5C5C);
-        statusView.setText(granted
-            ? "● Notification Access AKTIF — siap nangkep notif"
-            : "○ Notification Access BELUM aktif — tekan tombol di bawah");
+    // ================= TASKBAR =================
+    private LinearLayout buildTaskbar() {
+        LinearLayout bar = new LinearLayout(this);
+        bar.setOrientation(LinearLayout.VERTICAL);
+        bar.setBackground(Ui.raised(this, Ui.CREAM2));
+
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        int pad = dp(6);
+        tabs.setPadding(pad, pad, pad, pad);
+        for (int i = 0; i < 3; i++) {
+            final int idx = i;
+            TextView t = new TextView(this);
+            t.setText(TAB_LABELS[i]);
+            t.setGravity(Gravity.CENTER);
+            t.setTypeface(Ui.BODY, Typeface.BOLD);
+            t.setTextSize(13);
+            t.setTextColor(Ui.NAVY);
+            t.setPadding(dp(8), dp(10), dp(8), dp(10));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            lp.leftMargin = i == 0 ? 0 : dp(4);
+            t.setLayoutParams(lp);
+            t.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) { showTab(idx); }
+            });
+            tabBtns[i] = t;
+            tabs.addView(t);
+        }
+        bar.addView(tabs);
+
+        taskStatus = new TextView(this);
+        taskStatus.setTypeface(Ui.MONO, Typeface.BOLD);
+        taskStatus.setTextSize(11);
+        taskStatus.setPadding(dp(12), dp(4), dp(12), dp(8));
+        bar.addView(taskStatus);
+
+        return bar;
+    }
+
+    private void refreshTaskbar() {
+        for (int i = 0; i < 3; i++) {
+            boolean active = i == currentTab;
+            tabBtns[i].setBackground(active ? Ui.sunken(this, Ui.CREAM)
+                                            : Ui.raised(this, Ui.CREAM2));
+            tabBtns[i].setTextColor(active ? Ui.ROYAL : Ui.NAVY);
+        }
+        boolean on = isNlsGranted();
+        String clock = new SimpleDateFormat("HH:mm", Locale.US).format(new Date());
+        taskStatus.setText((on ? "* ONLINE" : "o OFFLINE") + "        " + clock);
+        taskStatus.setTextColor(on ? 0xFF0E7C5A : Ui.RED);
+    }
+
+    // ================= TAB SWITCH =================
+    private void showTab(int i) {
+        currentTab = i;
+        contentHost.removeAllViews();
+        if (i == 0) buildStatus();
+        else if (i == 1) buildHistory();
+        else buildSettings();
+        refreshTaskbar();
+    }
+
+    private TextView maintLog;
+
+    // ================= TAB: STATUS =================
+    private void buildStatus() {
+        Button keluar = smallBtn("KELUAR", new View.OnClickListener() {
+            public void onClick(View v) { confirmExit(); }
+        });
+        Ui.Win head = Ui.window(this, "GATEPAY_CATCHER.EXE", keluar);
+        head.body.addView(Ui.mono(this, "NOTIFICATION PAYMENT BRIDGE", Ui.DIM, 11.5f));
+        head.body.addView(Ui.mono(this, "VERSION " + appVersion(), Ui.DIM, 11.5f));
+        addWin(head);
+
+        final boolean granted = isNlsGranted();
+        View bar = Ui.statusBar(this, granted, new View.OnClickListener() {
+            public void onClick(View v) { openWizard(); }
+        });
+        addView(bar, 10);
+
+        EventLog.Stats st = EventLog.today(this);
+        Ui.Win today = Ui.window(this, "TODAY.DAT");
+        today.body.addView(Ui.label(this, "PEMBAYARAN TERDETEKSI"));
+        TextView big = Ui.mono(this, Integer.toString(st.count), Ui.NAVY, 34);
+        big.setTypeface(Ui.MONO, Typeface.BOLD);
+        big.setPadding(0, dp(2), 0, dp(6));
+        today.body.addView(big);
+        if (st.count > 0) {
+            String block = "TOTAL    : " + rupiah(st.total) + "\n"
+                         + "WEBHOOK  : " + st.sent + " SENT\n"
+                         + "FAILED   : " + st.failed;
+            today.body.addView(Ui.mono(this, block, Ui.TXT, 12.5f));
+        }
+        TextView lastTv = Ui.mono(this, "LAST SENT : "
+            + (st.lastAt > 0 ? hhmmss(st.lastAt) : "BELUM ADA"), Ui.DIM, 12);
+        lastTv.setPadding(0, dp(8), 0, 0);
+        today.body.addView(lastTv);
+        addWin(today);
+
+        Ui.Win tgt = Ui.window(this, "TARGET_APPS.CFG");
+        tgt.body.addView(Ui.text(this, "Pilih aplikasi yang notifikasinya akan dipantau.", Ui.DIM, 12.5f));
+        HorizontalScrollView hs = new HorizontalScrollView(this);
+        hs.setHorizontalScrollBarEnabled(false);
+        Ui.marginTop(hs, this, 10);
+        LinearLayout chips = new LinearLayout(this);
+        chips.setOrientation(LinearLayout.HORIZONTAL);
+        addChips(chips);
+        hs.addView(chips);
+        tgt.body.addView(hs);
+        Button add = Ui.normal(this, "+ PILIH APLIKASI", new View.OnClickListener() {
+            public void onClick(View v) { openPicker(); }
+        });
+        Ui.marginTop(add, this, 10);
+        tgt.body.addView(add);
+        addWin(tgt);
+
+        Ui.Win mnt = Ui.window(this, "MAINTENANCE.EXE");
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        Button uk = Ui.primary(this, "UJI KIRIM", new View.OnClickListener() {
+            public void onClick(View v) { doTestEvent(); }
+        });
+        uk.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        Button us = Ui.normal(this, "UJI SERVER", new View.OnClickListener() {
+            public void onClick(View v) { doPingServer(); }
+        });
+        LinearLayout.LayoutParams usp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        usp.leftMargin = dp(8);
+        us.setLayoutParams(usp);
+        row.addView(uk);
+        row.addView(us);
+        mnt.body.addView(row);
+        Button dash = Ui.normal(this, "DASHBOARD", new View.OnClickListener() {
+            public void onClick(View v) { openDashboard(); }
+        });
+        Ui.marginTop(dash, this, 8);
+        mnt.body.addView(dash);
+        maintLog = Ui.logArea(this);
+        maintLog.setText("> READY");
+        Ui.marginTop(maintLog, this, 10);
+        mnt.body.addView(maintLog);
+        addWin(mnt);
+
+        TextView seeAll = Ui.titleAction(this, "LIHAT SEMUA", new View.OnClickListener() {
+            public void onClick(View v) { showTab(1); }
+        });
+        Ui.Win act = Ui.window(this, "ACTIVITY.LOG", seeAll);
+        TextView log = Ui.logArea(this);
+        log.setText(buildActivitySpannable(granted));
+        act.body.addView(log);
+        addWin(act);
+
+        Ui.Win sec = Ui.window(this, "SECURITY.TXT");
+        sec.body.addView(Ui.text(this,
+            "GatePay Catcher hanya membaca notifikasi dari aplikasi yang Anda pilih. "
+            + "Aplikasi tidak membaca SMS, OTP, atau membuka isi aplikasi lain.",
+            Ui.TXT, 12.5f));
+        addWin(sec);
+    }
+
+    private CharSequence buildActivitySpannable(boolean granted) {
+        List<EventLog.Ev> evs = EventLog.recent(this, 6);
+        if (evs.isEmpty()) {
+            SpannableStringBuilder sb = new SpannableStringBuilder();
+            append(sb, "> Waiting for payment events...\n", Ui.TERM_TX);
+            append(sb, granted ? "> Notification listener READY"
+                               : "> Notification listener NOT READY", granted ? Ui.TERM_OK : Ui.TERM_WARN);
+            return sb;
+        }
+        SpannableStringBuilder sb = new SpannableStringBuilder();
+        for (int i = 0; i < evs.size(); i++) {
+            EventLog.Ev e = evs.get(i);
+            if (i > 0) sb.append("\n");
+            append(sb, hhmmss(e.t) + "  " + labelFor(e.src) + "\n", Ui.TERM_TX);
+            append(sb, "AMOUNT    " + rupiah(e.amt) + "\n", Ui.TERM_TX);
+            if (e.sent()) append(sb, "WEBHOOK   SENT [" + e.code + "]\n", Ui.TERM_OK);
+            else if (e.pending()) append(sb, "WEBHOOK   PENDING\n", Ui.TERM_WARN);
+            else append(sb, "WEBHOOK   FAILED\n", Ui.TERM_BAD);
+        }
+        return sb;
+    }
+
+    private void append(SpannableStringBuilder sb, String s, int color) {
+        int start = sb.length();
+        sb.append(s);
+        sb.setSpan(new ForegroundColorSpan(color), start, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+    }
+
+    // ---- target apps ----
+    private static final String[] PRESET_LABELS = {
+        "DANA", "DANA Bisnis", "ShopeePay", "GoPay (Gojek)", "GoBiz Merchant",
+        "OVO", "LinkAja", "BCA mobile", "BRImo", "Livin Mandiri"
+    };
+    private static final String[] PRESET_PKGS = {
+        "id.dana", "id.danabisnis", "com.shopee.id", "com.gojek.app", "com.gojek.gobiz",
+        "ovo.id", "com.telkom.mwallet", "com.bca.mybca.omni.android", "id.co.bri.brimo", "com.bankmandiri.livin"
+    };
+
+    private String labelFor(String pkg) {
+        if (pkg == null) return "";
+        for (int i = 0; i < PRESET_PKGS.length; i++)
+            if (PRESET_PKGS[i].equalsIgnoreCase(pkg)) return PRESET_LABELS[i].toUpperCase(Locale.US);
+        return pkg;
+    }
+
+    private List<String> targetList() {
+        List<String> out = new ArrayList<>();
+        for (String s : Config.targetPackages(this).split(",")) {
+            String t = s.trim();
+            if (!t.isEmpty() && !out.contains(t)) out.add(t);
+        }
+        return out;
+    }
+
+    private void saveTargets(List<String> pkgs) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < pkgs.size(); i++) { if (i > 0) sb.append(','); sb.append(pkgs.get(i)); }
+        Config.save(this, Config.serverUrl(this), Config.deviceId(this),
+            Config.deviceSecret(this), sb.toString());
+    }
+
+    private void addChips(LinearLayout container) {
+        final List<String> pkgs = targetList();
+        if (pkgs.isEmpty()) {
+            container.addView(Ui.text(this, "(belum ada aplikasi)", Ui.DIM, 12.5f));
+            return;
+        }
+        for (int i = 0; i < pkgs.size(); i++) {
+            final String pkg = pkgs.get(i);
+            LinearLayout chip = Ui.chip(this, labelFor(pkg), new View.OnClickListener() {
+                public void onClick(View v) {
+                    List<String> cur = targetList();
+                    cur.remove(pkg);
+                    saveTargets(cur);
+                    showTab(0);
+                }
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.rightMargin = dp(8);
+            chip.setLayoutParams(lp);
+            container.addView(chip);
+        }
+    }
+
+    // ---- maintenance actions ----
+    private void doTestEvent() {
+        long amt = 1000 + (long) (Math.random() * 9000);
+        long ts = System.currentTimeMillis() / 1000;
+        String eid = "test_" + System.currentTimeMillis();
+        String json = "{\"event_id\":\"" + eid + "\",\"source\":\"TEST\",\"amount\":"
+            + amt + ",\"sender\":\"TEST\",\"raw_text\":\"Test event Rp" + amt
+            + "\",\"received_at\":" + ts + "}";
+        Sender.send(this, json);
+        if (maintLog != null) maintLog.setText("> TEST WEBHOOK...\n> event Rp" + amt + " dikirim (cek ACTIVITY.LOG)");
+    }
+
+    private void doPingServer() {
+        if (maintLog != null) maintLog.setText("> PING " + Config.serverUrl(this) + "/health ...");
+        new Thread(new Runnable() {
+            public void run() {
+                final int code = Sender.ping(MainActivity.this);
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        if (maintLog != null)
+                            maintLog.setText("> SERVER RESPONSE: "
+                                + (code > 0 ? code + (code >= 200 && code < 400 ? " OK" : "") : "GAGAL / OFFLINE"));
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void openDashboard() {
+        try {
+            String url = Config.serverUrl(this);
+            if (url.endsWith("/")) url = url.substring(0, url.length() - 1);
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url + "/dashboard")));
+        } catch (Exception e) { toast("Tidak bisa membuka dashboard"); }
+    }
+
+    private void confirmExit() {
+        new AlertDialog.Builder(this)
+            .setTitle("Keluar aplikasi?")
+            .setMessage("Layanan penangkap notifikasi tetap berjalan di latar belakang.")
+            .setPositiveButton("KELUAR", new android.content.DialogInterface.OnClickListener() {
+                public void onClick(android.content.DialogInterface d, int w) { finish(); }
+            })
+            .setNegativeButton("BATAL", null)
+            .show();
+    }
+
+    private Button smallBtn(String text, View.OnClickListener cl) {
+        Button b = new Button(this);
+        b.setAllCaps(false);
+        b.setText(text);
+        b.setTextSize(11);
+        b.setTypeface(Ui.BODY, Typeface.BOLD);
+        b.setTextColor(Ui.TXT);
+        b.setStateListAnimator(null);
+        StateListDrawable sld = new StateListDrawable();
+        sld.addState(new int[]{android.R.attr.state_pressed}, Ui.sunken(this, Ui.CREAM));
+        sld.addState(new int[]{}, Ui.raised(this, Ui.CREAM));
+        b.setBackground(sld);
+        b.setPadding(dp(10), dp(5), dp(10), dp(5));
+        b.setMinHeight(0);
+        b.setMinimumHeight(0);
+        if (cl != null) b.setOnClickListener(cl);
+        return b;
+    }
+
+    // ---- dialog generik bertema window ----
+    private Dialog showDialog(String title, View content, View[] buttons, boolean closable) {
+        final Dialog d = new Dialog(this);
+        curDialog = d;
+        if (d.getWindow() != null) d.getWindow().setBackgroundDrawable(new ColorDrawable(0));
+
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout pad = new LinearLayout(this);
+        pad.setOrientation(LinearLayout.VERTICAL);
+        int m = dp(14);
+        pad.setPadding(m, m, m, m);
+        scroll.addView(pad);
+
+        View closeX = null;
+        if (closable) {
+            closeX = Ui.titleAction(this, "[x]", new View.OnClickListener() {
+                public void onClick(View v) { d.dismiss(); }
+            });
+        }
+        Ui.Win w = Ui.window(this, title, closeX);
+        if (content != null) w.body.addView(content);
+        if (buttons != null) {
+            for (View b : buttons) {
+                Ui.marginTop(b, this, 8);
+                w.body.addView(b);
+            }
+        }
+        pad.addView(w.outer);
+        d.setContentView(scroll);
+        d.show();
+        return d;
+    }
+
+    // ================= DIALOG: WIZARD IZIN =================
+    private void openWizard() {
+        if (isNlsGranted()) { toast("Akses notifikasi sudah aktif"); return; }
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+
+        TextView h = Ui.text(this, "AKTIFKAN AKSES NOTIFIKASI", Ui.NAVY, 15);
+        h.setTypeface(Ui.BODY, Typeface.BOLD);
+        body.addView(h);
+        TextView intro = Ui.text(this,
+            "GatePay Catcher memerlukan izin Notification Access agar dapat membaca pembayaran masuk.",
+            Ui.TXT, 13);
+        Ui.marginTop(intro, this, 8);
+        body.addView(intro);
+
+        TextView note = Ui.text(this,
+            "Jika muncul \"Restricted setting\" / \"Pengaturan dibatasi\":", Ui.TXT, 13);
+        Ui.marginTop(note, this, 10);
+        body.addView(note);
+        String[] steps = {
+            "1. Buka INFO APLIKASI.",
+            "2. Buka menu titik-tiga di kanan atas.",
+            "3. Pilih \"Izinkan setelan dibatasi\".",
+            "4. Kembali ke aplikasi.",
+            "5. Tekan AKSES NOTIFIKASI."
+        };
+        for (String s : steps) {
+            TextView t = Ui.text(this, s, Ui.TXT, 13);
+            Ui.marginTop(t, this, 6);
+            body.addView(t);
+        }
+        TextView tail = Ui.text(this,
+            "Catatan: letak menu dapat berbeda pada tiap merek HP.", Ui.DIM, 12);
+        Ui.marginTop(tail, this, 10);
+        body.addView(tail);
+
+        View[] btns = {
+            Ui.primary(this, "AKSES NOTIFIKASI", new View.OnClickListener() {
+                public void onClick(View v) {
+                    try { startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); }
+                    catch (Exception e) { toast("Buka Setelan > Akses notifikasi"); }
+                }
+            }),
+            Ui.normal(this, "INFO APLIKASI", new View.OnClickListener() {
+                public void onClick(View v) {
+                    try {
+                        Intent it = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:" + getPackageName()));
+                        startActivity(it);
+                    } catch (Exception e) { toast("Tidak bisa membuka info aplikasi"); }
+                }
+            }),
+            Ui.normal(this, "TUTUP", new View.OnClickListener() {
+                public void onClick(View v) { if (wizard != null) wizard.dismiss(); }
+            })
+        };
+        wizard = showDialog("NOTIFICATION_SETUP.EXE", body, btns, true);
+    }
+
+    // ================= DIALOG: PILIH APLIKASI =================
+    private void openPicker() {
+        final List<String> cur = targetList();
+        final boolean[] sel = new boolean[PRESET_PKGS.length];
+        for (int i = 0; i < PRESET_PKGS.length; i++) sel[i] = cur.contains(PRESET_PKGS[i]);
+
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.addView(Ui.text(this, "Pilih aplikasi yang ingin dipantau:", Ui.DIM, 12.5f));
+        for (int i = 0; i < PRESET_LABELS.length; i++) {
+            final int idx = i;
+            LinearLayout cb = Ui.checkbox(this, PRESET_LABELS[i], PRESET_PKGS[i], sel[i],
+                new Ui.CheckListener() {
+                    public void onChanged(boolean c) { sel[idx] = c; }
+                });
+            body.addView(cb);
+        }
+        TextView cl = Ui.label(this, "TAMBAH MANUAL (package)");
+        Ui.marginTop(cl, this, 8);
+        body.addView(cl);
+        final EditText custom = new EditText(this);
+        custom.setHint("mis. com.contoh.app");
+        custom.setHintTextColor(0xFF9AA0AA);
+        custom.setTextColor(Ui.TXT);
+        custom.setTextSize(13);
+        custom.setSingleLine(true);
+        custom.setBackground(Ui.sunken(this, Ui.WHITE));
+        custom.setPadding(dp(10), dp(9), dp(10), dp(9));
+        Ui.marginTop(custom, this, 4);
+        body.addView(custom);
+
+        View[] btns = {
+            Ui.primary(this, "SIMPAN", new View.OnClickListener() {
+                public void onClick(View v) {
+                    List<String> out = new ArrayList<>();
+                    for (String p : cur) {
+                        boolean isPreset = false;
+                        for (String pp : PRESET_PKGS) if (pp.equalsIgnoreCase(p)) { isPreset = true; break; }
+                        if (!isPreset) out.add(p);
+                    }
+                    for (int i = 0; i < sel.length; i++)
+                        if (sel[i] && !out.contains(PRESET_PKGS[i])) out.add(PRESET_PKGS[i]);
+                    String cu = custom.getText().toString().trim();
+                    if (!cu.isEmpty())
+                        for (String piece : cu.split(",")) {
+                            String t = piece.trim();
+                            if (!t.isEmpty() && !out.contains(t)) out.add(t);
+                        }
+                    saveTargets(out);
+                    if (curDialog != null) curDialog.dismiss();
+                    showTab(0);
+                }
+            }),
+            Ui.normal(this, "BATAL", new View.OnClickListener() {
+                public void onClick(View v) { if (curDialog != null) curDialog.dismiss(); }
+            })
+        };
+        showDialog("PILIH_APLIKASI.CFG", body, btns, true);
+    }
+    // ================= TAB: RIWAYAT =================
+    private void buildHistory() {
+        Ui.Win w = Ui.window(this, "HISTORY.LOG");
+
+        LinearLayout fr = new LinearLayout(this);
+        fr.setOrientation(LinearLayout.HORIZONTAL);
+        final String[] names = { "SEMUA", "SENT", "FAILED" };
+        Button fbtn = Ui.normal(this, "FILTER: " + names[histFilter], new View.OnClickListener() {
+            public void onClick(View v) { histFilter = (histFilter + 1) % 3; showTab(1); }
+        });
+        fbtn.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        fr.addView(fbtn);
+        w.body.addView(fr);
+
+        final EditText search = new EditText(this);
+        search.setText(histQuery);
+        search.setHint("Cari nominal / aplikasi");
+        search.setHintTextColor(0xFF9AA0AA);
+        search.setTextColor(Ui.TXT);
+        search.setTextSize(13);
+        search.setSingleLine(true);
+        search.setBackground(Ui.sunken(this, Ui.WHITE));
+        search.setPadding(dp(10), dp(9), dp(10), dp(9));
+        Ui.marginTop(search, this, 8);
+        search.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            public boolean onEditorAction(TextView v, int a, android.view.KeyEvent ev) {
+                histQuery = v.getText().toString().trim();
+                showTab(1);
+                return true;
+            }
+        });
+        w.body.addView(search);
+
+        List<EventLog.Ev> evs = EventLog.recent(this, 200);
+        int shown = 0;
+        String q = histQuery.toLowerCase(Locale.US);
+        for (EventLog.Ev e : evs) {
+            if (histFilter == 1 && !e.sent()) continue;
+            if (histFilter == 2 && (e.sent() || e.pending())) continue;
+            if (!q.isEmpty()) {
+                String hay = (labelFor(e.src) + " " + rupiah(e.amt)).toLowerCase(Locale.US);
+                if (!hay.contains(q)) continue;
+            }
+            View rowv = historyRow(e);
+            Ui.marginTop(rowv, this, 8);
+            w.body.addView(rowv);
+            shown++;
+        }
+        if (shown == 0) {
+            TextView empty = Ui.text(this, "(belum ada transaksi)", Ui.DIM, 12.5f);
+            Ui.marginTop(empty, this, 10);
+            w.body.addView(empty);
+        }
+        addWin(w);
+    }
+
+    private View historyRow(final EventLog.Ev e) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setBackground(Ui.raised(this, Ui.CREAM));
+        row.setPadding(dp(12), dp(10), dp(12), dp(10));
+
+        String tag = e.sent() ? "SENT" : (e.pending() ? "PENDING" : "FAILED");
+        int tagColor = e.sent() ? Ui.GREEN : (e.pending() ? Ui.ORANGE : Ui.RED);
+
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        TextView left = Ui.mono(this, hhmmss(e.t) + "  " + labelFor(e.src), Ui.TXT, 13);
+        left.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        top.addView(left);
+        TextView amt = Ui.mono(this, rupiah(e.amt), Ui.NAVY, 13);
+        amt.setTypeface(Ui.MONO, Typeface.BOLD);
+        top.addView(amt);
+        row.addView(top);
+
+        TextView st = Ui.mono(this, "[" + tag + "]" + (e.sent() ? " " + e.code : ""), tagColor, 11.5f);
+        row.addView(st);
+
+        row.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { openDetail(e); }
+        });
+        return row;
+    }
+
+    private void openDetail(final EventLog.Ev e) {
+        String tag = e.sent() ? "SENT [" + e.code + "]" : (e.pending() ? "PENDING" : "FAILED");
+        StringBuilder sb = new StringBuilder();
+        sb.append("Sumber   : ").append(labelFor(e.src)).append("\n");
+        sb.append("Nominal  : ").append(rupiah(e.amt)).append("\n");
+        sb.append("Webhook  : ").append(tag).append("\n");
+        sb.append("Waktu    : ").append(hhmmss(e.t)).append("\n");
+        sb.append("Event ID : ").append(e.eid);
+
+        View content = Ui.mono(this, sb.toString(), Ui.TXT, 13);
+        View[] btns = {
+            Ui.primary(this, "KIRIM ULANG", new View.OnClickListener() {
+                public void onClick(View v) {
+                    String src = e.src == null ? "notification" : e.src;
+                    String json = "{\"event_id\":\"" + e.eid + "\",\"source\":\"" + src
+                        + "\",\"amount\":" + e.amt + ",\"received_at\":" + e.t + "}";
+                    Sender.send(MainActivity.this, json);
+                    toast("Dikirim ulang");
+                    if (curDialog != null) curDialog.dismiss();
+                }
+            }),
+            Ui.normal(this, "TUTUP", new View.OnClickListener() {
+                public void onClick(View v) { if (curDialog != null) curDialog.dismiss(); }
+            })
+        };
+        showDialog("PAYMENT_DETAIL.TXT", content, btns, true);
+    }
+
+    // ================= TAB: SETELAN =================
+    private void buildSettings() {
+        Ui.Win n = Ui.window(this, "SETTINGS.INI  [NOTIFICATION]");
+        n.body.addView(Ui.checkbox(this, "Baca notifikasi", "Memantau notifikasi aplikasi target.",
+            pref("opt_read", true), new Ui.CheckListener() {
+                public void onChanged(boolean c) { setPref("opt_read", c); }
+            }));
+        n.body.addView(Ui.checkbox(this, "Getar saat pembayaran", "Umpan balik saat transaksi terdeteksi.",
+            pref("opt_vibrate", false), new Ui.CheckListener() {
+                public void onChanged(boolean c) { setPref("opt_vibrate", c); }
+            }));
+        n.body.addView(Ui.checkbox(this, "Tampilkan status permanen", "Menjaga service tetap aktif.",
+            pref("opt_persistent", true), new Ui.CheckListener() {
+                public void onChanged(boolean c) { setPref("opt_persistent", c); }
+            }));
+        Button openN = Ui.normal(this, "BUKA AKSES NOTIFIKASI", new View.OnClickListener() {
+            public void onClick(View v) {
+                try { startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); }
+                catch (Exception e) { toast("Buka Setelan > Akses notifikasi"); }
+            }
+        });
+        Ui.marginTop(openN, this, 10);
+        n.body.addView(openN);
+        addWin(n);
+
+        Ui.Win sv = Ui.window(this, "SETTINGS.INI  [SERVER]");
+        sv.body.addView(Ui.label(this, "SERVER URL"));
+        final EditText eUrl = settingField(Config.serverUrl(this), "https://gatepay.biz.id");
+        sv.body.addView(eUrl);
+        Button test = Ui.normal(this, "TEST CONNECTION", new View.OnClickListener() {
+            public void onClick(View v) {
+                toast("Menghubungi server...");
+                new Thread(new Runnable() {
+                    public void run() {
+                        final int code = Sender.ping(MainActivity.this);
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                toast(code > 0 ? "SERVER: " + code + (code < 400 ? " OK" : "") : "GAGAL / OFFLINE");
+                            }
+                        });
+                    }
+                }).start();
+            }
+        });
+        Ui.marginTop(test, this, 10);
+        sv.body.addView(test);
+        addWin(sv);
+
+        Ui.Win ac = Ui.window(this, "SETTINGS.INI  [ACCOUNT]");
+        ac.body.addView(Ui.label(this, "DEVICE ID"));
+        final EditText eId = settingField(Config.deviceId(this), "copy dari dashboard");
+        ac.body.addView(eId);
+        TextView ls = Ui.label(this, "DEVICE SECRET");
+        Ui.marginTop(ls, this, 8);
+        ac.body.addView(ls);
+        final EditText eSec = settingField(Config.deviceSecret(this), "copy dari dashboard");
+        ac.body.addView(eSec);
+        Button save = Ui.primary(this, "SIMPAN KONFIGURASI", new View.OnClickListener() {
+            public void onClick(View v) {
+                Config.save(MainActivity.this,
+                    eUrl.getText().toString().trim(),
+                    eId.getText().toString().trim(),
+                    eSec.getText().toString().trim(),
+                    Config.targetPackages(MainActivity.this));
+                toast("Konfigurasi tersimpan");
+            }
+        });
+        Ui.marginTop(save, this, 12);
+        ac.body.addView(save);
+        Button logout = Ui.danger(this, "KELUAR DARI AKUN", new View.OnClickListener() {
+            public void onClick(View v) { confirmLogout(); }
+        });
+        Ui.marginTop(logout, this, 8);
+        ac.body.addView(logout);
+        addWin(ac);
+
+        Ui.Win sys = Ui.window(this, "SETTINGS.INI  [SYSTEM]");
+        sys.body.addView(Ui.checkbox(this, "Jalankan di latar belakang", "Mencegah catcher berhenti saat aplikasi ditutup.",
+            pref("opt_background", true), new Ui.CheckListener() {
+                public void onChanged(boolean c) { setPref("opt_background", c); }
+            }));
+        Button batt = Ui.normal(this, "NONAKTIFKAN OPTIMASI BATERAI", new View.OnClickListener() {
+            public void onClick(View v) {
+                try { startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)); }
+                catch (Exception e) { toast("Buka Setelan baterai secara manual"); }
+            }
+        });
+        Ui.marginTop(batt, this, 10);
+        sys.body.addView(batt);
+        addWin(sys);
+    }
+
+    private EditText settingField(String val, String hint) {
+        EditText e = new EditText(this);
+        e.setText(val);
+        e.setHint(hint);
+        e.setHintTextColor(0xFF9AA0AA);
+        e.setTextColor(Ui.TXT);
+        e.setTextSize(14);
+        e.setSingleLine(true);
+        e.setBackground(Ui.sunken(this, Ui.WHITE));
+        e.setPadding(dp(10), dp(10), dp(10), dp(10));
+        Ui.marginTop(e, this, 4);
+        return e;
+    }
+
+    private void confirmLogout() {
+        new AlertDialog.Builder(this)
+            .setTitle("Keluar dari akun?")
+            .setMessage("Device ID & Secret akan dihapus dari perangkat ini. Catcher berhenti mengirim sampai diisi lagi.")
+            .setPositiveButton("KELUAR", new android.content.DialogInterface.OnClickListener() {
+                public void onClick(android.content.DialogInterface d, int w) {
+                    Config.save(MainActivity.this, Config.serverUrl(MainActivity.this), "", "",
+                        Config.targetPackages(MainActivity.this));
+                    toast("Akun dikeluarkan");
+                    showTab(2);
+                }
+            })
+            .setNegativeButton("BATAL", null)
+            .show();
+    }
+
+    // ================= HELPERS =================
+    private void addWin(Ui.Win w) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(10);
+        w.outer.setLayoutParams(lp);
+        contentHost.addView(w.outer);
+    }
+
+    private void addView(View v, int bottom) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(bottom);
+        v.setLayoutParams(lp);
+        contentHost.addView(v);
     }
 
     private boolean isNlsGranted() {
@@ -156,15 +797,13 @@ public class MainActivity extends Activity {
         return flat != null && flat.contains(getPackageName());
     }
 
-    private void save() {
-        Config.save(this,
-            eUrl.getText().toString().trim(),
-            eDevId.getText().toString().trim(),
-            eSecret.getText().toString().trim(),
-            ePkgs.getText().toString().trim());
+    private boolean pref(String key, boolean def) {
+        return Config.prefs(this).getBoolean(key, def);
+    }
+    private void setPref(String key, boolean val) {
+        Config.prefs(this).edit().putBoolean(key, val).apply();
     }
 
-    /** Terapkan config dari intent extras kalau ada (buat setup via ADB). */
     private void applyIntentConfig(Intent it) {
         if (it == null) return;
         String url = it.getStringExtra("url");
@@ -181,66 +820,28 @@ public class MainActivity extends Activity {
 
     private void toast(String s) { Toast.makeText(this, s, Toast.LENGTH_SHORT).show(); }
 
-    // ── UI helpers ──
-    private EditText field(LinearLayout p, String label, String val) {
-        TextView l = new TextView(this);
-        l.setText(label);
-        l.setTextColor(DIM);
-        l.setTextSize(12);
-        l.setPadding(0, dp(12), 0, dp(4));
-        p.addView(l);
-
-        EditText e = new EditText(this);
-        e.setText(val);
-        e.setTextColor(TX);
-        e.setTextSize(14);
-        e.setSingleLine(true);
-        e.setPadding(dp(12), dp(10), dp(12), dp(10));
-        e.setBackground(box(CARD2, BD));
-        p.addView(e);
-        return e;
-    }
-
-    private Button primaryBtn(String txt, View.OnClickListener cl) {
-        Button b = new Button(this);
-        b.setText(txt);
-        b.setAllCaps(false);
-        b.setTextColor(GREENINK);
-        b.setTextSize(15);
-        b.setTypeface(b.getTypeface(), android.graphics.Typeface.BOLD);
-        b.setBackground(box(GREEN, GREEN));
-        b.setPadding(0, dp(14), 0, dp(14));
-        b.setOnClickListener(cl);
-        return b;
-    }
-
-    private Button outlineBtn(String txt, View.OnClickListener cl) {
-        Button b = new Button(this);
-        b.setText(txt);
-        b.setAllCaps(false);
-        b.setTextColor(TX);
-        b.setTextSize(14);
-        b.setBackground(box(CARD2, BD));
-        b.setPadding(0, dp(13), 0, dp(13));
-        b.setOnClickListener(cl);
-        return b;
-    }
-
-    private GradientDrawable box(int fill, int stroke) {
-        GradientDrawable g = new GradientDrawable();
-        g.setColor(fill);
-        g.setStroke(dp(1), stroke);
-        g.setCornerRadius(0f); // kotak siku
-        return g;
-    }
-
-    private void spacer(LinearLayout p, int h) {
-        View v = new View(this);
-        v.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(h)));
-        p.addView(v);
-    }
-
     private int dp(int v) {
-        return (int) (v * getResources().getDisplayMetrics().density);
+        return Math.round(v * getResources().getDisplayMetrics().density);
+    }
+
+    static String rupiah(long n) {
+        String s = Long.toString(Math.abs(n));
+        StringBuilder sb = new StringBuilder();
+        int c = 0;
+        for (int i = s.length() - 1; i >= 0; i--) {
+            sb.append(s.charAt(i));
+            if (++c % 3 == 0 && i > 0) sb.append('.');
+        }
+        return "Rp" + (n < 0 ? "-" : "") + sb.reverse().toString();
+    }
+
+    private String appVersion() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Exception e) { return "1.0"; }
+    }
+
+    private String hhmmss(long epochSec) {
+        return new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date(epochSec * 1000L));
     }
 }

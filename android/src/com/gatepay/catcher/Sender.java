@@ -28,8 +28,12 @@ public class Sender {
     public static void send(final Context ctx, final String jsonBody) {
         POOL.execute(new Runnable() {
             public void run() {
-                boolean ok = post(ctx, jsonBody);
-                if (!ok) enqueue(ctx, jsonBody);
+                int code = post(ctx, jsonBody);
+                boolean ok = code >= 200 && code < 300;
+                boolean handled = ok || code == 400 || code == 401;
+                if (!handled) enqueue(ctx, jsonBody);
+                // catat aktivitas lokal buat tampilan Status/Riwayat
+                EventLog.record(ctx, jsonBody, code);
                 // coba drain antrian tiap kali ada kesempatan
                 drain(ctx);
             }
@@ -47,7 +51,9 @@ public class Sender {
                     List<String> remain = new ArrayList<>();
                     for (String line : lines) {
                         if (line.trim().isEmpty()) continue;
-                        if (!post(ctx, line)) remain.add(line);
+                        int code = post(ctx, line);
+                        boolean handled = (code >= 200 && code < 300) || code == 400 || code == 401;
+                        if (!handled) remain.add(line);
                     }
                     writeLines(q, remain);
                 }
@@ -55,7 +61,8 @@ public class Sender {
         });
     }
 
-    private static boolean post(Context ctx, String jsonBody) {
+    /** @return http code (2xx sukses; 400/401 = drop, jangan retry; -1 = gagal jaringan). */
+    private static int post(Context ctx, String jsonBody) {
         HttpURLConnection conn = null;
         try {
             String url = Config.serverUrl(ctx);
@@ -78,16 +85,29 @@ public class Sender {
 
             int code = conn.getResponseCode();
             Log.i(TAG, "POST /ingest/event -> " + code);
-            // 2xx = sukses; 401/400 = jangan retry (config/parse salah), buang saja
-            if (code >= 200 && code < 300) return true;
-            if (code == 400 || code == 401) {
-                Log.w(TAG, "drop event (client error " + code + ")");
-                return true; // treat as handled (jangan retry selamanya)
-            }
-            return false;
+            if (code == 400 || code == 401) Log.w(TAG, "drop event (client error " + code + ")");
+            return code;
         } catch (Exception e) {
             Log.w(TAG, "post failed: " + e.getMessage());
-            return false;
+            return -1;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    /** Uji koneksi ke server (buat tombol UJI SERVER). @return http code atau -1. */
+    public static int ping(Context ctx) {
+        HttpURLConnection conn = null;
+        try {
+            String url = Config.serverUrl(ctx);
+            if (url.endsWith("/")) url = url.substring(0, url.length() - 1);
+            conn = (HttpURLConnection) new URL(url + "/health").openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(8000);
+            conn.setReadTimeout(10000);
+            return conn.getResponseCode();
+        } catch (Exception e) {
+            return -1;
         } finally {
             if (conn != null) conn.disconnect();
         }
