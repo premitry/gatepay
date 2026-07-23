@@ -115,7 +115,7 @@ export function renderLanding() {
   <div class="badge">▮ GATEPAY · QRIS PAYMENT GATEWAY · INDONESIA</div>
   <h1>Terima &amp; konfirmasi<br>pembayaran <span class="hl">QRIS otomatis.</span></h1>
   <div class="hrule"></div>
-  <p class="sub">Ubah QRIS statis menjadi QRIS dinamis: nominal dikunci dan diberi <span class="hlb">kode unik</span> untuk pencocokan <span class="hlb">otomatis</span> setiap pembayaran masuk.</p>
+  <p class="sub">Ubah QRIS statis menjadi QRIS dinamis: nominal dikunci dan diberi <span class="hlb" style="white-space:nowrap">kode unik</span> untuk pencocokan <span class="hlb">otomatis</span> setiap pembayaran masuk.</p>
   <div class="chips">
     <span class="chip"><span class="d"></span>🛍 ShopeePay Partner</span>
     <span class="chip"><span class="d"></span>🟢 GoPay Merchant</span>
@@ -128,8 +128,8 @@ export function renderLanding() {
   <div class="subcta"><b>Gratis</b> · Tanpa kartu kredit · Setup ±5 menit · <b>Wajib sudah memiliki QRIS merchant</b></div>
 </div></header>
 
-<section id="statistik"><div class="wrap">
-  <div class="sec-title" style="margin-bottom:14px"><h2>Total di Seluruh GatePay</h2><p>Agregat semua merchant — diperbarui langsung.</p></div>
+<section id="statistik" style="padding:6px 0"><div class="wrap">
+  <div class="sec-title" style="margin-bottom:10px"><h2>Total di Seluruh GatePay</h2><p>Agregat semua merchant — diperbarui langsung.</p></div>
   <div class="gstats">
     <div class="gstat"><div class="gn" id="g-rev">—</div><div class="gl">Total Transaksi</div></div>
     <div class="gstat"><div class="gn" id="g-today">—</div><div class="gl">Sukses Hari Ini</div></div>
