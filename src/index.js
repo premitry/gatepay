@@ -1555,11 +1555,11 @@ app.get('/snap.js', (c) => {
   return c.body(js, 200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'public, max-age=300' });
 });
 
-// Halaman demo popup Snap — buat nyoba live tanpa nulis kode
+// Halaman demo popup Snap — sandbox 100% di browser, tanpa API key & tanpa uang beneran
 app.get('/snap-demo', (c) => {
   const html = `<!DOCTYPE html><html lang="id"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Demo Popup · GatePay</title>
+<title>Demo Pembayaran · GatePay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Michroma&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
@@ -1576,57 +1576,130 @@ app.get('/snap-demo', (c) => {
   .top .amt{font-family:'Share Tech Mono',monospace;font-size:11px}
   .body{padding:22px 20px}
   h1{font-size:18px;margin:0 0 4px}
-  .lead{color:var(--dim);font-size:13px;margin-bottom:18px}
+  .lead{color:var(--dim);font-size:13px;margin-bottom:16px}
   label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin:14px 0 4px;font-weight:700}
   input{width:100%;padding:10px;font-size:14px;font-family:'Share Tech Mono',monospace;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);color:var(--text)}
   .btn{width:100%;margin-top:20px;padding:13px;font-weight:700;font-size:15px;background:linear-gradient(180deg,#4a86c8,#26379d);color:#fff;border:2px solid;border-color:#7fb0e0 #141f5c #141f5c #7fb0e0;cursor:pointer;font-family:'Michroma',sans-serif}
   .btn:active{border-color:#141f5c #7fb0e0 #7fb0e0 #141f5c}
-  .btn:disabled{opacity:.6;cursor:wait}
-  .log{margin-top:18px;background:var(--term-bg);color:var(--term-text);padding:12px;font-family:'Share Tech Mono',monospace;font-size:12px;min-height:70px;line-height:1.7;border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);white-space:pre-wrap;word-break:break-word}
-  .log .ok{color:#8fe3f7}.log .bad{color:#ff9b8f}.log .win{color:#7dffb0;font-weight:700}
-  .tip{background:#fff6d9;border:2px solid var(--accent);padding:10px 12px;margin-top:14px;font-size:12px;color:#3a2a00}
+  .btn.ghost{background:linear-gradient(180deg,var(--chrome),var(--chrome-2));color:var(--text);border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);font-family:Verdana,sans-serif;font-size:13px}
+  .btn.ghost:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
+  .btn.ok{background:linear-gradient(180deg,#3fae6f,#0e7c66);border-color:#7fe0a8 #0a4a3c #0a4a3c #7fe0a8}
+  .tip{background:#fff6d9;border:2px solid var(--accent);padding:10px 12px;margin-top:16px;font-size:12px;color:#3a2a00;line-height:1.55}
   a{color:#3843b8}
+  /* overlay popup */
+  .ov{position:fixed;inset:0;background:rgba(20,31,92,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+  .ov.on{display:flex}
+  .pop{width:100%;max-width:420px;background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:4px 4px 0 rgba(20,31,92,.4)}
+  .pop .pt{background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--edge-dark)}
+  .pop .pt .l{font-family:'Michroma',sans-serif;font-size:13px}
+  .pop .pt .x{cursor:pointer;font-weight:900;padding:0 4px}
+  .pop .pb{padding:20px;text-align:center}
+  .demoban{background:#fff6d9;border:2px solid var(--accent);color:#3a2a00;font-size:11px;font-weight:700;padding:6px 10px;letter-spacing:.03em;text-transform:uppercase;margin-bottom:14px}
+  .amtbig{font-family:'Michroma';font-size:26px;color:#12235c;margin-bottom:2px}
+  .amtlbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
+  .qwrap{position:relative;display:inline-block;padding:10px;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
+  #qr{display:block}
+  .qtag{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-14deg);background:rgba(194,97,7,.92);color:#fff;font-family:'Michroma';font-size:14px;padding:5px 12px;letter-spacing:.08em;white-space:nowrap}
+  .oid{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);margin:12px 0 2px}
+  .cdown{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--title-a);margin-bottom:8px}
+  .log{margin-top:14px;background:var(--term-bg);color:var(--term-text);padding:11px;font-family:'Share Tech Mono',monospace;font-size:12px;min-height:52px;line-height:1.7;border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);white-space:pre-wrap;word-break:break-word;text-align:left}
+  .log .ok{color:#8fe3f7}.log .bad{color:#ff9b8f}.log .win{color:#7dffb0;font-weight:700}
+  .actions{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+  .actions .btn{margin-top:0}
+  /* success */
+  .succ{text-align:center;padding:8px 0}
+  .succ .ring{width:74px;height:74px;margin:6px auto 14px;background:#0e7c66;color:#fff;display:flex;align-items:center;justify-content:center;font-size:40px;border:3px solid;border-color:#7fe0a8 #0a4a3c #0a4a3c #7fe0a8}
+  .succ h2{font-family:'Michroma';font-size:19px;color:#0e7c66;margin:0 0 6px}
+  .succ p{color:var(--dim);font-size:13px;margin:0 0 4px}
 </style></head><body>
 <div class="card">
-  <div class="top"><span class="logo">GatePay</span><span class="amt">SNAP_DEMO</span></div>
+  <div class="top"><span class="logo">GatePay</span><span class="amt">DEMO_SANDBOX</span></div>
   <div class="body">
-    <h1>Demo Popup Pembayaran</h1>
-    <p class="lead">Masukkan API key dan nominal, lalu klik tombol — order akan dibuat kemudian popup QRIS langsung muncul. Ini merupakan simulasi persis dari <code>GatePay.pay()</code>.</p>
-    <label>API Key (sk_live_…)</label>
-    <input id="key" placeholder="sk_live_xxxxxxxx" autocomplete="off">
+    <h1>Demo Pembayaran</h1>
+    <p class="lead">Masukkan nominal lalu klik tombol — popup pembayaran akan muncul dengan QRIS demo. Semua ini <b>simulasi di browser Anda</b>: tanpa akun, tanpa API key, tanpa uang sungguhan.</p>
     <label>Nominal (Rp)</label>
     <input id="amt" type="number" value="10000" min="1">
-    <button class="btn" id="go" onclick="mulai()">🪟 Buka Popup Pembayaran</button>
-    <div class="log" id="log">Siap. Masukkan API key Anda terlebih dahulu…</div>
-    <div class="tip">💡 API key hanya digunakan di browser Anda untuk demo ini. Di produksi, <b>buat order dari server</b> — jangan pernah menaruh API key di frontend.</div>
+    <button class="btn" id="go" onclick="buka()">🪟 Buka Popup Pembayaran</button>
+    <div class="tip">💡 Ini pratinjau alur pembayaran. Di produksi, order dibuat dari <b>server Anda</b> lewat API dan QRIS-nya asli. <a href="/dashboard">Buka dashboard →</a></div>
   </div>
 </div>
-<script src="/snap.js"></script>
+
+<div class="ov" id="ov"><div class="pop">
+  <div class="pt"><span class="l">Bayar dengan QRIS</span><span class="x" onclick="tutup()">✕</span></div>
+  <div class="pb" id="pb"></div>
+</div></div>
+
 <script>
-  var L=document.getElementById('log');
-  function log(m,cls){ L.innerHTML += '\\n'+(cls?'<span class="'+cls+'">'+m+'</span>':m); L.scrollTop=L.scrollHeight; }
-  async function mulai(){
-    var key=document.getElementById('key').value.trim();
-    var amt=parseInt(document.getElementById('amt').value,10);
-    if(!key){ log('✗ API key kosong','bad'); return; }
-    if(!(amt>0)){ log('✗ Nominal harus > 0','bad'); return; }
-    var b=document.getElementById('go'); b.disabled=true;
-    L.textContent='> POST /api/orders …';
-    try{
-      var r=await fetch('/api/orders',{method:'POST',headers:{'x-api-key':key,'content-type':'application/json'},body:JSON.stringify({base_amount:amt,reference:'SNAP-DEMO'})});
-      var j=await r.json();
-      if(!r.ok){ log('✗ '+(j.error||r.status),'bad'); b.disabled=false; return; }
-      log('✓ order '+j.id,'ok');
-      log('  nominal unik: Rp '+Number(j.unique_amount).toLocaleString('id-ID'),'ok');
-      log('> GatePay.pay() → buka popup…');
-      GatePay.pay(j.id,{
-        onSuccess:function(o){ log('✔ PAID! Rp '+Number(o.unique_amount).toLocaleString('id-ID'),'win'); b.disabled=false; },
-        onPending:function(o){ log('  popup terbuka, menunggu pembayaran…'); },
-        onError:function(o){ log('✗ order '+(o.status||'gagal'),'bad'); b.disabled=false; },
-        onClose:function(){ log('  popup ditutup.'); b.disabled=false; }
-      });
-    }catch(e){ log('✗ '+e.message,'bad'); b.disabled=false; }
+  function idr(n){ return 'Rp '+(Number(n)||0).toLocaleString('id-ID'); }
+  // PRNG deterministik dari nominal (biar QR-nya stabil & mirip QR asli)
+  function drawQR(cv, seed){
+    var N=25, ctx=cv.getContext('2d'), cell=cv.width/N;
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+    var s=(seed>>>0)||987654321;
+    function rnd(){ s=(s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; }
+    ctx.fillStyle='#141f5c';
+    for(var y=0;y<N;y++)for(var x=0;x<N;x++){ if(rnd()>0.5) ctx.fillRect(x*cell,y*cell,cell+.5,cell+.5); }
+    function finder(fx,fy){
+      ctx.fillStyle='#fff'; ctx.fillRect((fx-1)*cell,(fy-1)*cell,9*cell,9*cell);
+      ctx.fillStyle='#141f5c'; ctx.fillRect(fx*cell,fy*cell,7*cell,7*cell);
+      ctx.fillStyle='#fff'; ctx.fillRect((fx+1)*cell,(fy+1)*cell,5*cell,5*cell);
+      ctx.fillStyle='#141f5c'; ctx.fillRect((fx+2)*cell,(fy+2)*cell,3*cell,3*cell);
+    }
+    finder(0,0); finder(N-7,0); finder(0,N-7);
   }
+  var cd=null, order=null;
+  function pad(n){ return (n<10?'0':'')+n; }
+  function buka(){
+    var amt=parseInt(document.getElementById('amt').value,10);
+    if(!(amt>0)){ alert('Nominal harus lebih dari 0'); return; }
+    var code=100+(amt%900);            // kode unik 3 digit (deterministik)
+    var uniq=amt+code;
+    var id='ord_demo_'+(amt.toString(36))+code.toString(36);
+    order={id:id, base:amt, uniq:uniq};
+    var pb=document.getElementById('pb');
+    pb.innerHTML=''
+      +'<div class="demoban">⚠ QRIS DEMO — jangan lakukan pembayaran nyata</div>'
+      +'<div class="amtbig">'+idr(uniq)+'</div>'
+      +'<div class="amtlbl">Nominal + kode unik '+code+'</div>'
+      +'<div class="qwrap"><canvas id="qr" width="200" height="200"></canvas><span class="qtag">DEMO</span></div>'
+      +'<div class="oid">'+id+'</div>'
+      +'<div class="cdown" id="cd">Berlaku 05:00 · menunggu pembayaran…</div>'
+      +'<div class="log" id="log">> order dibuat\\n> menampilkan QRIS…</div>'
+      +'<div class="actions">'
+        +'<button class="btn ok" onclick="sukses()">✓ Simulasikan Pembayaran Berhasil</button>'
+        +'<button class="btn ghost" onclick="tutup()">Tutup</button>'
+      +'</div>';
+    drawQR(document.getElementById('qr'), uniq);
+    document.getElementById('ov').classList.add('on');
+    var left=300;
+    cd=setInterval(function(){
+      left--; var el=document.getElementById('cd');
+      if(!el){ clearInterval(cd); return; }
+      if(left<=0){ clearInterval(cd); el.textContent='Kadaluarsa (demo)'; return; }
+      el.textContent='Berlaku '+pad(Math.floor(left/60))+':'+pad(left%60)+' · menunggu pembayaran…';
+    },1000);
+  }
+  function logln(m,cls){ var L=document.getElementById('log'); if(!L)return; L.innerHTML+='\\n'+(cls?'<span class="'+cls+'">'+m+'</span>':m); L.scrollTop=L.scrollHeight; }
+  function sukses(){
+    if(cd){ clearInterval(cd); cd=null; }
+    logln('✔ pembayaran terdeteksi','win');
+    logln('→ POST webhook merchant … 200 OK','ok');
+    setTimeout(function(){
+      var pb=document.getElementById('pb');
+      pb.innerHTML=''
+        +'<div class="succ">'
+          +'<div class="ring">✓</div>'
+          +'<h2>Pembayaran Berhasil</h2>'
+          +'<p>'+idr(order.uniq)+' diterima</p>'
+          +'<p style="font-family:Share Tech Mono,monospace;font-size:11px">'+order.id+' · status: paid</p>'
+          +'<div class="log" style="min-height:auto;margin-top:14px">✔ order PAID\\n→ webhook merchant: <span class="ok">200 OK</span>\\n→ redirect customer ke halaman sukses</div>'
+          +'<div class="actions"><button class="btn" onclick="tutup()">Selesai</button>'
+          +'<button class="btn ghost" onclick="buka()">Coba Lagi</button></div>'
+        +'</div>';
+    }, 650);
+  }
+  function tutup(){ if(cd){clearInterval(cd);cd=null;} document.getElementById('ov').classList.remove('on'); }
+  document.getElementById('ov').addEventListener('click',function(e){ if(e.target===this) tutup(); });
 </script>
 </body></html>`;
   return c.html(html);
