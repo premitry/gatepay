@@ -1,6 +1,6 @@
 {
-  "versionCode": 13,
-  "versionName": "3.0",
+  "versionCode": 14,
+  "versionName": "3.1",
   "url": "/gatepay-catcher.apk",
-  "notes": "Redesign UI Y2K retro-desktop: 3 tab (Status/Riwayat/Setelan) + taskbar, statistik harian, riwayat transaksi, wizard izin notifikasi, pilih aplikasi target. Fitur & keamanan tetap."
+  "notes": "Login gate: masuk sekali dengan akun web, Device ID & Secret terisi otomatis (tanpa copy manual). Plus redesign Y2K 3 tab + statistik + riwayat + wizard izin."
 }

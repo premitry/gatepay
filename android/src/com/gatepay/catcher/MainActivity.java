@@ -11,6 +11,7 @@ import android.graphics.drawable.StateListDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.InputType;
 import android.text.SpannableStringBuilder;
 import android.text.Spannable;
 import android.text.style.ForegroundColorSpan;
@@ -50,6 +51,12 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         applyIntentConfig(getIntent());
 
+        // Gerbang login: blokir semua sampai tersambung ke akun
+        if (!isLoggedIn()) {
+            setContentView(buildLoginGate());
+            return;
+        }
+
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackground(Ui.desktop());
@@ -74,8 +81,14 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (!isLoggedIn() || contentHost == null) return;
         if (wizard != null && isNlsGranted()) { wizard.dismiss(); wizard = null; }
         showTab(currentTab);
+    }
+
+    private boolean isLoggedIn() {
+        return !Config.deviceId(this).trim().isEmpty()
+            && !Config.deviceSecret(this).trim().isEmpty();
     }
 
     // ================= TASKBAR =================
@@ -702,7 +715,10 @@ public class MainActivity extends Activity {
         addWin(sv);
 
         Ui.Win ac = Ui.window(this, "SETTINGS.INI  [ACCOUNT]");
-        ac.body.addView(Ui.label(this, "DEVICE ID"));
+        ac.body.addView(Ui.text(this, "Terisi otomatis dari login. Ubah manual hanya bila perlu.", Ui.DIM, 12f));
+        TextView lid = Ui.label(this, "DEVICE ID");
+        Ui.marginTop(lid, this, 10);
+        ac.body.addView(lid);
         final EditText eId = settingField(Config.deviceId(this), "copy dari dashboard");
         ac.body.addView(eId);
         TextView ls = Ui.label(this, "DEVICE SECRET");
@@ -759,6 +775,267 @@ public class MainActivity extends Activity {
         return e;
     }
 
+    // ================= GERBANG LOGIN (full-screen) =================
+    private View buildLoginGate() {
+        ScrollView sv = new ScrollView(this);
+        sv.setBackground(Ui.desktop());
+        sv.setFitsSystemWindows(true);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER_HORIZONTAL);
+        root.setPadding(dp(24), dp(48), dp(24), dp(24));
+        sv.addView(root);
+
+        TextView mark = new TextView(this);
+        mark.setText("G");
+        mark.setTextColor(Ui.WHITE);
+        mark.setTypeface(Ui.HEAD, Typeface.BOLD);
+        mark.setTextSize(28);
+        mark.setGravity(Gravity.CENTER);
+        mark.setBackground(Ui.raised(this, Ui.ORANGE));
+        int ms = dp(58);
+        root.addView(mark, new LinearLayout.LayoutParams(ms, ms));
+
+        TextView title = new TextView(this);
+        title.setText("GatePay Catcher");
+        title.setTextColor(0xFF12235C);
+        title.setTypeface(Ui.HEAD, Typeface.BOLD);
+        title.setTextSize(24);
+        title.setPadding(0, dp(12), 0, 0);
+        title.setLayoutParams(new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(title);
+
+        TextView badge = new TextView(this);
+        badge.setText("● LIVE");
+        badge.setTextColor(0xFF0E7C5A);
+        badge.setTypeface(Ui.MONO, Typeface.BOLD);
+        badge.setTextSize(11);
+        badge.setBackground(Ui.raised(this, Ui.CREAM));
+        badge.setPadding(dp(12), dp(4), dp(12), dp(4));
+        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        bl.topMargin = dp(8);
+        badge.setLayoutParams(bl);
+        root.addView(badge);
+
+        Ui.Win w = Ui.window(this, "LOGIN.EXE");
+        w.body.addView(Ui.text(this,
+            "Masuk dengan akun GatePay-mu untuk mengaktifkan catcher.", Ui.DIM, 12.5f));
+
+        TextView l1 = Ui.label(this, "USERNAME");
+        Ui.marginTop(l1, this, 12);
+        w.body.addView(l1);
+        final EditText user = settingField("", "username akun web");
+        w.body.addView(user);
+
+        TextView l2 = Ui.label(this, "PASSWORD");
+        Ui.marginTop(l2, this, 10);
+        w.body.addView(l2);
+        LinearLayout prow = new LinearLayout(this);
+        prow.setOrientation(LinearLayout.HORIZONTAL);
+        Ui.marginTop(prow, this, 4);
+        final EditText pass = new EditText(this);
+        pass.setHint("password");
+        pass.setHintTextColor(0xFF9AA0AA);
+        pass.setTextColor(Ui.TXT);
+        pass.setTextSize(14);
+        pass.setSingleLine(true);
+        pass.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        pass.setBackground(Ui.sunken(this, Ui.WHITE));
+        pass.setPadding(dp(10), dp(10), dp(10), dp(10));
+        pass.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        prow.addView(pass);
+        final TextView eye = new TextView(this);
+        eye.setText("LIHAT");
+        eye.setGravity(Gravity.CENTER);
+        eye.setTypeface(Ui.MONO, Typeface.BOLD);
+        eye.setTextSize(11);
+        eye.setTextColor(Ui.NAVY);
+        eye.setBackground(Ui.raised(this, Ui.CREAM));
+        eye.setPadding(dp(10), dp(10), dp(10), dp(10));
+        LinearLayout.LayoutParams el = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        el.leftMargin = dp(6);
+        eye.setLayoutParams(el);
+        eye.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                boolean hidden = (pass.getInputType() & InputType.TYPE_TEXT_VARIATION_PASSWORD) != 0;
+                pass.setInputType(InputType.TYPE_CLASS_TEXT | (hidden
+                    ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                    : InputType.TYPE_TEXT_VARIATION_PASSWORD));
+                eye.setText(hidden ? "SEMBUNYI" : "LIHAT");
+                pass.setSelection(pass.getText().length());
+            }
+        });
+        prow.addView(eye);
+        w.body.addView(prow);
+
+        final TextView l3 = Ui.label(this, "KODE 2FA");
+        Ui.marginTop(l3, this, 10);
+        l3.setVisibility(View.GONE);
+        w.body.addView(l3);
+        final EditText otp = settingField("", "6 digit");
+        otp.setInputType(InputType.TYPE_CLASS_NUMBER);
+        otp.setVisibility(View.GONE);
+        w.body.addView(otp);
+
+        final TextView msg = Ui.mono(this, "", Ui.RED, 12);
+        Ui.marginTop(msg, this, 8);
+        w.body.addView(msg);
+
+        final Button masuk = Ui.primary(this, "MASUK", null);
+        Ui.marginTop(masuk, this, 14);
+        masuk.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                final String u = user.getText().toString().trim();
+                final String p = pass.getText().toString();
+                final String o = otp.getVisibility() == View.VISIBLE ? otp.getText().toString().trim() : null;
+                if (u.isEmpty() || p.isEmpty()) {
+                    msg.setTextColor(Ui.RED);
+                    msg.setText("Username & password wajib diisi");
+                    return;
+                }
+                masuk.setEnabled(false);
+                msg.setTextColor(Ui.DIM);
+                msg.setText("Menghubungkan...");
+                final String su = Config.serverUrl(MainActivity.this);
+                new Thread(new Runnable() {
+                    public void run() {
+                        final Api.Result r = Api.login(su, u, p, o);
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                masuk.setEnabled(true);
+                                if (r.ok && r.deviceId != null && !r.deviceId.isEmpty()) {
+                                    Config.save(MainActivity.this, su, r.deviceId, r.deviceSecret,
+                                        Config.targetPackages(MainActivity.this));
+                                    toast("Tersambung" + (r.merchantName != null && !r.merchantName.isEmpty()
+                                        ? " - " + r.merchantName : ""));
+                                    recreate();
+                                } else if (r.needs2fa) {
+                                    l3.setVisibility(View.VISIBLE);
+                                    otp.setVisibility(View.VISIBLE);
+                                    msg.setTextColor(Ui.ORANGE);
+                                    msg.setText("Akun pakai 2FA - masukkan kode lalu MASUK lagi");
+                                } else {
+                                    msg.setTextColor(Ui.RED);
+                                    msg.setText(r.error != null && !r.error.isEmpty()
+                                        ? r.error : ("Login gagal (" + r.code + ")"));
+                                }
+                            }
+                        });
+                    }
+                }).start();
+            }
+        });
+        w.body.addView(masuk);
+
+        Ui.marginTop(w.outer, this, 22);
+        root.addView(w.outer);
+
+        TextView foot = Ui.mono(this, "(c) GatePay Catcher", 0xFF1C2B4D, 11);
+        foot.setPadding(0, dp(18), 0, 0);
+        root.addView(foot);
+
+        return sv;
+    }
+
+    // ================= DIALOG: LOGIN AKUN WEB (dipakai ulang bila perlu) =================
+    private void openLogin() {
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.addView(Ui.text(this,
+            "Masuk dengan akun GatePay-mu. Device ID & Secret akan terisi otomatis.", Ui.DIM, 12.5f));
+
+        TextView lu = Ui.label(this, "SERVER URL");
+        Ui.marginTop(lu, this, 10);
+        body.addView(lu);
+        final EditText url = settingField(Config.serverUrl(this), "https://gatepay.biz.id");
+        body.addView(url);
+
+        TextView l1 = Ui.label(this, "USERNAME");
+        Ui.marginTop(l1, this, 8);
+        body.addView(l1);
+        final EditText user = settingField("", "username akun web");
+        body.addView(user);
+
+        TextView l2 = Ui.label(this, "PASSWORD");
+        Ui.marginTop(l2, this, 8);
+        body.addView(l2);
+        final EditText pass = settingField("", "password");
+        pass.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        body.addView(pass);
+
+        final TextView l3 = Ui.label(this, "KODE 2FA");
+        Ui.marginTop(l3, this, 8);
+        l3.setVisibility(View.GONE);
+        body.addView(l3);
+        final EditText otp = settingField("", "6 digit");
+        otp.setInputType(InputType.TYPE_CLASS_NUMBER);
+        otp.setVisibility(View.GONE);
+        body.addView(otp);
+
+        final TextView msg = Ui.mono(this, "", Ui.RED, 12);
+        Ui.marginTop(msg, this, 8);
+        body.addView(msg);
+
+        final Button masuk = Ui.primary(this, "MASUK", null);
+        Ui.marginTop(masuk, this, 12);
+        masuk.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                final String su = url.getText().toString().trim();
+                final String u = user.getText().toString().trim();
+                final String p = pass.getText().toString();
+                final String o = otp.getVisibility() == View.VISIBLE ? otp.getText().toString().trim() : null;
+                if (u.isEmpty() || p.isEmpty()) {
+                    msg.setTextColor(Ui.RED);
+                    msg.setText("Username & password wajib diisi");
+                    return;
+                }
+                masuk.setEnabled(false);
+                msg.setTextColor(Ui.DIM);
+                msg.setText("Menghubungkan...");
+                new Thread(new Runnable() {
+                    public void run() {
+                        final Api.Result r = Api.login(su, u, p, o);
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                masuk.setEnabled(true);
+                                if (r.ok && r.deviceId != null && !r.deviceId.isEmpty()) {
+                                    Config.save(MainActivity.this,
+                                        su.isEmpty() ? Config.serverUrl(MainActivity.this) : su,
+                                        r.deviceId, r.deviceSecret,
+                                        Config.targetPackages(MainActivity.this));
+                                    toast("Tersambung" + (r.merchantName != null && !r.merchantName.isEmpty()
+                                        ? " - " + r.merchantName : ""));
+                                    if (curDialog != null) curDialog.dismiss();
+                                    showTab(0);
+                                } else if (r.needs2fa) {
+                                    l3.setVisibility(View.VISIBLE);
+                                    otp.setVisibility(View.VISIBLE);
+                                    msg.setTextColor(Ui.ORANGE);
+                                    msg.setText("Akun pakai 2FA - masukkan kode lalu MASUK lagi");
+                                } else {
+                                    msg.setTextColor(Ui.RED);
+                                    msg.setText(r.error != null && !r.error.isEmpty()
+                                        ? r.error : ("Login gagal (" + r.code + ")"));
+                                }
+                            }
+                        });
+                    }
+                }).start();
+            }
+        });
+        body.addView(masuk);
+
+        View[] btns = {
+            Ui.normal(this, "TUTUP", new View.OnClickListener() {
+                public void onClick(View v) { if (curDialog != null) curDialog.dismiss(); }
+            })
+        };
+        showDialog("LOGIN.EXE", body, btns, true);
+    }
+
     private void confirmLogout() {
         new AlertDialog.Builder(this)
             .setTitle("Keluar dari akun?")
@@ -768,7 +1045,7 @@ public class MainActivity extends Activity {
                     Config.save(MainActivity.this, Config.serverUrl(MainActivity.this), "", "",
                         Config.targetPackages(MainActivity.this));
                     toast("Akun dikeluarkan");
-                    showTab(2);
+                    recreate();
                 }
             })
             .setNegativeButton("BATAL", null)
