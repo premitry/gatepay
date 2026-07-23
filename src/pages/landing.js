@@ -5,7 +5,7 @@ export function renderLanding() {
 <html lang="id"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GatePay — Payment Gateway QRIS Otomatis</title>
-<meta name="description" content="Terima pembayaran QRIS DANA secara otomatis. Buat order, customer melakukan scan, langsung terkonfirmasi. Tanpa kerumitan API merchant enterprise.">
+<meta name="description" content="GatePay — gateway pembayaran QRIS yang mengonfirmasi transaksi secara otomatis: dari notifikasi perangkat hingga langsung dari akun ShopeePay Partner dan GoPay Merchant Anda. Nominal terkunci, tanpa pengecekan manual.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Michroma&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
@@ -82,19 +82,19 @@ export function renderLanding() {
 </div></nav>
 
 <header class="hero"><div class="wrap">
-  <div class="badge">▮ PAYMENT_GATEWAY.SYS · QRIS · INDONESIA</div>
-  <h1>Terima <span class="hl">QRIS</span> otomatis,<br>tanpa kerumitan.</h1>
-  <p class="sub">Buat order, customer scan QRIS, pembayaran langsung terkonfirmasi otomatis. QRIS statis Anda diubah menjadi dinamis dengan nominal terkunci — mencegah kesalahan transfer.</p>
+  <div class="badge">▮ GATEPAY · QRIS PAYMENT GATEWAY · INDONESIA</div>
+  <h1>Terima &amp; konfirmasi pembayaran <span class="hl">QRIS</span><br>secara otomatis.</h1>
+  <p class="sub">GatePay mengubah QRIS statis Anda menjadi QRIS dinamis bernominal terkunci, lalu mengonfirmasi setiap pembayaran yang masuk secara otomatis — dari <b>notifikasi perangkat</b> hingga langsung dari akun <b>ShopeePay Partner</b> dan <b>GoPay Merchant</b> Anda. Tanpa pengecekan manual, tanpa salah nominal.</p>
   <div class="cta">
     <a class="btn primary" href="/dashboard">Mulai Sekarang →</a>
     <a class="btn" href="/docs">Lihat Dokumentasi</a>
   </div>
   <div class="stats out">
     <div class="stat"><div class="n">QRIS</div><div class="l">Semua e-wallet</div></div>
-    <div class="stat"><div class="n">Real-time</div><div class="l">Konfirmasi</div></div>
-    <div class="stat"><div class="n">API</div><div class="l">Integrasi mudah</div></div>
+    <div class="stat"><div class="n">Real-time</div><div class="l">Konfirmasi otomatis</div></div>
+    <div class="stat"><div class="n">ShopeePay + GoPay</div><div class="l">Deteksi server-side</div></div>
   </div>
-  <div class="warn">&gt; Nominal unik digunakan untuk pencocokan otomatis dari notifikasi pembayaran.</div>
+  <div class="warn">&gt; Nominal unik digunakan untuk pencocokan otomatis di setiap jalur konfirmasi.</div>
 </div></header>
 
 <section><div class="wrap">
@@ -121,8 +121,22 @@ export function renderLanding() {
         <div class="feat"><div class="ic">⚡</div><h3>Real-time</h3><p>Konfirmasi otomatis dari notifikasi pembayaran, tanpa pemeriksaan manual.</p></div>
         <div class="feat"><div class="ic">🧩</div><h3>API Sederhana</h3><p>Satu endpoint untuk order, satu untuk memeriksa status. Callback webhook ke sistem Anda.</p></div>
         <div class="feat"><div class="ic">📊</div><h3>Dashboard</h3><p>Pantau order, pembayaran, dan statistik secara live.</p></div>
-        <div class="feat"><div class="ic">🏦</div><h3>Semua e-wallet</h3><p>QRIS = 1 kode untuk DANA, OVO, GoPay, ShopeePay, m-banking, dan lain-lain.</p></div>
-        <div class="feat"><div class="ic">🚀</div><h3>Tanpa Onboarding Ribet</h3><p>Tidak perlu PKS enterprise. Upload QRIS statis Anda, langsung berjalan.</p></div>
+        <div class="feat"><div class="ic">🏦</div><h3>Satu QRIS, Semua Kanal</h3><p>QRIS = satu kode untuk DANA, OVO, GoPay, ShopeePay, m-banking, dan lainnya.</p></div>
+        <div class="feat"><div class="ic">🚀</div><h3>Integrasi Cepat</h3><p>Tanpa perjanjian enterprise. Upload QRIS statis Anda, langsung berjalan.</p></div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="win out">
+    <div class="tt">METODE_KONFIRMASI.TXT</div>
+    <div class="bd2">
+      <div class="sec-title"><h2>Metode Konfirmasi Pembayaran</h2><p>Tiga jalur deteksi yang dapat berjalan bersamaan dan saling mencadangkan.</p></div>
+      <div class="feats">
+        <div class="feat"><div class="ic">📱</div><h3>Notifikasi Perangkat</h3><p>Aplikasi pendamping menangkap notifikasi "uang masuk" dari DANA, OVO, ShopeePay, GoPay, m-banking, dan lainnya, lalu mengirimkannya untuk pencocokan otomatis.</p></div>
+        <div class="feat"><div class="ic">🛍</div><h3>ShopeePay Partner</h3><p>Konfirmasi langsung dari akun ShopeePay Partner Anda secara server-side — pembayaran ShopeePay terkonfirmasi tanpa perangkat tambahan.</p></div>
+        <div class="feat"><div class="ic">🟢</div><h3>GoPay Merchant</h3><p>Konfirmasi langsung dari akun GoPay Merchant (GoBiz) Anda secara server-side — pembayaran GoPay terkonfirmasi tanpa perangkat tambahan.</p></div>
       </div>
     </div>
   </div>
@@ -132,14 +146,13 @@ export function renderLanding() {
   <div class="win out">
     <div class="tt">APLIKASI_DIDUKUNG.TXT</div>
     <div class="bd2">
-      <div class="sec-title"><h2>Aplikasi yang Didukung</h2><p>APK penangkap notifikasi GatePay membaca notifikasi "uang masuk" dari aplikasi apa pun di HP Anda.</p></div>
+      <div class="sec-title"><h2>Aplikasi yang Didukung</h2><p>Pembayaran ke QRIS Anda dari berbagai e-wallet dan mobile banking, terkonfirmasi otomatis oleh GatePay.</p></div>
       <div class="feats" style="grid-template-columns:repeat(2,1fr)">
-        <div class="feat"><div class="ic">💙</div><h3>DANA &amp; DANA Bisnis</h3><p>Paling utama & paling cepat. Notifikasi transaksi masuk langsung tertangkap.<br><span class="mono" style="font-size:12px;color:var(--accent)">id.dana</span></p></div>
-        <div class="feat"><div class="ic">💜</div><h3>E-wallet lain</h3><p>OVO, GoPay, ShopeePay, LinkAja — asalkan menampilkan notifikasi uang masuk.<br><span class="mono" style="font-size:12px;color:var(--accent)">ovo.id · com.gojek.app · com.shopee.id</span></p></div>
-        <div class="feat"><div class="ic">🏦</div><h3>Mobile Banking</h3><p>BCA mobile, BRImo, Livin' Mandiri, dan lain-lain — jika memberikan notifikasi kredit masuk.<br><span class="mono" style="font-size:12px;color:var(--accent)">com.bca · id.co.bri.brimo</span></p></div>
-        <div class="feat"><div class="ic">➕</div><h3>Bebas Tambah</h3><p>Isi package name aplikasi lain (pisah koma) di APK — apa pun yang notifikasinya memuat nominal Rp.</p></div>
+        <div class="feat"><div class="ic">💙</div><h3>DANA &amp; DANA Bisnis</h3><p>Notifikasi transaksi masuk langsung tertangkap dan dicocokkan.</p></div>
+        <div class="feat"><div class="ic">🛍</div><h3>ShopeePay &amp; GoPay</h3><p>Terkonfirmasi lewat notifikasi maupun langsung dari akun Partner/Merchant Anda secara server-side.</p></div>
+        <div class="feat"><div class="ic">💜</div><h3>E-wallet Lain</h3><p>OVO, LinkAja, dan e-wallet lain — selama menampilkan notifikasi uang masuk.</p></div>
+        <div class="feat"><div class="ic">🏦</div><h3>Mobile Banking</h3><p>BCA mobile, BRImo, Livin' Mandiri, dan lainnya — bila memberikan notifikasi kredit masuk.</p></div>
       </div>
-      <div class="warn" style="margin-top:20px;text-align:left">&gt; SYARAT: Anda harus upload QRIS statis terlebih dahulu di dashboard. Semua e-wallet/bank di atas membayar ke QRIS tersebut — GatePay hanya mencocokkan nominalnya dari notifikasi. Cara menemukan package name: Setelan HP → Aplikasi → detail aplikasi, atau isi contoh di atas.</div>
     </div>
   </div>
 </div></section>
@@ -147,8 +160,8 @@ export function renderLanding() {
 <section><div class="wrap">
   <div class="cta-box out">
     <div class="bd2">
-      <h2>Siap terima pembayaran?</h2>
-      <p>Upload QRIS Anda, buat order pertama, dalam hitungan menit.</p>
+      <h2>Siap menerima pembayaran QRIS otomatis?</h2>
+      <p>Upload QRIS Anda dan buat order pertama dalam hitungan menit.</p>
       <a class="btn primary" href="/dashboard" style="padding:13px 30px;font-size:14px">Buka Dashboard →</a>
     </div>
   </div>
