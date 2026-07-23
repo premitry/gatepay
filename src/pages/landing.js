@@ -54,7 +54,7 @@ export function renderLanding() {
   .gstats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;max-width:860px;margin:0 auto}
   .gstat{padding:14px 12px;text-align:center;border-right:2px solid rgba(84,81,74,.35)}
   .gstat:last-child{border-right:0}
-  .gn{font-family:'Michroma';font-size:26px;color:#0d1c4d;text-shadow:1px 1px 0 rgba(255,255,255,.6)}
+  .gn{font-family:'Michroma';font-size:26px;color:#0d1c4d;-webkit-text-stroke:.8px #0d1c4d;text-shadow:1px 1px 0 rgba(255,255,255,.6)}
   .gl{font-size:13px;font-weight:800;color:#152350;text-transform:uppercase;letter-spacing:.04em;margin-top:7px}
   /* windows */
   .win{background:var(--chrome)}
