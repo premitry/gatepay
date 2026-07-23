@@ -68,20 +68,21 @@ export function renderLanding() {
   .step .num{width:28px;height:28px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Michroma';font-size:12px;margin-bottom:10px;border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
   .step h3{font-size:14px;margin-bottom:6px}
   .step p{color:var(--dim);font-size:12.5px;line-height:1.55}
-  .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-  .feat{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge);padding:14px}
-  .feat .ic{font-size:19px;margin-bottom:7px}
-  .feat h3{font-size:13.5px;margin-bottom:5px}
-  .feat p{color:var(--dim);font-size:12.5px;line-height:1.55}
+  .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .feat{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge);padding:11px 12px}
+  .feat .ic{font-size:17px;margin-bottom:5px}
+  .feat h3{font-size:13px;margin-bottom:4px}
+  .feat p{color:var(--dim);font-size:12px;line-height:1.5}
   .seclist{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;max-width:720px;margin:0 auto}
   .seci{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--text)}
   .seci .ck{color:var(--ok);font-weight:900;flex:0 0 auto}
-  .faq details{background:var(--chrome);border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:8px}
-  .faq summary{cursor:pointer;padding:11px 14px;font-weight:700;font-size:14px;list-style:none}
+  .faq{max-width:760px;margin:0 auto}
+  .faq details{background:var(--chrome);border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:6px}
+  .faq summary{cursor:pointer;padding:9px 12px;font-weight:700;font-size:13px;list-style:none}
   .faq summary::-webkit-details-marker{display:none}
   .faq summary:before{content:'▸ ';color:var(--title-a)}
   .faq details[open] summary:before{content:'▾ '}
-  .faq details>div{padding:0 14px 12px;font-size:13px;color:var(--dim);line-height:1.6}
+  .faq details>div{padding:0 12px 10px;font-size:12.5px;color:var(--dim);line-height:1.6}
   .foot-note{text-align:center;margin:18px auto 0;font-size:13px;line-height:1.65;color:#1c2b4d;max-width:820px}
   .foot-note a{font-weight:700}
   .cta-box{background:var(--chrome);text-align:center}
@@ -235,11 +236,16 @@ export function renderLanding() {
     <div class="bd2">
       <div class="sec-title"><h2>Pertanyaan Umum</h2></div>
       <div class="faq">
-        <details><summary>Apakah harus punya QRIS sendiri?</summary><div>Ya. GatePay tidak membuat QRIS dari nol — Anda harus sudah memiliki QRIS statis merchant (dari DANA Bisnis, ShopeePay Partner, GoBiz, bank, atau PSP berlisensi). GatePay mengubahnya menjadi QRIS dinamis dan mengonfirmasi pembayaran.</div></details>
-        <details><summary>Perlu HP Android?</summary><div>Untuk jalur default (notifikasi), ya — HP Android menyala &amp; online menjalankan aplikasi pendamping. Khusus ShopeePay &amp; GoPay, tersedia deteksi server-side tanpa HP.</div></details>
-        <details><summary>Berbayar?</summary><div>Gratis. Tidak ada biaya bulanan maupun potongan transaksi. Dana pembayaran masuk langsung ke akun e-wallet/bank Anda.</div></details>
-        <details><summary>Butuh kartu kredit untuk daftar?</summary><div>Tidak. Cukup daftar akun, upload QRIS statis, dan mulai membuat order.</div></details>
-        <details><summary>Apakah aman?</summary><div>Kredensial dienkripsi AES-GCM 256-bit, webhook ditandatangani HMAC-SHA256, tersedia 2FA, dan API key dapat dirotasi kapan saja. Detail di <a href="/privasi">Ketentuan &amp; Privasi</a>.</div></details>
+        <details><summary>Apakah saya harus punya QRIS sendiri?</summary><div>Ya. GatePay tidak menerbitkan QRIS baru. Anda harus sudah memiliki QRIS merchant (DANA Bisnis, ShopeePay Partner, GoBiz, bank, atau PSP berlisensi). GatePay mengubah QRIS statis menjadi QRIS dinamis dan mengonfirmasi pembayaran otomatis.</div></details>
+        <details><summary>Apakah GatePay benar-benar gratis?</summary><div>Ya. Tidak ada biaya bulanan maupun potongan transaksi. Dana pembayaran tetap masuk langsung ke akun merchant Anda.</div></details>
+        <details><summary>Apakah perlu HP Android?</summary><div>Untuk metode notifikasi, ya. HP Android harus menyala, terhubung internet, dan menjalankan aplikasi pendamping. Khusus ShopeePay Partner dan GoPay Merchant tersedia metode tanpa HP.</div></details>
+        <details><summary>Apakah saya perlu kartu kredit untuk mendaftar?</summary><div>Tidak. Anda cukup membuat akun, menghubungkan QRIS merchant, lalu mulai membuat pembayaran.</div></details>
+        <details><summary>Bagaimana cara kerja GatePay?</summary><div>GatePay membuat QRIS dinamis dengan nominal unik. Setelah pelanggan membayar, sistem akan mendeteksi transaksi dan mengirim webhook ke server Anda secara otomatis.</div></details>
+        <details><summary>Berapa lama konfirmasi pembayaran?</summary><div>Umumnya dalam hitungan detik setelah pembayaran berhasil. Kecepatan bergantung pada metode deteksi yang digunakan.</div></details>
+        <details><summary>Apakah dana pembayaran masuk ke GatePay?</summary><div>Tidak. Dana tetap masuk langsung ke akun QRIS merchant Anda. GatePay hanya membantu membuat QRIS dinamis dan mengonfirmasi pembayaran — kami tidak pernah menahan atau menampung dana Anda.</div></details>
+        <details><summary>Apakah GatePay aman digunakan?</summary><div>Kredensial dienkripsi menggunakan AES-GCM 256-bit, webhook ditandatangani dengan HMAC-SHA256, tersedia autentikasi 2FA, dan API Key dapat dirotasi kapan saja.</div></details>
+        <details><summary>Apakah tersedia REST API dan Webhook?</summary><div>Ya. GatePay menyediakan REST API untuk membuat pembayaran serta webhook untuk menerima status transaksi secara otomatis.</div></details>
+        <details><summary>Aplikasi apa saja yang didukung?</summary><div>GatePay mendukung berbagai e-wallet dan mobile banking. Daftar lengkap aplikasi yang didukung tersedia pada <a href="/docs">dokumentasi</a>.</div></details>
       </div>
     </div>
   </div>
