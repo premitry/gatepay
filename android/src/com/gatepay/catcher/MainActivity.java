@@ -10,6 +10,8 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.content.pm.ResolveInfo;
+import android.graphics.drawable.Drawable;
 import android.provider.Settings;
 import android.text.InputType;
 import android.text.SpannableStringBuilder;
@@ -21,6 +23,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -28,7 +31,10 @@ import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 
@@ -281,20 +287,16 @@ public class MainActivity extends Activity {
     }
 
     // ---- target apps ----
-    private static final String[] PRESET_LABELS = {
-        "DANA", "DANA Bisnis", "ShopeePay", "GoPay (Gojek)", "GoBiz Merchant",
-        "OVO", "LinkAja", "BCA mobile", "BRImo", "Livin Mandiri"
-    };
-    private static final String[] PRESET_PKGS = {
-        "id.dana", "id.danabisnis", "com.shopee.id", "com.gojek.app", "com.gojek.gobiz",
-        "ovo.id", "com.telkom.mwallet", "com.bca.mybca.omni.android", "id.co.bri.brimo", "com.bankmandiri.livin"
-    };
-
     private String labelFor(String pkg) {
-        if (pkg == null) return "";
-        for (int i = 0; i < PRESET_PKGS.length; i++)
-            if (PRESET_PKGS[i].equalsIgnoreCase(pkg)) return PRESET_LABELS[i].toUpperCase(Locale.US);
-        return pkg;
+        if (pkg == null || pkg.isEmpty()) return "";
+        if (pkg.equals("TEST")) return "UJI KIRIM";
+        if (pkg.equals("notification")) return "NOTIFIKASI";
+        try {
+            android.content.pm.PackageManager pm = getPackageManager();
+            return pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString();
+        } catch (Exception e) {
+            return pkg;
+        }
     }
 
     private List<String> targetList() {
@@ -495,54 +497,51 @@ public class MainActivity extends Activity {
         wizard = showDialog("NOTIFICATION_SETUP.EXE", body, btns, true);
     }
 
-    // ================= DIALOG: PILIH APLIKASI =================
+    // ================= DIALOG: PILIH APLIKASI (baca app terpasang) =================
     private void openPicker() {
         final List<String> cur = targetList();
-        final boolean[] sel = new boolean[PRESET_PKGS.length];
-        for (int i = 0; i < PRESET_PKGS.length; i++) sel[i] = cur.contains(PRESET_PKGS[i]);
+        final android.content.pm.PackageManager pm = getPackageManager();
+
+        // baca aplikasi yang punya launcher (yang dilihat user), dedup per paket
+        final LinkedHashMap<String, String> labelOf = new LinkedHashMap<>();
+        Intent q = new Intent(Intent.ACTION_MAIN);
+        q.addCategory(Intent.CATEGORY_LAUNCHER);
+        for (ResolveInfo ri : pm.queryIntentActivities(q, 0)) {
+            String pkg = ri.activityInfo != null ? ri.activityInfo.packageName : null;
+            if (pkg == null || pkg.equals(getPackageName()) || labelOf.containsKey(pkg)) continue;
+            labelOf.put(pkg, ri.loadLabel(pm).toString());
+        }
+        final List<String> pkgs = new ArrayList<>(labelOf.keySet());
+        Collections.sort(pkgs, new Comparator<String>() {
+            public int compare(String a, String b) {
+                return labelOf.get(a).compareToIgnoreCase(labelOf.get(b));
+            }
+        });
+        final boolean[] sel = new boolean[pkgs.size()];
+        for (int i = 0; i < pkgs.size(); i++) sel[i] = cur.contains(pkgs.get(i));
 
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
-        body.addView(Ui.text(this, "Pilih aplikasi yang ingin dipantau:", Ui.DIM, 12.5f));
-        for (int i = 0; i < PRESET_LABELS.length; i++) {
+        body.addView(Ui.text(this, "Pilih aplikasi yang notifikasinya dipantau:", Ui.DIM, 12.5f));
+        for (int i = 0; i < pkgs.size(); i++) {
             final int idx = i;
-            LinearLayout cb = Ui.checkbox(this, PRESET_LABELS[i], PRESET_PKGS[i], sel[i],
-                new Ui.CheckListener() {
-                    public void onChanged(boolean c) { sel[idx] = c; }
-                });
-            body.addView(cb);
+            final String pkg = pkgs.get(i);
+            Drawable icon = null;
+            try { icon = pm.getApplicationIcon(pkg); } catch (Exception ignored) {}
+            LinearLayout row = appRow(labelOf.get(pkg), pkg, icon, sel[i], new Ui.CheckListener() {
+                public void onChanged(boolean c) { sel[idx] = c; }
+            });
+            Ui.marginTop(row, this, 2);
+            body.addView(row);
         }
-        TextView cl = Ui.label(this, "TAMBAH MANUAL (package)");
-        Ui.marginTop(cl, this, 8);
-        body.addView(cl);
-        final EditText custom = new EditText(this);
-        custom.setHint("mis. com.contoh.app");
-        custom.setHintTextColor(0xFF9AA0AA);
-        custom.setTextColor(Ui.TXT);
-        custom.setTextSize(13);
-        custom.setSingleLine(true);
-        custom.setBackground(Ui.sunken(this, Ui.WHITE));
-        custom.setPadding(dp(10), dp(9), dp(10), dp(9));
-        Ui.marginTop(custom, this, 4);
-        body.addView(custom);
 
         View[] btns = {
             Ui.primary(this, "SIMPAN", new View.OnClickListener() {
                 public void onClick(View v) {
                     List<String> out = new ArrayList<>();
-                    for (String p : cur) {
-                        boolean isPreset = false;
-                        for (String pp : PRESET_PKGS) if (pp.equalsIgnoreCase(p)) { isPreset = true; break; }
-                        if (!isPreset) out.add(p);
-                    }
-                    for (int i = 0; i < sel.length; i++)
-                        if (sel[i] && !out.contains(PRESET_PKGS[i])) out.add(PRESET_PKGS[i]);
-                    String cu = custom.getText().toString().trim();
-                    if (!cu.isEmpty())
-                        for (String piece : cu.split(",")) {
-                            String t = piece.trim();
-                            if (!t.isEmpty() && !out.contains(t)) out.add(t);
-                        }
+                    for (int i = 0; i < sel.length; i++) if (sel[i]) out.add(pkgs.get(i));
+                    // pertahankan paket manual lama yang tidak muncul di daftar launcher
+                    for (String p : cur) if (!pkgs.contains(p) && !out.contains(p)) out.add(p);
                     saveTargets(out);
                     if (curDialog != null) curDialog.dismiss();
                     showTab(0);
@@ -553,6 +552,69 @@ public class MainActivity extends Activity {
             })
         };
         showDialog("PILIH_APLIKASI.CFG", body, btns, true);
+    }
+
+    /** Baris pilih aplikasi: checkbox + ikon + nama + package. */
+    private LinearLayout appRow(String label, String pkg, Drawable icon, boolean checked,
+                                final Ui.CheckListener cl) {
+        final boolean[] state = { checked };
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(7), 0, dp(7));
+
+        final TextView box = new TextView(this);
+        box.setGravity(Gravity.CENTER);
+        box.setTypeface(Ui.MONO, Typeface.BOLD);
+        box.setTextSize(13);
+        box.setTextColor(Ui.NAVY);
+        int s = dp(22);
+        box.setWidth(s);
+        box.setHeight(s);
+        box.setBackground(Ui.sunken(this, Ui.WHITE));
+        box.setText(checked ? "✓" : "");
+        row.addView(box);
+
+        if (icon != null) {
+            ImageView iv = new ImageView(this);
+            iv.setImageDrawable(icon);
+            int is = dp(30);
+            LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(is, is);
+            il.leftMargin = dp(10);
+            iv.setLayoutParams(il);
+            row.addView(iv);
+        }
+
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams cl2 = new LinearLayout.LayoutParams(0,
+            ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        cl2.leftMargin = dp(10);
+        col.setLayoutParams(cl2);
+        TextView tt = new TextView(this);
+        tt.setText(label);
+        tt.setTextColor(Ui.TXT);
+        tt.setTypeface(Ui.BODY, Typeface.BOLD);
+        tt.setTextSize(13.5f);
+        tt.setSingleLine(true);
+        col.addView(tt);
+        TextView pk = new TextView(this);
+        pk.setText(pkg);
+        pk.setTextColor(Ui.DIM);
+        pk.setTypeface(Ui.MONO);
+        pk.setTextSize(10.5f);
+        pk.setSingleLine(true);
+        col.addView(pk);
+        row.addView(col);
+
+        row.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                state[0] = !state[0];
+                box.setText(state[0] ? "✓" : "");
+                if (cl != null) cl.onChanged(state[0]);
+            }
+        });
+        return row;
     }
     // ================= TAB: RIWAYAT =================
     private void buildHistory() {
@@ -610,6 +672,7 @@ public class MainActivity extends Activity {
         addWin(w);
     }
 
+    /** Baris riwayat dengan detail lengkap langsung inline (tanpa popup). */
     private View historyRow(final EventLog.Ev e) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.VERTICAL);
@@ -619,51 +682,69 @@ public class MainActivity extends Activity {
         String tag = e.sent() ? "SENT" : (e.pending() ? "PENDING" : "FAILED");
         int tagColor = e.sent() ? Ui.GREEN : (e.pending() ? Ui.ORANGE : Ui.RED);
 
+        // baris atas: waktu + sumber ........ nominal
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
         TextView left = Ui.mono(this, hhmmss(e.t) + "  " + labelFor(e.src), Ui.TXT, 13);
+        left.setTypeface(Ui.MONO, Typeface.BOLD);
         left.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         top.addView(left);
-        TextView amt = Ui.mono(this, rupiah(e.amt), Ui.NAVY, 13);
+        TextView amt = Ui.mono(this, rupiah(e.amt), Ui.NAVY, 14);
         amt.setTypeface(Ui.MONO, Typeface.BOLD);
         top.addView(amt);
         row.addView(top);
 
-        TextView st = Ui.mono(this, "[" + tag + "]" + (e.sent() ? " " + e.code : ""), tagColor, 11.5f);
-        row.addView(st);
+        // detail inline
+        LinearLayout detail = new LinearLayout(this);
+        detail.setOrientation(LinearLayout.VERTICAL);
+        detail.setBackground(Ui.sunken(this, 0xFFF4F2E7));
+        detail.setPadding(dp(10), dp(8), dp(10), dp(8));
+        Ui.marginTop(detail, this, 8);
+        detail.addView(kv("Sumber", labelFor(e.src)));
+        detail.addView(kv("Nominal", rupiah(e.amt)));
+        TextView wh = kv("Webhook", "[" + tag + "]" + (e.sent() ? " " + e.code : ""));
+        detail.addView(wh);
+        detail.addView(kv("Waktu", hhmmss(e.t)));
+        detail.addView(kv("Event", e.eid));
+        row.addView(detail);
 
-        row.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { openDetail(e); }
+        Button resend = smallBtn("KIRIM ULANG", new View.OnClickListener() {
+            public void onClick(View v) {
+                String src = e.src == null ? "notification" : e.src;
+                String json = "{\"event_id\":\"" + e.eid + "\",\"source\":\"" + src
+                    + "\",\"amount\":" + e.amt + ",\"received_at\":" + e.t + "}";
+                Sender.send(MainActivity.this, json);
+                toast("Dikirim ulang");
+            }
         });
+        LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rl.topMargin = dp(8);
+        resend.setLayoutParams(rl);
+        row.addView(resend);
         return row;
     }
 
-    private void openDetail(final EventLog.Ev e) {
-        String tag = e.sent() ? "SENT [" + e.code + "]" : (e.pending() ? "PENDING" : "FAILED");
-        StringBuilder sb = new StringBuilder();
-        sb.append("Sumber   : ").append(labelFor(e.src)).append("\n");
-        sb.append("Nominal  : ").append(rupiah(e.amt)).append("\n");
-        sb.append("Webhook  : ").append(tag).append("\n");
-        sb.append("Waktu    : ").append(hhmmss(e.t)).append("\n");
-        sb.append("Event ID : ").append(e.eid);
+    /** Baris "key : value" mono untuk detail. */
+    private TextView kv(String k, String v) {
+        TextView t = new TextView(this);
+        t.setTypeface(Ui.MONO);
+        t.setTextSize(12);
+        SpannableStringBuilder sb = new SpannableStringBuilder();
+        int a = sb.length();
+        sb.append(padRight(k, 8) + ": ");
+        sb.setSpan(new ForegroundColorSpan(Ui.DIM), a, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        int b = sb.length();
+        sb.append(v == null ? "" : v);
+        sb.setSpan(new ForegroundColorSpan(Ui.TXT), b, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        t.setText(sb);
+        return t;
+    }
 
-        View content = Ui.mono(this, sb.toString(), Ui.TXT, 13);
-        View[] btns = {
-            Ui.primary(this, "KIRIM ULANG", new View.OnClickListener() {
-                public void onClick(View v) {
-                    String src = e.src == null ? "notification" : e.src;
-                    String json = "{\"event_id\":\"" + e.eid + "\",\"source\":\"" + src
-                        + "\",\"amount\":" + e.amt + ",\"received_at\":" + e.t + "}";
-                    Sender.send(MainActivity.this, json);
-                    toast("Dikirim ulang");
-                    if (curDialog != null) curDialog.dismiss();
-                }
-            }),
-            Ui.normal(this, "TUTUP", new View.OnClickListener() {
-                public void onClick(View v) { if (curDialog != null) curDialog.dismiss(); }
-            })
-        };
-        showDialog("PAYMENT_DETAIL.TXT", content, btns, true);
+    private String padRight(String s, int n) {
+        StringBuilder b = new StringBuilder(s);
+        while (b.length() < n) b.append(' ');
+        return b.toString();
     }
 
     // ================= TAB: SETELAN =================

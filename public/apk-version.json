@@ -1,6 +1,6 @@
 {
-  "versionCode": 14,
-  "versionName": "3.1",
+  "versionCode": 15,
+  "versionName": "3.2",
   "url": "/gatepay-catcher.apk",
-  "notes": "Login gate: masuk sekali dengan akun web, Device ID & Secret terisi otomatis (tanpa copy manual). Plus redesign Y2K 3 tab + statistik + riwayat + wizard izin."
+  "notes": "Pilih aplikasi target langsung dari daftar app terpasang (ikon + nama). Riwayat menampilkan detail lengkap inline + Kirim Ulang. Plus login gate & redesign Y2K."
 }
