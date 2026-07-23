@@ -48,8 +48,8 @@ cd ..
 echo "=== 5. zipalign ==="
 $BT/zipalign -f 4 paygate-catcher-unsigned.apk paygate-catcher-aligned.apk
 
-echo "=== 6. bikin debug keystore (kalau belum ada) ==="
-KS=/root/paygate-debug.keystore
+echo "=== 6. keystore tetap (di repo, biar signature konsisten antar build) ==="
+KS="$(dirname "$0")/paygate-debug.keystore"
 if [ ! -f "$KS" ]; then
   keytool -genkeypair -v -keystore "$KS" \
     -alias paygate -keyalg RSA -keysize 2048 -validity 10000 \
