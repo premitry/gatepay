@@ -90,13 +90,13 @@ export function renderLanding() {
   .cta-box h2{font-size:24px;margin-bottom:12px;color:#12235c}
   .cta-box p{color:var(--dim);margin-bottom:22px}
   /* footer */
-  footer{border-top:2px solid var(--edge-dark);background:linear-gradient(180deg,var(--chrome),var(--chrome-2));padding:30px 0 20px;color:var(--dim);font-size:12px;margin-top:20px}
-  .fcols{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;gap:22px;margin-bottom:22px}
-  .fcol h4{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--title-a);font-family:'Michroma';margin-bottom:10px}
-  .fcol a{display:block;color:var(--dim);padding:3px 0;font-size:12px}
+  footer{border-top:2px solid var(--edge-dark);background:linear-gradient(180deg,var(--chrome),var(--chrome-2));padding:18px 0 12px;color:var(--dim);font-size:12px;margin-top:10px}
+  .fcols{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;gap:18px;margin-bottom:12px}
+  .fcol h4{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--title-a);font-family:'Michroma';margin-bottom:7px}
+  .fcol a{display:block;color:var(--dim);padding:2px 0;font-size:12px}
   .fcol a:hover{color:var(--text)}
   .fbrand p{font-size:12px;color:var(--dim);margin-top:8px;max-width:240px;line-height:1.6}
-  .fbot{border-top:1px solid var(--edge);padding-top:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  .fbot{border-top:1px solid var(--edge);padding-top:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
   @media(max-width:820px){.fcols{grid-template-columns:1fr 1fr}}
   @media(max-width:720px){.steps,.feats{grid-template-columns:1fr}.seclist{grid-template-columns:1fr}.faq{grid-template-columns:1fr}}
   @media(max-width:640px){.gstats{grid-template-columns:1fr 1fr}.gstat{border-bottom:2px solid rgba(84,81,74,.25)}}
