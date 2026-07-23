@@ -36,14 +36,16 @@ export function renderLanding() {
   .btn.primary:active{border-color:#141f5c #7fb0e0 #7fb0e0 #141f5c}
   /* hero */
   .hero{padding:56px 0 44px;text-align:center}
-  .badge{display:inline-block;padding:5px 14px;background:var(--term-bg);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);font-size:11px;color:var(--term-ok);margin-bottom:40px;letter-spacing:.06em;font-family:'Share Tech Mono',monospace}
-  h1{font-size:42px;line-height:.98;margin:0 auto;max-width:900px;color:#12235c;text-shadow:1px 1px 0 rgba(255,255,255,.5)}
+  .badge{display:inline-block;padding:5px 14px;background:var(--term-bg);border:2px solid;border-color:var(--edge-dark) #2b3a7a #2b3a7a var(--edge-dark);font-size:11px;color:var(--term-ok);margin-bottom:24px;letter-spacing:.06em;font-family:'Share Tech Mono',monospace}
+  h1{font-size:clamp(26px,5.4vw,42px);line-height:1;margin:0 auto;max-width:900px;color:#12235c;text-shadow:1px 1px 0 rgba(255,255,255,.5);overflow-wrap:break-word}
   h1 .hl{color:var(--accent)}
-  .hrule{width:80px;height:3px;margin:28px auto;background:#22d3ee;box-shadow:0 0 10px rgba(34,211,238,.85),0 0 3px rgba(34,211,238,1)}
-  .sub{font-size:16px;color:#1c2740;max-width:620px;margin:0 auto;line-height:1.7;font-family:Verdana,sans-serif}
-  .sub2{font-size:16px;color:#1c2740;max-width:620px;margin:18px auto 0;line-height:1.7;font-family:Verdana,sans-serif}
+  .hrule{width:80px;height:3px;margin:18px auto;background:#22d3ee;box-shadow:0 0 10px rgba(34,211,238,.85),0 0 3px rgba(34,211,238,1)}
+  .sub{font-size:16px;color:#1c2740;max-width:600px;margin:0 auto;line-height:1.65;font-family:Verdana,sans-serif}
   .hlb{color:var(--title-a);font-weight:700}
-  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+  .chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:14px auto 0;max-width:640px}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text);background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge);padding:7px 12px;white-space:nowrap}
+  .chip .d{width:7px;height:7px;background:#22d3ee;box-shadow:0 0 5px rgba(34,211,238,.9)}
+  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px}
   .cta .btn{padding:13px 26px;font-size:14px}
   .stats{display:flex;margin:52px auto 0;max-width:640px;background:var(--chrome)}
   .stat{flex:1;padding:18px;border-right:2px solid var(--edge)}
@@ -89,7 +91,11 @@ export function renderLanding() {
   <h1>Terima &amp; konfirmasi<br>pembayaran <span class="hl">QRIS otomatis.</span></h1>
   <div class="hrule"></div>
   <p class="sub">Ubah QRIS statis menjadi QRIS dinamis dengan <span class="hlb">nominal unik</span> dan konfirmasi pembayaran <span class="hlb">otomatis</span>.</p>
-  <p class="sub2">Mendukung <span class="hlb">ShopeePay Partner</span>, <span class="hlb">GoPay Merchant</span>, dan <span class="hlb">notifikasi perangkat</span>.</p>
+  <div class="chips">
+    <span class="chip"><span class="d"></span>🛍 ShopeePay Partner</span>
+    <span class="chip"><span class="d"></span>🟢 GoPay Merchant</span>
+    <span class="chip"><span class="d"></span>📱 Notifikasi Perangkat</span>
+  </div>
   <div class="cta">
     <a class="btn primary" href="/dashboard">Mulai Sekarang →</a>
     <a class="btn" href="/docs">Lihat Dokumentasi</a>
