@@ -47,7 +47,11 @@ export function renderLanding() {
   .stat:last-child{border-right:0}
   .stat .n{font-size:18px;font-family:'Michroma';color:var(--title-a)}
   .stat .l{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
-  section{padding:52px 0}
+  section{padding:24px 0}
+  .hlx{color:var(--title-a);font-weight:700}
+  .chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:22px auto 0;max-width:560px}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text);background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge);padding:7px 12px}
+  .chip .d{width:8px;height:8px;background:var(--ok)}
   .win{background:var(--chrome);margin-bottom:0}
   .win .tt{background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;font-family:'Michroma';font-size:11px;padding:8px 14px;border-bottom:2px solid var(--edge-dark)}
   .win .bd2{padding:28px 24px}
@@ -84,7 +88,12 @@ export function renderLanding() {
 <header class="hero"><div class="wrap">
   <div class="badge">▮ GATEPAY · QRIS PAYMENT GATEWAY · INDONESIA</div>
   <h1>Terima &amp; konfirmasi pembayaran <span class="hl">QRIS</span><br>secara otomatis.</h1>
-  <p class="sub">GatePay mengubah QRIS statis Anda menjadi QRIS dinamis bernominal terkunci, lalu mengonfirmasi setiap pembayaran yang masuk secara otomatis — dari <b>notifikasi perangkat</b> hingga langsung dari akun <b>ShopeePay Partner</b> dan <b>GoPay Merchant</b> Anda. Tanpa pengecekan manual, tanpa salah nominal.</p>
+  <p class="sub">GatePay mengubah QRIS statis Anda menjadi QRIS dinamis bernominal terkunci, lalu mengonfirmasi setiap pembayaran yang masuk secara otomatis — dari <span class="hlx">notifikasi perangkat</span> hingga langsung dari akun <span class="hlx">ShopeePay Partner</span> dan <span class="hlx">GoPay Merchant</span> Anda. Tanpa pengecekan manual, tanpa salah nominal.</p>
+  <div class="chips">
+    <span class="chip"><span class="d"></span>📱 Notifikasi Perangkat</span>
+    <span class="chip"><span class="d"></span>🛍 ShopeePay Partner</span>
+    <span class="chip"><span class="d"></span>🟢 GoPay Merchant</span>
+  </div>
   <div class="cta">
     <a class="btn primary" href="/dashboard">Mulai Sekarang →</a>
     <a class="btn" href="/docs">Lihat Dokumentasi</a>
@@ -144,14 +153,14 @@ export function renderLanding() {
 
 <section><div class="wrap">
   <div class="win out">
-    <div class="tt">APLIKASI_DIDUKUNG.TXT</div>
+    <div class="tt">PENYEDIA_QRIS.TXT</div>
     <div class="bd2">
-      <div class="sec-title"><h2>Aplikasi yang Didukung</h2><p>Pembayaran ke QRIS Anda dari berbagai e-wallet dan mobile banking, terkonfirmasi otomatis oleh GatePay.</p></div>
+      <div class="sec-title"><h2>Penyedia QRIS yang Didukung</h2><p>GatePay bekerja dengan QRIS statis dari penyedia mana pun. Belum punya? Daftar merchant di salah satu berikut.</p></div>
       <div class="feats" style="grid-template-columns:repeat(2,1fr)">
-        <div class="feat"><div class="ic">💙</div><h3>DANA &amp; DANA Bisnis</h3><p>Notifikasi transaksi masuk langsung tertangkap dan dicocokkan.</p></div>
-        <div class="feat"><div class="ic">🛍</div><h3>ShopeePay &amp; GoPay</h3><p>Terkonfirmasi lewat notifikasi maupun langsung dari akun Partner/Merchant Anda secara server-side.</p></div>
-        <div class="feat"><div class="ic">💜</div><h3>E-wallet Lain</h3><p>OVO, LinkAja, dan e-wallet lain — selama menampilkan notifikasi uang masuk.</p></div>
-        <div class="feat"><div class="ic">🏦</div><h3>Mobile Banking</h3><p>BCA mobile, BRImo, Livin' Mandiri, dan lainnya — bila memberikan notifikasi kredit masuk.</p></div>
+        <div class="feat"><div class="ic">💙</div><h3>DANA Bisnis</h3><p>QRIS statis dari akun DANA Bisnis Anda.</p></div>
+        <div class="feat"><div class="ic">🛍</div><h3>ShopeePay Partner</h3><p>QRIS merchant dari portal ShopeePay Partner.</p></div>
+        <div class="feat"><div class="ic">🟢</div><h3>GoPay Merchant (GoBiz)</h3><p>QRIS dari akun GoPay Merchant di GoBiz.</p></div>
+        <div class="feat"><div class="ic">🏦</div><h3>Bank / PSP Berlisensi</h3><p>QRIS dari BCA, BRI, Mandiri, atau penyedia jasa pembayaran (PSP) berlisensi QRIS lainnya.</p></div>
       </div>
     </div>
   </div>
