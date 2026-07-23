@@ -1,6 +1,6 @@
 {
-  "versionCode": 12,
-  "versionName": "2.3.1",
+  "versionCode": 13,
+  "versionName": "3.0",
   "url": "/gatepay-catcher.apk",
-  "notes": "Panduan izin lebih jelas (letak Allow restricted settings beda tiap HP)."
+  "notes": "Redesign UI Y2K retro-desktop: 3 tab (Status/Riwayat/Setelan) + taskbar, statistik harian, riwayat transaksi, wizard izin notifikasi, pilih aplikasi target. Fitur & keamanan tetap."
 }
