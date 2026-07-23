@@ -76,8 +76,8 @@ export function renderLanding() {
   .seclist{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;max-width:720px;margin:0 auto}
   .seci{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--text)}
   .seci .ck{color:var(--ok);font-weight:900;flex:0 0 auto}
-  #faq .wrap{max-width:720px}
-  .faq{margin:0}
+  #faq .wrap{max-width:900px}
+  .faq{margin:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;align-items:start}
   .faq details{background:var(--chrome);border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark);margin-bottom:6px}
   .faq summary{cursor:pointer;padding:9px 12px;font-weight:700;font-size:13px;list-style:none}
   .faq summary::-webkit-details-marker{display:none}
@@ -99,7 +99,7 @@ export function renderLanding() {
   .fbrand p{font-size:12px;color:var(--dim);margin-top:8px;max-width:240px;line-height:1.6}
   .fbot{border-top:1px solid var(--edge);padding-top:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
   @media(max-width:820px){.fcols{grid-template-columns:1fr 1fr}}
-  @media(max-width:720px){.steps,.feats{grid-template-columns:1fr}.seclist{grid-template-columns:1fr}}
+  @media(max-width:720px){.steps,.feats{grid-template-columns:1fr}.seclist{grid-template-columns:1fr}.faq{grid-template-columns:1fr}}
   @media(max-width:640px){.gstats{grid-template-columns:1fr 1fr}.gstat{border-bottom:2px solid rgba(84,81,74,.25)}}
 </style></head><body id="top">
 <nav><div class="wrap">
