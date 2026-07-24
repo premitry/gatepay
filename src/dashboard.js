@@ -192,7 +192,7 @@ export function renderDashboard() {
 
   .res{margin-top:12px;padding:12px;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
   .res{display:none}.res.show{display:block}
-  .res .amt{font-size:32px;font-weight:700;font-family:'Share Tech Mono',monospace;color:var(--accent);line-height:1.1}
+  .res .amt{font-size:24px;font-weight:700;font-family:'Share Tech Mono',monospace;color:var(--accent);line-height:1.15}
   #qrcanvas{background:#fff;padding:8px;width:200px;height:200px;box-sizing:content-box;border:2px solid var(--edge-dark)}
   #qrprev{max-width:120px;margin-top:8px;display:none;background:#fff;padding:4px;border:2px solid var(--edge-dark)}
   #rbreak{white-space:pre-line}
@@ -422,8 +422,8 @@ export function renderDashboard() {
             <button onclick="createOrder()" style="margin-top:8px">Buat Order + QR</button>
             <div class="msg" id="omsg"></div>
             <div class="res show" id="ores" style="flex:1;display:flex;flex-direction:column">
-              <div class="dim" id="rbreak" style="font-size:14px;line-height:1.75;margin-bottom:10px"></div>
-              <div class="dim" style="font-size:14px">Bayar persis</div>
+              <div class="dim" id="rbreak" style="font-size:12.5px;line-height:1.55;margin-bottom:8px"></div>
+              <div class="dim" style="font-size:12px">Bayar persis</div>
               <div class="amt" id="ramt">Rp 0</div>
               <div style="margin-top:8px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
                 <div id="qrph" style="width:200px;max-width:100%;aspect-ratio:1;background:#fff;border:2px dashed var(--edge);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:12px;padding:12px">QR muncul otomatis<br>setelah menekan "Buat Order + QR"</div>
