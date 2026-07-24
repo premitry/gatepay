@@ -14,7 +14,7 @@ export function renderDashboard() {
     --desk-a:#7fc6c9;--desk-b:#8ea8dc;--desk-c:#6f87c8;--grid:rgba(255,255,255,.34);
     --chrome:#eceade;--chrome-2:#e0ded1;--hi:#ffffff;--edge:#8f8b7e;--edge-dark:#54514a;
     --title-a:#26379d;--title-b:#3f7fc4;--text:#23262e;--dim:#5b5f66;--link:#3843b8;
-    --accent:#c26107;--term-bg:#141f5c;--term-text:#dfe6ff;--term-ok:#8fe3f7;
+    --accent:#e8690b;--term-bg:#141f5c;--term-text:#dfe6ff;--term-ok:#8fe3f7;
     --ok:#0e7c66;--warn:#a05a00;--bad:#b0362a;
     /* alias supaya inline style lama tetap jalan */
     --card:#eceade;--card2:#e0ded1;--bd:#8f8b7e;--tx:#23262e;--brand:#26379d;--brandink:#fff;
@@ -71,7 +71,7 @@ export function renderDashboard() {
   .sidebar{width:232px;flex-shrink:0;background:var(--chrome);border-right:2px solid var(--edge-dark);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:40;transition:width .16s;box-shadow:2px 0 0 var(--edge)}
   .side-top{display:flex;align-items:center;justify-content:space-between;height:52px;padding:0 12px;background:linear-gradient(90deg,var(--title-a),var(--title-b));border-bottom:2px solid var(--edge-dark)}
   .logo{font-size:15px;color:#fff;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden}
-  .logo .mark{background:var(--accent);color:#fff;width:24px;height:24px;min-width:24px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;border:1px solid rgba(0,0,0,.3)}
+  .logo .mark{width:26px;height:26px;min-width:26px;display:block;flex:0 0 auto;filter:drop-shadow(1px 1px 0 rgba(0,0,0,.35))}
   .collapse{background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);color:var(--text);width:auto;margin:0;padding:2px 8px;font-size:13px;font-weight:700}
   .collapse:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
   .snav{flex:1;overflow-y:auto;padding:8px}
@@ -251,7 +251,7 @@ export function renderDashboard() {
 <!-- ══ AUTH ══ -->
 <div id="authview">
   <div class="authwrap"><div class="authcard out">
-    <div class="tt"><span class="mark" style="background:var(--accent);color:#fff;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px">G</span> GATEPAY.EXE</div>
+    <div class="tt"><svg viewBox="0 0 64 64" aria-hidden="true" style="width:18px;height:18px;display:inline-block;vertical-align:middle"><defs><linearGradient id="gpmt" x1="12" y1="4" x2="52" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FCA83E"/><stop offset="1" stop-color="#E9660A"/></linearGradient></defs><path d="M44 23 L56 5 L50 27 Z" fill="url(#gpmt)"/><path d="M46 20 A18 18 0 1 0 46 44 L46 34 L33 34" fill="none" stroke="url(#gpmt)" stroke-width="10.5" stroke-linejoin="round" stroke-linecap="round"/></svg> GATEPAY.EXE</div>
     <div class="bd2">
       <h1>GatePay</h1>
       <div class="sub">Masuk atau daftar untuk mengelola payment gateway Anda.</div>
@@ -310,7 +310,7 @@ export function renderDashboard() {
   <div class="scrim" onclick="toggleMnav(false)"></div>
   <aside class="sidebar">
     <div class="side-top">
-      <a class="logo" href="/"><span class="mark">G</span><span>GatePay</span></a>
+      <a class="logo" href="/"><svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gpm" x1="12" y1="4" x2="52" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FCA83E"/><stop offset="1" stop-color="#E9660A"/></linearGradient></defs><path d="M44 23 L56 5 L50 27 Z" fill="url(#gpm)"/><path d="M46 20 A18 18 0 1 0 46 44 L46 34 L33 34" fill="none" stroke="url(#gpm)" stroke-width="10.5" stroke-linejoin="round" stroke-linecap="round"/></svg><span>GatePay</span></a>
       <button class="collapse" onclick="toggleCollapse()" title="Sembunyikan">‹</button>
     </div>
     <nav class="snav" id="snav">

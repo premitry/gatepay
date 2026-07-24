@@ -325,6 +325,11 @@ function faviconSvg(emoji) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="54" font-size="76" text-anchor="middle" dominant-baseline="central">${esc(emoji || '💳')}</text></svg>`;
 }
 
+// Favicon brand: mark "G" GatePay (oranye gradient) — dipakai bila belum di-override admin
+function brandFaviconSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="gpf" x1="12" y1="4" x2="52" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FCA83E"/><stop offset="1" stop-color="#E9660A"/></linearGradient></defs><path d="M44 23 L56 5 L50 27 Z" fill="url(#gpf)"/><path d="M46 20 A18 18 0 1 0 46 44 L46 34 L33 34" fill="none" stroke="url(#gpf)" stroke-width="10.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
 // Sisipin favicon/theme/manifest ke <head> tiap halaman
 // Sisipkan sebelum kemunculan TERAKHIR tag (penutup halaman asli), bukan yang pertama —
 // penting: HTML inline JS (mis. fungsi export) bisa mengandung '</body>'/'</head>' di dalam
@@ -1818,9 +1823,11 @@ app.get('/privacy', (c) => c.redirect('/privasi', 302));
 // Favicon (emoji → SVG, atau redirect kalau favicon berupa URL gambar)
 app.get('/favicon.svg', async (c) => {
   const s = await getSettings(c.env.DB);
-  const fav = s.favicon || '💳';
+  const fav = s.favicon || '';
   if (/^https?:\/\//i.test(fav)) return c.redirect(fav, 302);
-  return c.body(faviconSvg(fav), 200, { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'public, max-age=300' });
+  // Default (belum di-override / masih emoji bawaan) → pakai mark brand GatePay
+  const body = (!fav || fav === '💳') ? brandFaviconSvg() : faviconSvg(fav);
+  return c.body(body, 200, { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'public, max-age=300' });
 });
 app.get('/favicon.ico', (c) => c.redirect('/favicon.svg', 302));
 
