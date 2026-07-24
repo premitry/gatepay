@@ -62,6 +62,8 @@ export function renderDocs() {
     <a href="#intro">Pengantar</a>
     <a href="#auth">Autentikasi</a>
     <a href="#qris">Setup QRIS</a>
+    <a href="#deteksi">Deteksi Pembayaran</a>
+    <a href="#matching">Pencocokan &amp; Metode</a>
     <div class="h">API</div>
     <a href="#create">Buat Order</a>
     <a href="#status">Cek Status</a>
@@ -95,13 +97,23 @@ export function renderDocs() {
     <div class="tip">💡 Isi <code>qris</code> = teks string QRIS statis (bukan gambar). Dapat di-decode dari foto QR menggunakan aplikasi scanner apa saja, atau melalui dashboard.</div>
 
     <h2 id="deteksi">Deteksi Pembayaran</h2>
-    <p>GatePay mengetahui order telah terbayar melalui beberapa jalur (dapat berjalan bersamaan, saling mencadangkan):</p>
+    <p><b>Satu QRIS = satu penerbit = satu akun penerima.</b> Anda cukup upload satu QRIS statis. Pembayaran (dari e-wallet apa pun, karena QRIS interoperable) <b>mendarat di akun penerbit QRIS itu</b>. Pilih metode deteksi yang sesuai dengan penerbit QRIS Anda:</p>
     <ul>
-      <li><b>APK Catcher (default, universal)</b> — aplikasi Android menangkap notifikasi "uang masuk" (DANA, ShopeePay, GoPay, OVO, dan lain-lain) lalu mengirim ke GatePay. Memerlukan HP dalam keadaan menyala. Setup melalui menu <b>Kredensial &amp; APK</b> di dashboard.</li>
-      <li><b>Token ShopeePay Partner (opsional, tanpa HP)</b> — khusus <b>ShopeePay Partner</b>. GatePay memeriksa mutasi transaksi ShopeePay langsung dari server menggunakan cookie token akun Anda. Aktifkan di dashboard menu <b>QRIS &amp; Order → panel ShopeePay Partner</b>.</li>
-      <li><b>Login GoPay Merchant (opsional, tanpa HP)</b> — khusus <b>GoPay Merchant / GoBiz</b>. GatePay login otomatis ke portal GoBiz menggunakan email &amp; password Anda, memeriksa mutasi, lalu mencocokkan dengan order. Token GoPay pendek, tetapi sistem auto-refresh sehingga hands-off. Aktifkan di dashboard menu <b>QRIS &amp; Order → panel GoPay Merchant</b>.</li>
+      <li><b>APK Catcher (default, universal)</b> — aplikasi Android menangkap notifikasi "uang masuk" (DANA, ShopeePay, GoPay, OVO, dan lain-lain) lalu mengirim ke GatePay. Universal — cocok untuk QRIS dari penerbit mana pun, dan menjadi cadangan yang baik. Memerlukan HP menyala. Setup di menu <b>Kredensial &amp; APK</b>.</li>
+      <li><b>ShopeePay Partner (server-side, tanpa HP)</b> — untuk QRIS terbitan <b>ShopeePay</b>. GatePay membaca mutasi ShopeePay langsung dari server memakai cookie token akun Anda. Aktifkan di <b>QRIS &amp; Order → panel ShopeePay Partner</b>.</li>
+      <li><b>GoPay Merchant / GoBiz (server-side, tanpa HP)</b> — untuk QRIS terbitan <b>GoPay Merchant</b>. Login <b>dua opsi</b>: <b>email + password</b> atau <b>OTP</b> (masukkan nomor HP → kode OTP dikirim via SMS/WA → verifikasi). Sekali login, token auto-refresh (hands-off). Aktifkan di <b>QRIS &amp; Order → panel GoPay Merchant</b>.</li>
     </ul>
-    <div class="tip">⚠️ ShopeePay Partner (cookie sesi <code>partner.shopee.co.id</code>) dan GoPay Merchant (login GoBiz) menggunakan API internal — tidak resmi, dapat expired, dan ada risiko ToS akun. Jika salah satu tidak aktif, APK catcher otomatis menjadi cadangan. Panduan lengkap ada di menu <b>Tutorial</b> dashboard.</div>
+    <div class="tip">💡 <b>ShopeePay vs GoPay itu jalur terpisah yang membaca akun berbeda.</b> Pakai yang sesuai penerbit QRIS Anda — bukan keduanya untuk QRIS yang sama, karena uang hanya mendarat di satu akun. Contoh: QRIS GoPay → nyalakan GoPay, matikan ShopeePay agar tak polling sia-sia.</div>
+    <div class="tip">⚠️ ShopeePay Partner (cookie <code>partner.shopee.co.id</code>) dan GoPay Merchant (GoBiz) memakai API internal — tidak resmi, dapat expired, ada risiko ToS akun. Jika satu tidak aktif, APK catcher otomatis menjadi cadangan. Panduan di menu <b>Tutorial</b>.</div>
+
+    <h2 id="matching">Pencocokan Order &amp; Metode Aktif</h2>
+    <p>GatePay perlu membedakan pembayaran satu order dengan yang lain. Ada dua cara, diatur lewat toggle <b>Nominal Unik</b> per metode (dashboard → <b>QRIS &amp; Order → Metode Konfirmasi &amp; Keamanan</b>):</p>
+    <ul>
+      <li><b>Nominal unik ON</b> — order diberi sen unik (mis. Rp10.<b>237</b>), dicocokkan lewat nominal. Presisi tinggi walau banyak order.</li>
+      <li><b>Nominal unik OFF</b> — order memakai <b>nominal bulat</b> apa adanya, dan dibedakan lewat <b>kode order</b> yang disisipkan ke QRIS (EMVCo tag&nbsp;62 / Bill Number). GatePay mencocokkan kode itu di riwayat transaksi; jika penyedia tidak meneruskan kode, sistem otomatis <b>fallback</b> ke nominal + urutan tercepat (claim-once), dengan pembatasan <b>satu order pending per nominal</b>.</li>
+    </ul>
+    <div class="tip">🛡️ <b>Untuk GoPay disarankan matikan Nominal Unik &amp; Fee</b> (default sudah OFF). Nominal ber-sen unik + fee membuat transaksi terlihat "otomatis/robot" dan dapat memicu pembatasan akun GoPay Merchant. Nominal bulat + kode order jauh lebih aman.</div>
+    <p>Setiap metode (Notifikasi Perangkat / ShopeePay / GoPay) bisa diaktif-nonaktifkan sendiri. Aturannya: <b>nominal unik &amp; fee dipakai hanya bila semua metode aktif mengizinkannya</b> (yang paling aman menang). Jadi jika GoPay aktif dengan unik OFF, seluruh order menjadi bulat.</p>
 
     <h2 id="create">Buat Order</h2>
     <p><span class="method post">POST</span><code>/api/orders</code></p>
@@ -123,11 +135,13 @@ export function renderDocs() {
   "status": "pending",
   "base_amount": 10000,
   "unique_amount": 10237,
+  "unique_enabled": true,
+  "order_code": "K7M2QPT",
   "qris": "00020101021226...6304XXXX",
   "checkout_url": "https://.../pay/ord_xxx",
   "expires_in": 900
 }</code></pre>
-    <div class="tip">💡 <code>unique_amount</code> = nominal unik yang harus dibayar. <code>qris</code> = string QRIS dinamis (render menjadi QR). <code>checkout_url</code> = halaman pembayaran siap pakai.</div>
+    <div class="tip">💡 <code>unique_amount</code> = nominal yang harus dibayar (bulat bila nominal unik OFF). <code>unique_enabled</code> = apakah sen unik dipakai. <code>order_code</code> = kode pembeda order (disisipkan ke QRIS saat nominal unik OFF). <code>qris</code> = string QRIS dinamis. <code>checkout_url</code> = halaman pembayaran siap pakai.</div>
 
     <h2 id="status">Cek Status Order</h2>
     <p><span class="method get">GET</span><code>/api/orders/:id</code></p>
