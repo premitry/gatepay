@@ -389,10 +389,9 @@ export function renderDashboard() {
         <div class="grid2">
           <div class="panel">
             <h2>QRIS_STATIS.CFG · Langkah 1</h2>
-            <div class="dim" style="margin-bottom:8px">Wajib dilakukan terlebih dahulu. Unggah foto QRIS statis DANA Bisnis Anda → Decode → Simpan. Order tidak dapat dibuat sebelum QRIS diatur.</div>
-            <label>Upload QR (foto/gambar)</label>
-            <input type="file" id="qrfile" accept="image/*">
-            <button class="sec" onclick="decodeQr()">🔍 Decode QR</button>
+            <div class="dim" style="margin-bottom:8px">Wajib dilakukan terlebih dahulu. Unggah foto QRIS statis Anda → otomatis ter-decode → Simpan. Order tidak dapat dibuat sebelum QRIS diatur.</div>
+            <label>Upload QR (foto/gambar) — otomatis ter-decode</label>
+            <input type="file" id="qrfile" accept="image/*" onchange="decodeQr()">
             <img id="qrprev">
             <label>Hasil QRIS String</label>
             <textarea id="qris" placeholder="hasil decode (atau tempel manual)"></textarea>
