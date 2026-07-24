@@ -386,7 +386,7 @@ export function renderDashboard() {
 
       <!-- QRIS & ORDER (gabung) -->
       <section class="view" id="v-qris">
-        <div class="grid2">
+        <div class="grid2" style="align-items:start">
           <div class="panel">
             <h2>QRIS_STATIS.CFG · Langkah 1</h2>
             <div class="dim" style="margin-bottom:8px">Wajib dilakukan terlebih dahulu. Unggah foto QRIS statis Anda → otomatis ter-decode → Simpan. Order tidak dapat dibuat sebelum QRIS diatur.</div>
@@ -412,7 +412,7 @@ export function renderDashboard() {
             <div class="msg" id="smsg"></div>
           </div>
 
-          <div class="panel" style="display:flex;flex-direction:column">
+          <div class="panel">
             <h2>NEW_ORDER.EXE · Langkah 2</h2>
             <div id="noqris" class="dim" style="margin-bottom:10px;padding:8px;background:#fff6d9;border:2px solid var(--accent);color:#3a2a00;display:none">⚠ Atur QRIS statis terlebih dahulu di panel kiri sebelum membuat order.</div>
             <label>Nominal (Rp)</label>
@@ -421,11 +421,11 @@ export function renderDashboard() {
             <input id="ref" type="text" placeholder="INV-001">
             <button onclick="createOrder()" style="margin-top:8px">Buat Order + QR</button>
             <div class="msg" id="omsg"></div>
-            <div class="res show" id="ores" style="flex:1;display:flex;flex-direction:column">
+            <div class="res show" id="ores">
               <div class="dim" id="rbreak" style="font-size:14px;line-height:1.75;margin-bottom:10px"></div>
               <div class="dim" style="font-size:14px">Bayar persis</div>
               <div class="amt" id="ramt">Rp 0</div>
-              <div style="margin-top:8px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="margin-top:8px;display:flex;flex-direction:column;align-items:center">
                 <div id="qrph" style="width:200px;max-width:100%;aspect-ratio:1;background:#fff;border:2px dashed var(--edge);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:12px;padding:12px">QR muncul otomatis<br>setelah menekan "Buat Order + QR"</div>
                 <canvas id="qrcanvas" style="display:none"></canvas>
                 <div id="rlinkwrap" style="margin-top:10px;display:none"><a class="lnk" id="rlink" target="_blank">Buka halaman checkout ↗</a></div>
