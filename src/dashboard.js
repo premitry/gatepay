@@ -471,8 +471,8 @@ export function renderDashboard() {
               <div id="gp-form-otp" style="display:none">
                 <a class="lnk" onclick="gpBack()" style="cursor:pointer;display:inline-block;margin-bottom:6px">← Kembali pilih metode</a>
                 <div id="gp-otp-step1">
-                  <label>Nomor HP GoPay Merchant</label>
-                  <input id="gp-phone" type="tel" placeholder="08xxxxxxxxxx" autocomplete="off">
+                  <label>Email atau Nomor HP GoPay Merchant</label>
+                  <input id="gp-phone" type="text" placeholder="[email protected] / 08xxxxxxxxxx" autocomplete="off">
                   <div style="margin-top:6px"><button onclick="gpOtpRequest()" id="gp-otp-sendbtn">Kirim OTP</button></div>
                 </div>
                 <div id="gp-otp-step2" style="display:none">
@@ -1103,11 +1103,11 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function gpOtpReset(){ var s1=$('gp-otp-step1'), s2=$('gp-otp-step2'); if(s1)s1.style.display='block'; if(s2)s2.style.display='none'; }
   async function gpOtpRequest(){
     var ph=$('gp-phone').value.trim();
-    if(!ph) return msg('gp-msg','err','Nomor HP wajib diisi');
+    if(!ph) return msg('gp-msg','err','Email atau nomor HP wajib diisi');
     var b=$('gp-otp-sendbtn'); if(b){ b.disabled=true; b.textContent='Mengirim...'; }
-    try{ var r=await fetch('/api/merchant/gopay/otp/request',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({phone:ph})});
+    try{ var r=await fetch('/api/merchant/gopay/otp/request',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({login:ph})});
       var j=await r.json();
-      if(r.ok){ $('gp-otp-phone').textContent=j.phone_preview||ph; $('gp-otp-step1').style.display='none'; $('gp-otp-step2').style.display='block'; msg('gp-msg','ok','OTP dikirim. Cek SMS/WhatsApp.'); }
+      if(r.ok){ $('gp-otp-phone').textContent=j.login_preview||ph; $('gp-otp-step1').style.display='none'; $('gp-otp-step2').style.display='block'; msg('gp-msg','ok','OTP dikirim. Cek SMS / WhatsApp / email.'); }
       else msg('gp-msg','err',j.error||'Gagal kirim OTP');
     }catch(e){ msg('gp-msg','err',String(e)); }
     if(b){ b.disabled=false; b.textContent='Kirim OTP'; }

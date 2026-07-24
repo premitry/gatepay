@@ -903,11 +903,10 @@ app.get('/api/merchant/gopay', async (c) => {
   const m = await c.env.DB.prepare('SELECT gopay_email, gopay_login_type, gopay_phone, gopay_token_status, gopay_checked_at, gopay_merchant, method_gopay, gopay_unique, gopay_fee FROM merchants WHERE id = ?')
     .bind(merchant.id).first();
   const enabled = !!(m && m.gopay_email && m.gopay_email !== 'gobiz');
-  const isOtp = m && m.gopay_login_type === 'otp';
   return json(c, {
     enabled,
     login_type: m ? (m.gopay_login_type || 'password') : 'password',
-    email_preview: enabled ? (isOtp ? maskPhone(m.gopay_phone) : maskEmail(m.gopay_email)) : null,
+    email_preview: enabled ? (String(m.gopay_email).indexOf('@') >= 0 ? maskEmail(m.gopay_email) : maskPhone(m.gopay_email)) : null,
     status: m ? (m.gopay_token_status || (enabled ? 'ok' : null)) : null,
     checked_at: m ? m.gopay_checked_at || null : null,
     merchant: m ? m.gopay_merchant || null : null,
@@ -926,19 +925,29 @@ app.post('/api/merchant/gopay/otp/request', async (c) => {
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   await ensureGopayColumns(c.env.DB);
   const body = await c.req.json().catch(() => ({}));
-  const phone = normPhone(body.phone || '');
-  if (phone.length < 8 || phone.length > 15) return json(c, { error: 'Nomor HP tidak valid' }, 400);
+  const login = String(body.login || body.email || body.phone || '').trim();
+  const isEmail = /@/.test(login);
+  let ident;
+  if (isEmail) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(login.toLowerCase())) return json(c, { error: 'Format email tidak valid' }, 400);
+    ident = login.toLowerCase();
+  } else {
+    const ph = normPhone(login);
+    if (ph.length < 8 || ph.length > 15) return json(c, { error: 'Masukkan email atau nomor HP yang valid' }, 400);
+    ident = ph;
+  }
   let r;
   try {
-    r = await gopayOtpRequest(phone);
+    r = await gopayOtpRequest(ident);
   } catch (e) {
     return json(c, { error: 'Gagal kirim OTP: ' + (e && e.message ? e.message : 'error') }, 400);
   }
   if (!r.otp_token) return json(c, { error: 'Server tidak mengembalikan sesi OTP. Coba lagi atau pakai login password.' }, 400);
   const encOtp = await encField(c.env, r.otp_token);
+  // gopay_phone dipakai sementara buat simpan identifier pending OTP (email/HP) — scratch
   await c.env.DB.prepare('UPDATE merchants SET gopay_phone = ?, gopay_unique_id = ?, gopay_otp_token = ? WHERE id = ?')
-    .bind(phone, r.unique_id, encOtp, merchant.id).run();
-  return json(c, { ok: true, sent: true, phone_preview: maskPhone(phone) });
+    .bind(ident, r.unique_id, encOtp, merchant.id).run();
+  return json(c, { ok: true, sent: true, login_preview: isEmail ? maskEmail(ident) : maskPhone(ident) });
 });
 
 // GoPay login OTP — step 2: verifikasi kode OTP → simpan token
@@ -952,6 +961,7 @@ app.post('/api/merchant/gopay/otp/verify', async (c) => {
   const m = await c.env.DB.prepare('SELECT gopay_phone, gopay_unique_id, gopay_otp_token FROM merchants WHERE id = ?').bind(merchant.id).first();
   if (!m || !m.gopay_otp_token) return json(c, { error: 'Sesi OTP tidak ditemukan. Ulangi kirim OTP.' }, 400);
   const otpToken = await decField(c.env, m.gopay_otp_token);
+  const pendingEmail = m.gopay_phone || 'gopay-otp';
   let sess;
   try {
     sess = await gopayOtpVerify(otpToken, otp, m.gopay_unique_id);
@@ -968,8 +978,8 @@ app.post('/api/merchant/gopay/otp/verify', async (c) => {
   const expires = now() + Number(sess.expires_in || 3600);
   const encRef = sess.refresh_token ? await encField(c.env, sess.refresh_token) : null;
   const encTok = sess.access_token ? await encField(c.env, sess.access_token) : null;
-  await c.env.DB.prepare("UPDATE merchants SET gopay_email = ?, gopay_login_type = 'otp', gopay_password = NULL, gopay_token = ?, gopay_refresh = ?, gopay_expires = ?, gopay_token_status = 'ok', gopay_checked_at = ?, gopay_merchant = ?, gopay_merchant_id = ?, gopay_unique_id = ?, gopay_otp_token = NULL WHERE id = ?")
-    .bind('gopay:' + m.gopay_phone, encTok, encRef, expires, now(), mname, mid, sess.unique_id, merchant.id).run();
+  await c.env.DB.prepare("UPDATE merchants SET gopay_email = ?, gopay_login_type = 'otp', gopay_phone = NULL, gopay_password = NULL, gopay_token = ?, gopay_refresh = ?, gopay_expires = ?, gopay_token_status = 'ok', gopay_checked_at = ?, gopay_merchant = ?, gopay_merchant_id = ?, gopay_unique_id = ?, gopay_otp_token = NULL WHERE id = ?")
+    .bind(pendingEmail, encTok, encRef, expires, now(), mname, mid, sess.unique_id, merchant.id).run();
   return json(c, { ok: true, enabled: true, merchant: mname });
 });
 
@@ -1452,14 +1462,17 @@ function normPhone(raw) {
   return p;
 }
 
-// Login OTP — step 1: minta OTP dikirim ke nomor HP. Balikin { otp_token, unique_id }.
-async function gopayOtpRequest(phone, uniqueId) {
+// Login OTP — step 1: minta OTP. identifier bisa email ATAU nomor HP. Balikin { otp_token, unique_id }.
+async function gopayOtpRequest(identifier, uniqueId) {
   const uid = uniqueId || gpUniqueId();
   const headers = gpAuthHeaders(uid);
-  const phone_number = normPhone(phone);
+  const isEmail = /@/.test(String(identifier || ''));
+  const body = isEmail
+    ? { email: String(identifier).trim().toLowerCase(), login_type: 'otp', client_id: GOPAY.CLIENT_ID }
+    : { country_code: '+62', phone_number: normPhone(identifier), login_type: 'otp', client_id: GOPAY.CLIENT_ID };
   const res = await fetch(`${GOPAY.BASE}/goid/login/request`, {
     method: 'POST', headers,
-    body: JSON.stringify({ country_code: '+62', phone_number, login_type: 'otp', client_id: GOPAY.CLIENT_ID }),
+    body: JSON.stringify(body),
   });
   const j = await res.json().catch(() => ({}));
   if (!res.ok) {
