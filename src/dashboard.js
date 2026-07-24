@@ -175,6 +175,19 @@ export function renderDashboard() {
   .spstat.ok{background:#dff3ea;border-color:var(--ok);color:var(--ok);font-weight:700}
   .spstat.dead{background:#f7dcd9;border-color:var(--red);color:var(--red);font-weight:700}
   .spstat.off{background:var(--chrome-2);border-color:var(--edge);color:var(--dim)}
+  /* Group Box metode konfirmasi */
+  .mthbox{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge);margin-bottom:10px}
+  .mthbox .mth-tt{background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;font-family:'Michroma',sans-serif;font-size:11px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:2px solid var(--edge-dark)}
+  .mthbox .mth-bd{padding:10px 12px}
+  .mthbox .mth-act{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;margin:0}
+  .mthbox .mth-desc{font-size:11.5px;color:var(--dim);margin:4px 0 0 25px}
+  .mthbox .mth-opts{display:flex;gap:18px;margin:9px 0 0 25px}
+  .mthbox .mth-opts label{display:inline-flex;align-items:center;gap:6px;margin:0;text-transform:none;letter-spacing:0;color:var(--text);font-size:12px;cursor:pointer}
+  .mthbox input[type=checkbox]{width:auto;min-width:0;margin:0}
+  .mth-badge{font-family:'Share Tech Mono',Consolas,monospace;font-size:10px;padding:2px 7px;border:1px solid;white-space:nowrap}
+  .mth-badge.ok{background:#dff3ea;border-color:var(--ok);color:var(--ok)}
+  .mth-badge.dim{background:var(--chrome-2);border-color:var(--edge);color:var(--dim)}
+  .mth-badge.warn{background:#fff1d6;border-color:var(--accent);color:var(--accent)}
 
   .res{margin-top:12px;padding:12px;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
   .res{display:none}.res.show{display:block}
@@ -273,6 +286,19 @@ export function renderDashboard() {
       <input id="fpw-conf" type="password" placeholder="ulangi password" style="margin-bottom:10px">
       <div id="fpw-msg" style="font-size:12px;margin-bottom:8px"></div>
       <button onclick="submitForcedPw()" style="width:100%">Simpan & Lanjutkan</button>
+    </div>
+  </div>
+  <div id="gpwhy-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(20,31,92,.55);align-items:center;justify-content:center;padding:16px">
+    <div class="panel" style="max-width:430px;width:100%;margin:0">
+      <div style="font-family:'Michroma',sans-serif;color:#12235c;font-size:13px;margin-bottom:10px">🟠 GOPAY_RECOMMENDATION.TXT</div>
+      <div style="font-size:13px;margin-bottom:10px">Nominal Unik dan Fee dinonaktifkan secara default untuk GoPay. Alasannya:</div>
+      <ul style="font-size:12.5px;margin:0 0 14px 18px;line-height:1.75;color:var(--text)">
+        <li>Mengurangi pola transaksi yang mudah dikenali sebagai otomatis.</li>
+        <li>Membantu mengurangi risiko pembatasan akun merchant.</li>
+        <li>Order tetap dibedakan lewat <b>kode order</b> pada QRIS (bukan sen unik).</li>
+        <li>Anda tetap dapat mengaktifkannya apabila memang diperlukan.</li>
+      </ul>
+      <button onclick="gopayWhyClose()" style="width:100%">Mengerti</button>
     </div>
   </div>
   <div class="scrim" onclick="toggleMnav(false)"></div>
@@ -405,10 +431,11 @@ export function renderDashboard() {
 
         <div class="dualconn" style="margin-top:14px">
           <div class="panel">
-            <h2>SHOPEEPAY PARTNER · Token Opsional</h2>
-            <div class="dim" style="margin-bottom:8px">Konfirmasi pembayaran ShopeePay <b>tanpa HP</b>. Kosongkan → menggunakan APK catcher (default).</div>
+            <h2>SHOPEEPAY PARTNER</h2>
+            <div class="dim" style="margin-bottom:8px">Konfirmasi pembayaran ShopeePay <b>tanpa HP</b>. Default: APK catcher.</div>
             <div id="sp-status" class="spstat" style="margin-bottom:10px"></div>
-            <div id="sp-inputwrap">
+            <button id="sp-connectbtn" onclick="spReveal()" style="display:none">🔗 Hubungkan</button>
+            <div id="sp-inputwrap" style="display:none">
               <a class="lnk" onclick="goTutorShopee()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara mengambil token → buka Tutorial</a>
               <label>Cookie token (diawali "eyJ")</label>
               <textarea id="sp-token" placeholder="eyJhbGciOi…" rows="2" style="height:46px;min-height:46px;resize:vertical"></textarea>
@@ -420,16 +447,16 @@ export function renderDashboard() {
           </div>
 
           <div class="panel">
-            <h2>GOPAY MERCHANT · Login Opsional</h2>
-            <div class="dim" style="margin-bottom:8px">Konfirmasi pembayaran GoPay <b>tanpa HP</b>. Kosongkan → menggunakan APK catcher (default).</div>
+            <h2>GOPAY MERCHANT</h2>
+            <div class="dim" style="margin-bottom:8px">Konfirmasi pembayaran GoPay <b>tanpa HP</b>. Default: APK catcher.</div>
             <div id="gp-status" class="spstat" style="margin-bottom:10px"></div>
             <div id="gp-inputwrap">
               <a class="lnk" onclick="goTutorGopay()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara setup akun GoPay Merchant → buka Tutorial</a>
               <div style="display:flex;gap:6px;margin:2px 0 8px">
-                <button type="button" id="gp-mode-pw" onclick="gpMode('pw')" style="flex:1">Login Password</button>
+                <button type="button" class="sec" id="gp-mode-pw" onclick="gpMode('pw')" style="flex:1">Login Password</button>
                 <button type="button" class="sec" id="gp-mode-otp" onclick="gpMode('otp')" style="flex:1">Login OTP</button>
               </div>
-              <div id="gp-form-pw">
+              <div id="gp-form-pw" style="display:none">
                 <label>Email GoPay Merchant</label>
                 <input id="gp-email" type="email" placeholder="[email protected]" autocomplete="off">
                 <label>Password</label>
@@ -460,7 +487,7 @@ export function renderDashboard() {
 
         <div class="panel" style="margin-top:16px">
           <h2>METODE KONFIRMASI &amp; KEAMANAN</h2>
-          <div class="dim" style="margin-bottom:10px">Aktif/nonaktifkan metode, dan atur <b>nominal unik</b> &amp; <b>fee</b> per metode. <b style="color:var(--accent)">Untuk GoPay disarankan matikan nominal unik &amp; fee</b> — nominal ber-sen unik + fee bikin transaksi terlihat "robot" dan bisa memicu pembatasan akun. Saat nominal unik OFF, order dibedakan pakai <b>kode order</b> di QR (bukan sen).</div>
+          <div class="dim" style="margin-bottom:12px">Pilih metode konfirmasi pembayaran. Setiap metode punya karakteristik berbeda. Rekomendasi bawaan sudah disesuaikan dengan penerbit QRIS Anda untuk membantu keamanan akun merchant.</div>
           <div id="mth-wrap"></div>
           <div class="msg" id="mth-msg"></div>
           <div class="dim" style="font-size:11px;margin-top:8px">Aturan: nominal unik/fee dipakai hanya bila <b>semua metode aktif</b> mengizinkan (yang paling aman menang).</div>
@@ -1004,17 +1031,18 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function goTutorShopee(){ go('tutor'); setTimeout(function(){ var d=$('tut-shopee'); if(d){ d.open=true; d.scrollIntoView({behavior:'smooth',block:'start'}); } },140); }
   async function loadShopee(){
     try{ var j=await (await fetch('/api/merchant/shopee',{headers:{'x-api-key':key()},cache:'no-store'})).json();
-      var el=$('sp-status'); var cb=$('sp-clearbtn'); var iw=$('sp-inputwrap');
+      var el=$('sp-status'); var cb=$('sp-clearbtn'); var iw=$('sp-inputwrap'); var conb=$('sp-connectbtn');
+      if(iw) iw.style.display='none';
       if(j.enabled){
         var nm=j.merchant?escj(j.merchant):null;
-        // catatan kecil kalau QRIS tersimpan bukan ShopeePay (tetap jalan via catcher, di belakang layar)
-        var note=(j.has_qris && !j.qris_is_shopee)?'<br><span style="font-weight:400;font-size:11px;color:var(--accent)">⚠ QRIS tersimpan bukan ShopeePay — pembayaran tetap terdeteksi lewat APK catcher.</span>':'';
-        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● TOKEN MATI'+(nm?' ('+nm+')':'')+' — ambil cookie baru lalu simpan ulang. Sementara itu ShopeePay menggunakan APK catcher.'; if(iw) iw.style.display='block'; }
-        else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG'+(nm?' — <b>'+nm+'</b>':'')+'<br><span style="font-weight:400;font-size:11px">ShopeePay dikonfirmasi server-side (tanpa HP).</span>'+note; if(iw) iw.style.display='none'; }
+        var note=(j.has_qris && !j.qris_is_shopee)?'<br><span style="font-weight:400;font-size:11px;color:var(--accent)">⚠ QRIS tersimpan bukan ShopeePay — pembayaran tetap via APK catcher.</span>':'';
+        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● TOKEN MATI'+(nm?' ('+nm+')':'')+' — ambil cookie baru lalu hubungkan ulang.'; if(conb){ conb.style.display='block'; conb.textContent='🔗 Hubungkan Ulang'; } }
+        else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG'+(nm?' — <b>'+nm+'</b>':'')+'<br><span style="font-weight:400;font-size:11px">Server-side, tanpa HP.</span>'+note; if(conb) conb.style.display='none'; }
         if(cb) cb.style.display='inline-block';
-      } else { el.className='spstat off'; el.innerHTML='○ Belum terhubung — ShopeePay menggunakan APK catcher (default).'; if(cb) cb.style.display='none'; if(iw) iw.style.display='block'; }
+      } else { el.className='spstat off'; el.innerHTML='○ Status: APK Catcher (default). Tanpa HP? Hubungkan token.'; if(cb) cb.style.display='none'; if(conb){ conb.style.display='block'; conb.textContent='🔗 Hubungkan'; } }
     }catch(e){}
   }
+  function spReveal(){ var iw=$('sp-inputwrap'); var conb=$('sp-connectbtn'); if(iw) iw.style.display='block'; if(conb) conb.style.display='none'; }
   async function saveShopee(){
     var t=$('sp-token').value.trim();
     if(!t) return msg('sp-msg','err','Token kosong');
@@ -1087,21 +1115,30 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   async function loadMethods(){
     var w=$('mth-wrap'); if(!w) return;
     try{ var j=await (await fetch('/api/merchant/methods',{headers:{'x-api-key':key()},cache:'no-store'})).json();
-      var row=function(k,label,desc){
+      var iss=j.qris_issuer||null;
+      function badge(k){
+        if(k==='device') return '<span class="mth-badge dim">UNIVERSAL · CADANGAN</span>';
+        if(k==='shopee') return iss==='shopeepay' ? '<span class="mth-badge ok">✓ SESUAI QRIS ANDA</span>' : (iss?'<span class="mth-badge dim">TIDAK SESUAI QRIS</span>':'<span class="mth-badge dim">SERVER-SIDE</span>');
+        return iss==='gopay' ? '<span class="mth-badge ok">✓ SESUAI QRIS ANDA</span>' : (iss?'<span class="mth-badge warn">DEFAULT OFF · TIDAK SESUAI</span>':'<span class="mth-badge warn">DEFAULT OFF</span>');
+      }
+      function box(k,icon,title,desc,extra){
         var a=j['method_'+k], u=j[k+'_unique'], f=j[k+'_fee'];
-        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-top:1px solid rgba(128,128,128,.18);flex-wrap:wrap">'
-          +'<div style="min-width:170px"><label style="cursor:pointer"><input type="checkbox" data-m="method_'+k+'"'+(a?' checked':'')+'> <b>'+label+'</b></label><div class="dim" style="font-size:11px">'+desc+'</div></div>'
-          +'<div style="display:flex;gap:14px;font-size:12px">'
-            +'<label style="cursor:pointer"><input type="checkbox" data-m="'+k+'_unique"'+(u?' checked':'')+'> Nominal unik</label>'
-            +'<label style="cursor:pointer"><input type="checkbox" data-m="'+k+'_fee"'+(f?' checked':'')+'> Fee</label>'
-          +'</div></div>';
-      };
-      w.innerHTML = row('device','Notifikasi Perangkat','Lewat APK catcher di HP')
-        + row('shopee','ShopeePay Partner','Server-side tanpa HP')
-        + row('gopay','GoPay Merchant','Server-side · disarankan unik & fee OFF')
+        return '<div class="mthbox"><div class="mth-tt"><span>'+icon+' '+title+'</span>'+badge(k)+'</div><div class="mth-bd">'
+          +'<label class="mth-act"><input type="checkbox" data-m="method_'+k+'"'+(a?' checked':'')+'> Aktifkan metode ini</label>'
+          +'<div class="mth-desc">'+desc+'</div>'
+          +'<div class="mth-opts"><label><input type="checkbox" data-m="'+k+'_unique"'+(u?' checked':'')+'> Nominal Unik</label>'
+          +'<label><input type="checkbox" data-m="'+k+'_fee"'+(f?' checked':'')+'> Fee</label></div>'
+          +(extra||'')+'</div></div>';
+      }
+      w.innerHTML =
+        box('device','🔔','NOTIFIKASI HP','Membaca notifikasi "uang masuk" dari HP Android. Cocok untuk semua penerbit QRIS.','')
+        + box('shopee','🛍','SHOPEEPAY PARTNER','Konfirmasi server-side melalui akun ShopeePay Partner (tanpa HP).','')
+        + box('gopay','🟢','GOPAY MERCHANT','Konfirmasi server-side melalui akun GoPay Merchant (tanpa HP).','<div style="margin:9px 0 0 25px"><button class="sec" style="width:auto;font-size:11px" onclick="gopayWhyOff()">Kenapa Default OFF?</button></div>')
         + '<div style="margin-top:12px"><button onclick="saveMethods()">Simpan Pengaturan Metode</button></div>';
     }catch(e){}
   }
+  function gopayWhyOff(){ var m=$('gpwhy-modal'); if(m) m.style.display='flex'; }
+  function gopayWhyClose(){ var m=$('gpwhy-modal'); if(m) m.style.display='none'; }
   async function viewRaw(which){
     var out=$('raw-out'); if(!out) return;
     out.style.display='block'; out.textContent='memuat...';

@@ -803,13 +803,14 @@ app.get('/api/merchant/methods', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   await ensureMethodCols(c.env.DB);
-  const m = await c.env.DB.prepare('SELECT method_device, method_shopee, method_gopay, device_unique, device_fee, shopee_unique, shopee_fee, gopay_unique, gopay_fee FROM merchants WHERE id = ?').bind(merchant.id).first();
+  const m = await c.env.DB.prepare('SELECT method_device, method_shopee, method_gopay, device_unique, device_fee, shopee_unique, shopee_fee, gopay_unique, gopay_fee, qris_issuer FROM merchants WHERE id = ?').bind(merchant.id).first();
   const g = (x, d) => ((x ?? d) ? true : false);
   return json(c, {
     method_device: g(m?.method_device, 1), method_shopee: g(m?.method_shopee, 1), method_gopay: g(m?.method_gopay, 1),
     device_unique: g(m?.device_unique, 1), device_fee: g(m?.device_fee, 1),
     shopee_unique: g(m?.shopee_unique, 1), shopee_fee: g(m?.shopee_fee, 1),
     gopay_unique: g(m?.gopay_unique, 0), gopay_fee: g(m?.gopay_fee, 0),
+    qris_issuer: m ? (m.qris_issuer || null) : null,
   });
 });
 
