@@ -1700,6 +1700,14 @@ async function checkShopeePay(env, merchant, order) {
     if (res.status === 401 || res.status === 403) return { matched: false, tokenDead: true };
     if (!res.ok) return { matched: false };
     const data = await res.json().catch(() => null);
+    // ShopeePay sering balikin HTTP 200 tapi body error (mis. code 200020 "login timeout")
+    // → token sebenarnya sudah mati. Tandai dead biar user tahu harus ambil cookie baru.
+    if (data && data.code != null && data.code !== 0 && data.code !== 200) {
+      const m = String(data.msg || '').toLowerCase();
+      if (data.code === 200020 || m.includes('login') || m.includes('timeout') || m.includes('auth')) {
+        return { matched: false, tokenDead: true };
+      }
+    }
     const txns = data ? (SHOPEE_CFG.parse(data) || []) : [];
     const hit = matchTxn(txns, order);
     if (hit) return { matched: true, txnId: String(hit.id || ''), sender: hit.sender || 'ShopeePay' };

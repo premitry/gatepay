@@ -80,6 +80,7 @@ export function renderCheckout({ order, qris, embed }) {
       <div class="note">⚠️ Bayar PERSIS ${rupiah(order.unique_amount)} (nominal unik) — jangan dibulatkan.</div>
       ${qris ? `
         <div class="qrbox"><canvas id="qr"></canvas></div>
+        <a id="qrdl" download="QRIS-${esc(order.id.slice(0, 10))}.png" style="display:block;text-align:center;padding:11px;margin-bottom:14px;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge);color:var(--text);font-weight:700;text-decoration:none;font-size:13px">⬇ Download QRIS</a>
         <div class="steps">
           <b>1.</b> Buka DANA / e-wallet / m-banking<br>
           <b>2.</b> Scan QRIS di atas<br>
@@ -117,6 +118,7 @@ ${!paid && !expired && qris ? `
 <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 <script>
   new QRious({ element: document.getElementById('qr'), value: ${JSON.stringify(qris)}, size: 560, level: 'M' });
+  try{ var _dl=document.getElementById('qrdl'); if(_dl) _dl.href=document.getElementById('qr').toDataURL('image/png'); }catch(e){}
   // countdown
   var exp = ${order.expires_at} * 1000;
   function tick(){
