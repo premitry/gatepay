@@ -994,7 +994,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     try{
       var r=await fetch('/api/merchant/qris',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({qris:$('qris').value.trim()})});
       var j=await r.json();
-      if(r.ok){ var iss=j.issuer_name?(' · Penerbit: '+j.issuer_name+(j.nmid?' (NMID '+j.nmid+')':'')+' — metode disetel otomatis'):' · Penerbit tak terdeteksi (pakai APK catcher)'; msg('qmsg','ok','QRIS tersimpan: '+(j.merchant_name||'-')+iss); loadSettings(); loadShopee(); loadGopay(); loadMethods(); }
+      if(r.ok){ msg('qmsg','ok','QRIS tersimpan ✓'+(j.issuer_name?' — '+j.issuer_name+' terdeteksi, metode disetel otomatis':'')); loadSettings(); loadShopee(); loadGopay(); loadMethods(); setTimeout(function(){ var e=$('qmsg'); if(e) e.innerHTML=''; },4000); }
       else msg('qmsg','err',j.error||'gagal');
     }catch(e){ msg('qmsg','err',String(e)); }
   }
@@ -1006,7 +1006,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
         if($('ttlmin')) $('ttlmin').value=Math.round((j.order_ttl||900)/60);
         if($('defredir')) $('defredir').value=j.default_redirect||'';
         estOrder();
-        if(j.has_qris){ $('qstat').textContent='✓ QRIS aktif: '+(j.merchant_name||'-'); $('qstat').style.color='var(--ok)'; $('noqris').style.display='none'; $('clearqrisbtn').style.display='block'; }
+        if(j.has_qris){ var pen=j.issuer_name?(' · '+j.issuer_name+(j.nmid?' ('+j.nmid+')':'')):' · penerbit tak terdeteksi'; $('qstat').textContent='✓ QRIS aktif: '+(j.merchant_name||'-')+pen; $('qstat').style.color='var(--ok)'; $('noqris').style.display='none'; $('clearqrisbtn').style.display='block'; }
         else { $('qstat').textContent='○ Belum ada QRIS statis (terputus)'; $('qstat').style.color='var(--bad,#b0362a)'; $('noqris').style.display='block'; $('clearqrisbtn').style.display='none'; }
         // profil
         $('p-qris').textContent=j.qris_name||'(QRIS belum diatur)';

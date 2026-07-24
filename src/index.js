@@ -1036,10 +1036,14 @@ function maskPhone(p) {
 app.get('/api/merchant/settings', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  const det = merchant.qris_static ? detectQrisIssuer(merchant.qris_static) : { issuer: null, name: null, nmid: null };
   return json(c, {
     fee_percent: merchant.fee_percent || 0,
     unique_digits: merchant.unique_digits || 2,
     has_qris: !!merchant.qris_static,
+    qris_issuer: det.issuer,
+    issuer_name: det.name,
+    nmid: det.nmid,
     merchant_name: merchant.qris_merchant_name || merchant.name,
     notify_url: merchant.notify_url || '',
     callback_secret: merchant.callback_secret || '',
