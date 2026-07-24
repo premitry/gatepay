@@ -289,16 +289,21 @@ export function renderDashboard() {
     </div>
   </div>
   <div id="gpwhy-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(20,31,92,.55);align-items:center;justify-content:center;padding:16px">
-    <div class="panel" style="max-width:430px;width:100%;margin:0">
-      <div style="font-family:'Michroma',sans-serif;color:#12235c;font-size:13px;margin-bottom:10px">🟠 GOPAY_RECOMMENDATION.TXT</div>
-      <div style="font-size:13px;margin-bottom:10px">Nominal Unik dan Fee dinonaktifkan secara default untuk GoPay. Alasannya:</div>
-      <ul style="font-size:12.5px;margin:0 0 14px 18px;line-height:1.75;color:var(--text)">
-        <li>Mengurangi pola transaksi yang mudah dikenali sebagai otomatis.</li>
-        <li>Membantu mengurangi risiko pembatasan akun merchant.</li>
-        <li>Order tetap dibedakan lewat <b>kode order</b> pada QRIS (bukan sen unik).</li>
-        <li>Anda tetap dapat mengaktifkannya apabila memang diperlukan.</li>
-      </ul>
-      <button onclick="gopayWhyClose()" style="width:100%">Mengerti</button>
+    <div class="out" style="max-width:440px;width:100%;background:var(--chrome)">
+      <div style="background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;font-family:'Michroma',sans-serif;font-size:11px;padding:7px 12px;border-bottom:2px solid var(--edge-dark);display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span>🟠 GOPAY_RECOMMENDATION.TXT</span>
+        <span onclick="gopayWhyClose()" style="cursor:pointer;font-weight:700;font-family:Verdana">✕</span>
+      </div>
+      <div style="padding:14px 16px">
+        <div style="font-size:13px;margin-bottom:10px">Nominal Unik dan Fee dinonaktifkan secara default untuk GoPay. Alasannya:</div>
+        <ul style="font-size:12.5px;margin:0 0 14px 18px;line-height:1.75;color:var(--text)">
+          <li>Mengurangi pola transaksi yang mudah dikenali sebagai otomatis.</li>
+          <li>Membantu mengurangi risiko pembatasan akun merchant.</li>
+          <li>Order tetap dibedakan lewat <b>kode order</b> pada QRIS (bukan sen unik).</li>
+          <li>Anda tetap dapat mengaktifkannya apabila memang diperlukan.</li>
+        </ul>
+        <button onclick="gopayWhyClose()" style="width:100%">Mengerti</button>
+      </div>
     </div>
   </div>
   <div class="scrim" onclick="toggleMnav(false)"></div>
