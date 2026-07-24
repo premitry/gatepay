@@ -51,6 +51,7 @@ export function renderDashboard() {
   .msg{font-size:12px;margin-top:8px;padding:8px;display:none;border:2px solid}
   .msg.ok{background:#dff3ea;color:var(--ok);border-color:var(--ok);display:block}
   .msg.err{background:#f7dcd9;color:var(--bad);border-color:var(--bad);display:block}
+  .msg:empty{display:none!important}
   .dim{color:var(--dim);font-size:12px}
   .lnk{font-size:12px}
 
