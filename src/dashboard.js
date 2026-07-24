@@ -234,11 +234,19 @@ export function renderDashboard() {
   .scrim{display:none}
   @media(max-width:820px){
     .stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}
-    .sidebar{transform:translateX(-100%);transition:transform .18s;width:232px}
-    body.col .sidebar{width:232px}
+    .sidebar{transform:translateX(-100%);transition:transform .18s;width:236px;box-shadow:4px 0 12px rgba(20,31,92,.35)}
+    body.col .sidebar{width:236px}
     body.mnav .sidebar{transform:translateX(0)}
     .content{margin-left:0!important}
     .topbar .burger{display:block}
+    /* mobile: drawer selalu tampil penuh — batalkan mode collapse */
+    .collapse{display:none}
+    body.col .snav .grp,body.col .navi .lbl,body.col .side-bot .txt,body.col .logo span:last-child{display:revert}
+    body.col .navi{justify-content:flex-start;padding:10px 10px;gap:11px}
+    body.col .side-top{padding:0 12px;justify-content:space-between}
+    body.col .side-top .logo,body.col .logo{display:flex}
+    body.col .side-bot{justify-content:space-between;padding:10px 12px}
+    body.col .side-bot .who{gap:9px}
     body.mnav .scrim{display:block;position:fixed;inset:0;background:rgba(20,31,92,.45);z-index:35}
     .page{padding:14px}
     table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
@@ -909,7 +917,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   async function fa2Setup(){ try{ var r=await fetch('/api/merchant/2fa/setup',{method:'POST',headers:{'x-api-key':key()}}); var j=await r.json(); if(!r.ok) return alert(j.error||'gagal'); $('fa-secret').textContent=j.secret; $('fa-off').style.display='none'; $('fa-setup').style.display='block'; new QRious({element:$('fa-qr'),value:j.otpauth,size:300,level:'M'}); }catch(e){ alert(String(e)); } }
   async function fa2Verify(){ var code=$('fa-code').value.trim(); try{ var r=await fetch('/api/merchant/2fa/verify',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({code:code})}); var j=await r.json(); if(r.ok){ msg('fa-msg','ok','2FA aktif ✓'); fa2Render(true); } else msg('fa-msg','err',j.error||'gagal'); }catch(e){ msg('fa-msg','err',String(e)); } }
   async function fa2Disable(){ var code=$('fa-dcode').value.trim(); try{ var r=await fetch('/api/merchant/2fa/disable',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({code:code})}); var j=await r.json(); if(r.ok){ msg('fa-dmsg','ok','2FA dinonaktifkan'); fa2Render(false); } else msg('fa-dmsg','err',j.error||'gagal'); }catch(e){ msg('fa-dmsg','err',String(e)); } }
-  function go(v){ if(location.hash==='#'+v) navTo(v); else location.hash='#'+v; }
+  function go(v){ document.body.classList.remove('mnav'); if(location.hash==='#'+v) navTo(v); else location.hash='#'+v; }
   window.addEventListener('hashchange',function(){ navTo((location.hash||'').replace('#','')); });
   function setColArrow(){ var b=document.querySelector('.collapse'); if(b) b.textContent=document.body.classList.contains('col')?'›':'‹'; }
   function toggleCollapse(){ document.body.classList.toggle('col'); localStorage.setItem('gp_col',document.body.classList.contains('col')?'1':''); setColArrow(); }
