@@ -75,11 +75,11 @@ export function renderDashboard() {
   .collapse{background:linear-gradient(180deg,var(--chrome),var(--chrome-2));border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);color:var(--text);width:auto;margin:0;padding:2px 8px;font-size:13px;font-weight:700}
   .collapse:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
   .snav{flex:1;overflow-y:auto;padding:8px}
-  .snav .grp{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);padding:12px 6px 4px;white-space:nowrap;overflow:hidden;font-weight:700}
-  .navi{display:flex;align-items:center;gap:11px;padding:9px 10px;color:var(--text);cursor:pointer;font-size:13px;white-space:nowrap;overflow:hidden;margin-bottom:3px;border:2px solid transparent}
+  .snav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);padding:12px 6px 4px;white-space:nowrap;overflow:hidden;font-weight:700}
+  .navi{display:flex;align-items:center;gap:11px;padding:10px 10px;color:var(--text);cursor:pointer;font-size:15px;white-space:nowrap;overflow:hidden;margin-bottom:3px;border:2px solid transparent}
   .navi:hover{background:var(--chrome-2);border-color:var(--edge) var(--hi) var(--hi) var(--edge)}
   .navi.active{background:linear-gradient(90deg,#26379d,#3f7fc4);color:#fff;font-weight:700;border-color:#141f5c #7fb0e0 #7fb0e0 #141f5c}
-  .navi .ic{font-size:16px;width:20px;min-width:20px;text-align:center}
+  .navi .ic{font-size:18px;width:22px;min-width:22px;text-align:center}
   .side-bot{border-top:2px solid var(--edge);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap;overflow:hidden;background:var(--chrome-2)}
   .side-bot .who{display:flex;align-items:center;gap:9px;overflow:hidden}
   .side-bot .av{width:28px;height:28px;min-width:28px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
