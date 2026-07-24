@@ -2438,4 +2438,117 @@ app.post('/api/admin/tickets/:id/status', async (c) => {
   return json(c, { ok: true, status: st });
 });
 
-export default app;
+// ─────────────────────────────────────────────────────────
+// Status untuk APK — cek akun aktif + alert token (dipanggil berkala oleh app).
+// Auth: header x-device-id + x-signature = HMAC-SHA256(device_secret, device_id).
+// ─────────────────────────────────────────────────────────
+app.get('/api/device/status', async (c) => {
+  const deviceId = c.req.header('x-device-id') || '';
+  const sig = c.req.header('x-signature') || '';
+  if (!deviceId) return json(c, { error: 'device id wajib' }, 400);
+  const m = await c.env.DB.prepare('SELECT * FROM merchants WHERE device_id = ?').bind(deviceId).first();
+  if (!m || !m.device_secret) return json(c, { error: 'device tidak dikenal' }, 401);
+  let expect;
+  try { expect = await hmacHex(m.device_secret, deviceId); } catch { expect = null; }
+  if (!expect || !safeEqual(expect, sig)) return json(c, { error: 'signature salah' }, 401);
+  await ensureShopeeColumns(c.env.DB);
+  await ensureGopayColumns(c.env.DB);
+  const t = now();
+  const pending = await c.env.DB.prepare("SELECT COUNT(*) n FROM orders WHERE merchant_id=? AND status='pending' AND expires_at>?").bind(m.id, t).first().catch(() => ({ n: 0 }));
+  const alerts = [];
+  if (m.shopee_token && m.shopee_token_status === 'dead') alerts.push('Token ShopeePay Partner mati — perbarui cookie di dashboard.');
+  if (m.gopay_email && m.gopay_email !== 'gobiz' && m.gopay_token_status === 'dead') alerts.push('Sesi GoPay Merchant mati — hubungkan ulang (login/OTP) di dashboard.');
+  return json(c, {
+    ok: true,
+    username: m.username || null,
+    merchant_name: m.qris_merchant_name || m.name || null,
+    shopee_connected: !!m.shopee_token,
+    shopee_status: m.shopee_token_status || (m.shopee_token ? 'ok' : null),
+    gopay_connected: !!(m.gopay_email && m.gopay_email !== 'gobiz'),
+    gopay_status: m.gopay_token_status || null,
+    pending: pending ? pending.n : 0,
+    alerts,
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// Cron: cek berkala order pending (server-side ShopeePay/GoPay) tanpa perlu
+// halaman checkout kebuka. Batch per merchant biar hemat subrequest.
+// ─────────────────────────────────────────────────────────
+async function runScheduled(env) {
+  const t = now();
+  try { await env.DB.prepare("UPDATE orders SET status='expired' WHERE status='pending' AND expires_at <= ?").bind(t).run(); } catch {}
+  let rows;
+  try {
+    rows = await env.DB.prepare(
+      `SELECT o.*, m.shopee_token, m.shopee_token_status, m.method_shopee, m.method_gopay, m.gopay_email, m.gopay_password, m.gopay_token, m.gopay_refresh, m.gopay_expires, m.gopay_unique_id, m.gopay_merchant_id
+       FROM orders o JOIN merchants m ON m.id = o.merchant_id
+       WHERE o.status='pending' AND o.expires_at > ?
+         AND ( (m.shopee_token IS NOT NULL AND (m.method_shopee IS NULL OR m.method_shopee=1))
+            OR (m.gopay_email IS NOT NULL AND m.gopay_email != 'gobiz' AND (m.method_gopay IS NULL OR m.method_gopay=1)) )
+       ORDER BY o.created_at ASC LIMIT 80`,
+    ).bind(t).all();
+  } catch { return; }
+  const orders = (rows && rows.results) || [];
+  const byMerchant = new Map();
+  for (const o of orders) {
+    if (!byMerchant.has(o.merchant_id)) byMerchant.set(o.merchant_id, []);
+    byMerchant.get(o.merchant_id).push(o);
+  }
+  let budget = 30; // batas kasar subrequest per run
+  for (const [mid, list] of byMerchant) {
+    if (budget <= 0) break;
+    const m0 = list[0];
+    // ── ShopeePay (batch) ──
+    if (SHOPEE_CFG && m0.shopee_token && (m0.method_shopee == null || m0.method_shopee === 1)) {
+      budget--;
+      try {
+        const tok = await decField(env, m0.shopee_token);
+        const res = await fetch(SHOPEE_CFG.url, { method: SHOPEE_CFG.method, headers: SHOPEE_CFG.headers(tok), body: SHOPEE_CFG.body(tok) });
+        const data = await res.json().catch(() => null);
+        const dead = res.status === 401 || res.status === 403 || (data && data.code != null && data.code !== 0 && data.code !== 200);
+        if (dead) {
+          if (m0.shopee_token_status !== 'dead') await env.DB.prepare("UPDATE merchants SET shopee_token_status='dead' WHERE id=?").bind(mid).run().catch(() => {});
+        } else {
+          const txns = data ? (SHOPEE_CFG.parse(data) || []) : [];
+          for (const o of list) {
+            if (o.status !== 'pending') continue;
+            const hit = matchTxn(txns, o);
+            if (hit) { const eid = await settleShopeeMatch(env, o, { txnId: String(hit.id || ''), sender: hit.sender }); await fireCallback(env, o, eid); o.status = 'paid'; budget--; }
+          }
+        }
+      } catch {}
+    }
+    if (budget <= 0) break;
+    // ── GoPay (batch) ──
+    if (m0.gopay_email && m0.gopay_email !== 'gobiz' && (m0.method_gopay == null || m0.method_gopay === 1)) {
+      budget--;
+      try {
+        const dm = {
+          ...m0, id: mid,
+          gopay_token: m0.gopay_token ? await decField(env, m0.gopay_token) : null,
+          gopay_refresh: m0.gopay_refresh ? await decField(env, m0.gopay_refresh) : null,
+          gopay_password: m0.gopay_password ? await decField(env, m0.gopay_password) : null,
+        };
+        const sess = await gopayEnsureToken(env, dm);
+        if (sess) {
+          let gmid = sess.merchant_id;
+          if (!gmid) { try { const r = await gopayResolveMerchant(sess.access_token, sess.unique_id); gmid = r.merchant_id; } catch {} }
+          const glist = await gopayHistory(sess.access_token, gmid, { days: 1, size: 50 });
+          for (const o of list) {
+            if (o.status !== 'pending') continue;
+            const hit = matchTxn(glist, o);
+            if (hit) { const eid = await settleGopayMatch(env, o, { txnId: hit.id, sender: hit.sender }); await fireCallback(env, o, eid); o.status = 'paid'; budget--; }
+          }
+        }
+      } catch {}
+    }
+  }
+}
+
+export default {
+  fetch: app.fetch,
+  scheduled: async (event, env, ctx) => {
+    ctx.waitUntil(runScheduled(env));
+  },
+};

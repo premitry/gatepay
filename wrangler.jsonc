@@ -6,6 +6,10 @@
   "observability": {
     "enabled": true
   },
+  "triggers": {
+    // Cek berkala order pending (ShopeePay/GoPay server-side) tiap menit
+    "crons": ["* * * * *"]
+  },
   "assets": {
     "directory": "./public"
   },
