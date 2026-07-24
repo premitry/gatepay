@@ -1184,17 +1184,27 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     $('rbreak').textContent='base      : '+idr(base)+'\\nfee '+fee+'%    : '+idr(feeAmt)+'\\nkode unik : +1 s/d +50\\n─────────────────\\nTOTAL     : '+idr(sub+1)+' – '+idr(sub+50);
     $('ramt').textContent='≈ '+idr(sub+1)+' – '+idr(sub+50);
   }
+  var _opoll=null;
   async function createOrder(){
     var amt=parseInt($('amt').value,10); if(!amt||amt<=0) return msg('omsg','err','Nominal harus > 0');
+    if(_opoll){ clearInterval(_opoll); _opoll=null; }
     try{
       var r=await fetch('/api/orders',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({base_amount:amt,reference:$('ref').value.trim()||undefined})});
       var j=await r.json(); if(!r.ok) return msg('omsg','err',j.error||'gagal');
-      msg('omsg','ok','Order dibuat: '+j.id);
       $('rbreak').textContent='base      : '+idr(j.base_amount)+'\\nfee '+(j.fee_percent||0)+'%    : '+idr(j.fee_amount||0)+'\\nkode unik : '+(j.unique_code||0)+'\\n─────────────────\\nTOTAL     : '+idr(j.unique_amount);
       $('ramt').textContent=idr(j.unique_amount); $('rlink').href=j.checkout_url; $('rlinkwrap').style.display='block';
       if(j.qris){ new QRious({element:$('qrcanvas'),value:j.qris,size:400,level:'M'}); $('qrcanvas').style.display='block'; $('qrph').style.display='none'; }
-      else msg('omsg','err','Order dibuat tetapi QRIS belum ada — unggah QRIS terlebih dahulu di menu QRIS & Order.');
+      else return msg('omsg','err','Order dibuat tetapi QRIS belum ada — unggah QRIS terlebih dahulu.');
       setTimeout(tick,800);
+      // poll status tiap 3 detik → cepat kedetek + memicu cek ShopeePay/GoPay server-side
+      var oid=j.id;
+      msg('omsg','ok','⏳ Menunggu pembayaran… (order '+oid.slice(0,12)+')');
+      _opoll=setInterval(async function(){
+        try{ var s=await (await fetch('/pay/'+oid+'/status?_='+Date.now(),{cache:'no-store'})).json();
+          if(s.status==='paid'){ clearInterval(_opoll); _opoll=null; msg('omsg','ok','✓ PEMBAYARAN DITERIMA — '+oid.slice(0,12)); }
+          else if(s.status==='expired'||s.status==='cancelled'){ clearInterval(_opoll); _opoll=null; msg('omsg','err','Order '+s.status); }
+        }catch(e){}
+      },3000);
     }catch(e){ msg('omsg','err',String(e)); }
   }
 
