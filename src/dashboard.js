@@ -421,15 +421,16 @@ export function renderDashboard() {
             <input id="ref" type="text" placeholder="INV-001">
             <button onclick="createOrder()" style="margin-top:8px">Buat Order + QR</button>
             <div class="msg" id="omsg"></div>
-            <div class="res show" id="ores">
+            <div class="res show" id="ores" style="min-height:420px;display:flex;flex-direction:column">
               <div class="dim" id="rbreak" style="font-size:14px;line-height:1.75;margin-bottom:10px"></div>
               <div class="dim" style="font-size:14px">Bayar persis</div>
               <div class="amt" id="ramt">Rp 0</div>
-              <div style="margin-top:8px;display:flex;flex-direction:column;align-items:center">
+              <div style="margin-top:8px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
                 <div id="qrph" style="width:200px;max-width:100%;aspect-ratio:1;background:#fff;border:2px dashed var(--edge);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:12px;padding:12px">QR muncul otomatis<br>setelah menekan "Buat Order + QR"</div>
                 <canvas id="qrcanvas" style="display:none"></canvas>
-                <div id="rlinkwrap" style="margin-top:10px;display:none"><a class="lnk" id="rlink" target="_blank">Buka halaman checkout ↗</a></div>
               </div>
+              <div id="ostat" class="dim" style="text-align:center;font-size:12px;margin-top:8px;min-height:16px"></div>
+              <div id="rlinkwrap" style="margin-top:4px;display:none;text-align:center"><a class="lnk" id="rlink" target="_blank">Buka halaman checkout ↗</a></div>
             </div>
           </div>
         </div>
@@ -1198,11 +1199,12 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       setTimeout(tick,800);
       // poll status tiap 3 detik → cepat kedetek + memicu cek ShopeePay/GoPay server-side
       var oid=j.id;
-      msg('omsg','ok','⏳ Menunggu pembayaran… (order '+oid.slice(0,12)+')');
+      var ost=$('ostat'); if(ost){ ost.style.color=''; ost.textContent='⏳ Menunggu pembayaran… ('+oid.slice(0,12)+')'; }
       _opoll=setInterval(async function(){
         try{ var s=await (await fetch('/pay/'+oid+'/status?_='+Date.now(),{cache:'no-store'})).json();
-          if(s.status==='paid'){ clearInterval(_opoll); _opoll=null; msg('omsg','ok','✓ PEMBAYARAN DITERIMA — '+oid.slice(0,12)); }
-          else if(s.status==='expired'||s.status==='cancelled'){ clearInterval(_opoll); _opoll=null; msg('omsg','err','Order '+s.status); }
+          var e=$('ostat');
+          if(s.status==='paid'){ clearInterval(_opoll); _opoll=null; if(e){ e.style.color='var(--ok)'; e.textContent='✓ PEMBAYARAN DITERIMA'; } }
+          else if(s.status==='expired'||s.status==='cancelled'){ clearInterval(_opoll); _opoll=null; if(e){ e.style.color='var(--bad)'; e.textContent='Order '+s.status; } }
         }catch(e){}
       },3000);
     }catch(e){ msg('omsg','err',String(e)); }
