@@ -7,7 +7,7 @@ export function renderLanding() {
 <title>GatePay — Payment Gateway QRIS Otomatis</title>
 <meta name="description" content="GatePay — gateway pembayaran QRIS yang mengonfirmasi transaksi secara otomatis: dari notifikasi perangkat hingga langsung dari akun ShopeePay Partner dan GoPay Merchant Anda. Gratis, nominal terkunci, tanpa pengecekan manual.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Poppins:wght@600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root{
     --desk-a:#7fc6c9;--desk-b:#8ea8dc;--desk-c:#6f87c8;--grid:rgba(255,255,255,.34);
@@ -27,8 +27,13 @@ export function renderLanding() {
   nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px}
   .logo{font-size:17px;display:flex;align-items:center;gap:8px;color:var(--text)}
   .logo .mark{width:30px;height:30px;display:block;flex:0 0 auto;filter:drop-shadow(1px 1px 0 rgba(0,0,0,.14))}
+  .logo .wm{font-family:'Poppins',sans-serif;font-weight:800;letter-spacing:-.02em;line-height:1}
+  .logo .wm .g1{color:#2b2f36}
+  .logo .wm .g2{color:var(--accent)}
+  .wm-tag{font-family:'Poppins',sans-serif;font-weight:600;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin:4px 0 0 40px}
   .nav-links{display:flex;gap:10px;align-items:center}
-  .nav-links .nlink{font-size:13px;color:var(--text);font-weight:700;padding:6px 8px}
+  .nav-links .nlink{font-size:13px;color:var(--text);font-weight:700;padding:6px 8px;white-space:nowrap}
+  nav .btn{white-space:nowrap}
   .btn{display:inline-block;padding:9px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:Verdana,sans-serif;background:linear-gradient(180deg,var(--chrome),var(--chrome-2));color:var(--text);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi)}
   .btn:hover{filter:brightness(1.04);text-decoration:none}
   .btn:active{border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
@@ -100,6 +105,14 @@ export function renderLanding() {
   @media(max-width:820px){.fcols{grid-template-columns:1fr 1fr}}
   @media(max-width:720px){.steps,.feats{grid-template-columns:1fr}.seclist{grid-template-columns:1fr}.faq{grid-template-columns:1fr}}
   @media(max-width:640px){.gstats{grid-template-columns:1fr 1fr}.gstat{border-bottom:2px solid rgba(84,81,74,.25)}}
+  @media(max-width:600px){
+    nav .wrap{height:52px;padding:0 12px}
+    .logo{font-size:15px;gap:6px}
+    .logo .mark{width:26px;height:26px}
+    .nav-links{gap:6px}
+    .nav-links .nlink{display:none}
+    nav .btn{padding:7px 12px;font-size:12px}
+  }
 </style></head><body id="top">
 <nav><div class="wrap">
   <div class="logo"><svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gpm" x1="12" y1="4" x2="52" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FCA83E"/><stop offset="1" stop-color="#E9660A"/></linearGradient></defs><path d="M44 23 L56 5 L50 27 Z" fill="url(#gpm)"/><path d="M46 20 A18 18 0 1 0 46 44 L46 34 L33 34" fill="none" stroke="url(#gpm)" stroke-width="10.5" stroke-linejoin="round" stroke-linecap="round"/></svg>GatePay</div>

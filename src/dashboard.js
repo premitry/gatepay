@@ -8,7 +8,7 @@ export function renderDashboard() {
 <title>Dashboard · GatePay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Poppins:wght@600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root{
     --desk-a:#7fc6c9;--desk-b:#8ea8dc;--desk-c:#6f87c8;--grid:rgba(255,255,255,.34);
