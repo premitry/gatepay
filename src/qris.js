@@ -66,18 +66,22 @@ export function detectQrisIssuer(payload) {
   const tlv = parseTLV(payload);
   const get = (t) => (tlv.find((x) => x.tag === t) || {}).value || null;
   out.merchantName = get('59');
-  // scan tag merchant account info (26..51) → PAN (sub-01) + NMID (sub-02)
+  // scan SEMUA tag merchant account info (26..51) → kumpulin PAN (sub-01) + NMID (sub-02).
+  // Jangan berhenti di tag pertama: issuer bisa di template acquirer (tag 26),
+  // sedangkan NMID nasional ("ID"+angka) ada di template QRIS nasional (tag 51).
   for (let n = 26; n <= 51; n++) {
     const v = get(String(n).padStart(2, '0'));
     if (!v) continue;
     const sub = parseTLV(v);
     const pan = (sub.find((s) => s.tag === '01') || {}).value || '';
     const nmid = (sub.find((s) => s.tag === '02') || {}).value || '';
-    if (nmid && !out.nmid) out.nmid = nmid;
-    for (const code in QRIS_ACQUIRERS) {
-      if (pan.indexOf(code) >= 0) { const a = QRIS_ACQUIRERS[code]; out.issuer = a.issuer; out.name = a.name; out.acquirer = code; break; }
+    if (nmid && /^ID\d{6,}/i.test(nmid)) out.nmid = nmid;        // NMID nasional (utamakan)
+    else if (nmid && !out.nmid) out.nmid = nmid;                 // cadangan
+    if (!out.issuer) {
+      for (const code in QRIS_ACQUIRERS) {
+        if (pan.indexOf(code) >= 0) { const a = QRIS_ACQUIRERS[code]; out.issuer = a.issuer; out.name = a.name; out.acquirer = code; break; }
+      }
     }
-    if (out.issuer) break;
   }
   // fallback: scan seluruh payload untuk kode acquirer
   if (!out.issuer) {
