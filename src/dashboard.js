@@ -439,8 +439,7 @@ export function renderDashboard() {
             <h2>SHOPEEPAY PARTNER</h2>
             <div class="dim" style="margin-bottom:8px">Konfirmasi pembayaran ShopeePay <b>tanpa HP</b>. Default: APK catcher.</div>
             <div id="sp-status" class="spstat" style="margin-bottom:10px"></div>
-            <button id="sp-connectbtn" onclick="spReveal()" style="display:none">🔗 Hubungkan</button>
-            <div id="sp-inputwrap" style="display:none">
+            <div id="sp-inputwrap">
               <a class="lnk" onclick="goTutorShopee()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara mengambil token → buka Tutorial</a>
               <label>Cookie token (diawali "eyJ")</label>
               <textarea id="sp-token" placeholder="eyJhbGciOi…" rows="2" style="height:46px;min-height:46px;resize:vertical"></textarea>
@@ -1038,18 +1037,16 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   function goTutorShopee(){ go('tutor'); setTimeout(function(){ var d=$('tut-shopee'); if(d){ d.open=true; d.scrollIntoView({behavior:'smooth',block:'start'}); } },140); }
   async function loadShopee(){
     try{ var j=await (await fetch('/api/merchant/shopee',{headers:{'x-api-key':key()},cache:'no-store'})).json();
-      var el=$('sp-status'); var cb=$('sp-clearbtn'); var iw=$('sp-inputwrap'); var conb=$('sp-connectbtn');
-      if(iw) iw.style.display='none';
+      var el=$('sp-status'); var cb=$('sp-clearbtn'); var iw=$('sp-inputwrap');
       if(j.enabled){
         var nm=j.merchant?escj(j.merchant):null;
         var note=(j.has_qris && !j.qris_is_shopee)?'<br><span style="font-weight:400;font-size:11px;color:var(--accent)">⚠ QRIS tersimpan bukan ShopeePay — pembayaran tetap via APK catcher.</span>':'';
-        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● TOKEN MATI'+(nm?' ('+nm+')':'')+' — ambil cookie baru lalu hubungkan ulang.'; if(conb){ conb.style.display='block'; conb.textContent='🔗 Hubungkan Ulang'; } }
-        else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG'+(nm?' — <b>'+nm+'</b>':'')+'<br><span style="font-weight:400;font-size:11px">Server-side, tanpa HP.</span>'+note; if(conb) conb.style.display='none'; }
+        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● TOKEN MATI'+(nm?' ('+nm+')':'')+' — ambil cookie baru lalu simpan ulang.'; if(iw) iw.style.display='block'; }
+        else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG'+(nm?' — <b>'+nm+'</b>':'')+'<br><span style="font-weight:400;font-size:11px">Server-side, tanpa HP.</span>'+note; if(iw) iw.style.display='none'; }
         if(cb) cb.style.display='inline-block';
-      } else { el.className='spstat off'; el.innerHTML='○ Status: APK Catcher (default). Tanpa HP? Hubungkan token.'; if(cb) cb.style.display='none'; if(conb){ conb.style.display='block'; conb.textContent='🔗 Hubungkan'; } }
+      } else { el.className='spstat off'; el.innerHTML='○ Status: APK Catcher (default). Tempel token untuk konfirmasi tanpa HP.'; if(cb) cb.style.display='none'; if(iw) iw.style.display='block'; }
     }catch(e){}
   }
-  function spReveal(){ var iw=$('sp-inputwrap'); var conb=$('sp-connectbtn'); if(iw) iw.style.display='block'; if(conb) conb.style.display='none'; }
   async function saveShopee(){
     var t=$('sp-token').value.trim();
     if(!t) return msg('sp-msg','err','Token kosong');
