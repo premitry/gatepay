@@ -452,11 +452,12 @@ export function renderDashboard() {
             <div id="gp-status" class="spstat" style="margin-bottom:10px"></div>
             <div id="gp-inputwrap">
               <a class="lnk" onclick="goTutorGopay()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara setup akun GoPay Merchant → buka Tutorial</a>
-              <div style="display:flex;gap:6px;margin:2px 0 8px">
-                <button type="button" class="sec" id="gp-mode-pw" onclick="gpMode('pw')" style="flex:1">Login Password</button>
-                <button type="button" class="sec" id="gp-mode-otp" onclick="gpMode('otp')" style="flex:1">Login OTP</button>
+              <div id="gp-chooser" style="display:flex;gap:6px;margin:2px 0 8px">
+                <button type="button" id="gp-mode-pw" onclick="gpMode('pw')" style="flex:1">Login Password</button>
+                <button type="button" id="gp-mode-otp" onclick="gpMode('otp')" style="flex:1">Login OTP</button>
               </div>
               <div id="gp-form-pw" style="display:none">
+                <a class="lnk" onclick="gpBack()" style="cursor:pointer;display:inline-block;margin-bottom:6px">← Kembali pilih metode</a>
                 <label>Email GoPay Merchant</label>
                 <input id="gp-email" type="email" placeholder="[email protected]" autocomplete="off">
                 <label>Password</label>
@@ -464,6 +465,7 @@ export function renderDashboard() {
                 <div style="margin-top:6px"><button onclick="saveGopay()">Simpan &amp; Hubungkan</button></div>
               </div>
               <div id="gp-form-otp" style="display:none">
+                <a class="lnk" onclick="gpBack()" style="cursor:pointer;display:inline-block;margin-bottom:6px">← Kembali pilih metode</a>
                 <div id="gp-otp-step1">
                   <label>Nomor HP GoPay Merchant</label>
                   <input id="gp-phone" type="tel" placeholder="08xxxxxxxxxx" autocomplete="off">
@@ -1061,13 +1063,14 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
   async function loadGopay(){
     try{ var j=await (await fetch('/api/merchant/gopay',{headers:{'x-api-key':key()},cache:'no-store'})).json();
       var el=$('gp-status'); var cb=$('gp-clearbtn'); var iw=$('gp-inputwrap');
+      gpBack();
       if(j.enabled){
         var nm=j.merchant?escj(j.merchant):null;
-        var note=(j.has_qris && !j.qris_is_gopay)?'<br><span style="font-weight:400;font-size:11px;color:var(--accent)">⚠ QRIS tersimpan bukan GoPay — pembayaran tetap terdeteksi lewat APK catcher.</span>':'';
-        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● KONEKSI GAGAL'+(nm?' ('+nm+')':'')+' — email/password mungkin berubah. Sementara itu GoPay menggunakan APK catcher.'; if(iw) iw.style.display='block'; }
-        else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG'+(nm?' — <b>'+nm+'</b>':'')+'<br><span style="font-weight:400;font-size:11px">GoPay dikonfirmasi server-side (tanpa HP). Akun: '+escj(j.email_preview||'-')+'</span>'+note; if(iw) iw.style.display='none'; }
+        var note=(j.has_qris && !j.qris_is_gopay)?'<br><span style="font-weight:400;font-size:11px;color:var(--accent)">⚠ QRIS tersimpan bukan GoPay — pembayaran tetap via APK catcher.</span>':'';
+        if(j.status==='dead'){ el.className='spstat dead'; el.innerHTML='● KONEKSI GAGAL'+(nm?' ('+nm+')':'')+' — hubungkan ulang.'; if(iw) iw.style.display='block'; }
+        else { el.className='spstat ok'; el.innerHTML='✓ TERHUBUNG'+(nm?' — <b>'+nm+'</b>':'')+'<br><span style="font-weight:400;font-size:11px">Server-side, tanpa HP. Akun: '+escj(j.email_preview||'-')+'</span>'+note; if(iw) iw.style.display='none'; }
         if(cb) cb.style.display='inline-block';
-      } else { el.className='spstat off'; el.innerHTML='○ Belum terhubung — GoPay menggunakan APK catcher (default).'; if(cb) cb.style.display='none'; if(iw) iw.style.display='block'; }
+      } else { el.className='spstat off'; el.innerHTML='○ Status: APK Catcher (default). Tanpa HP? Pilih cara login.'; if(cb) cb.style.display='none'; if(iw) iw.style.display='block'; }
     }catch(e){}
   }
   async function saveGopay(){
@@ -1083,12 +1086,17 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
       if(r.ok){ msg('gp-msg','ok','GoPay diputus — menggunakan APK catcher'); loadGopay(); } else msg('gp-msg','err','gagal');
     }catch(e){ msg('gp-msg','err',String(e)); }
   }
-  // ── GoPay login mode: password / OTP ──
+  // ── GoPay login mode: swap tampilan (chooser ⇄ form), tidak menambah ke bawah ──
   function gpMode(m){
-    var pw=$('gp-form-pw'), otp=$('gp-form-otp'), bp=$('gp-mode-pw'), bo=$('gp-mode-otp');
-    if(!pw||!otp) return;
-    if(m==='otp'){ pw.style.display='none'; otp.style.display='block'; if(bo)bo.className=''; if(bp)bp.className='sec'; }
-    else { pw.style.display='block'; otp.style.display='none'; if(bp)bp.className=''; if(bo)bo.className='sec'; gpOtpReset(); }
+    var ch=$('gp-chooser'), pw=$('gp-form-pw'), otp=$('gp-form-otp');
+    if(ch) ch.style.display='none';
+    if(m==='otp'){ if(pw)pw.style.display='none'; if(otp)otp.style.display='block'; gpOtpReset(); }
+    else { if(pw)pw.style.display='block'; if(otp)otp.style.display='none'; }
+  }
+  function gpBack(){
+    var ch=$('gp-chooser'), pw=$('gp-form-pw'), otp=$('gp-form-otp');
+    if(pw)pw.style.display='none'; if(otp)otp.style.display='none';
+    if(ch) ch.style.display='flex'; gpOtpReset();
   }
   function gpOtpReset(){ var s1=$('gp-otp-step1'), s2=$('gp-otp-step2'); if(s1)s1.style.display='block'; if(s2)s2.style.display='none'; }
   async function gpOtpRequest(){
