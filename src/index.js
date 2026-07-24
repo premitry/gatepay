@@ -851,7 +851,8 @@ app.get('/api/merchant/shopee/raw', async (c) => {
     if (!res.ok) return json(c, { error: 'HTTP ' + res.status }, 400);
     const data = await res.json().catch(() => null);
     const list = data ? (SHOPEE_CFG.parse(data) || []) : [];
-    return json(c, { ok: true, count: list.length, http: res.status, full: data, transactions: list.map((x) => ({ amount: x.amount, status: x.status, id: x.id, time: x.time, raw: _safeParse(x.raw) })) });
+    const errNote = (data && data.code != null && data.code !== 0 && data.code !== 200) ? (data.msg || ('code ' + data.code)) : null;
+    return json(c, { ok: true, count: list.length, note: errNote, transactions: list.map((x) => ({ amount: x.amount, status: x.status, id: x.id, time: x.time, raw: _safeParse(x.raw) })) });
   } catch (e) { return json(c, { error: e && e.message ? e.message : 'gagal' }, 400); }
 });
 
@@ -1370,7 +1371,9 @@ const SHOPEE_CFG = {
   },
   // status 3 = sukses (uang masuk). amount string rupiah.
   parse: (data) => (((data && data.data && data.data.list) || []).map((x) => ({
-    amount: Number(x.amount),
+    // ShopeePay pakai format Indonesia: titik = pemisah RIBUAN (mis. "10.049" = 10049),
+    // bukan desimal. Buang semua non-digit lalu parse integer.
+    amount: parseInt(String(x.amount == null ? '' : x.amount).replace(/[^0-9]/g, ''), 10) || 0,
     status: x.status === 3 ? 'success' : String(x.status),
     id: x.transactionId,
     sender: x.storeName || 'ShopeePay',
