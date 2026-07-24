@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { renderDashboard } from './dashboard.js';
-import { makeDynamic, isValidQris, qrisInfo } from './qris.js';
+import { makeDynamic, isValidQris, qrisInfo, detectQrisIssuer } from './qris.js';
 import { renderLanding } from './pages/landing.js';
 import { renderDocs } from './pages/docs.js';
 import { renderPrivacy } from './pages/privacy.js';
@@ -207,6 +207,7 @@ async function ensureMethodCols(DB) {
     ['device_unique', 'INTEGER DEFAULT 1'], ['device_fee', 'INTEGER DEFAULT 1'],
     ['shopee_unique', 'INTEGER DEFAULT 1'], ['shopee_fee', 'INTEGER DEFAULT 1'],
     ['gopay_unique', 'INTEGER DEFAULT 0'], ['gopay_fee', 'INTEGER DEFAULT 0'],
+    ['qris_issuer', 'TEXT'],
   ];
   for (const [name, def] of cols) {
     try { await DB.prepare(`ALTER TABLE merchants ADD COLUMN ${name} ${def}`).run(); } catch {}
@@ -697,17 +698,31 @@ app.post('/api/merchant/qris', async (c) => {
     return json(c, { error: 'QRIS tidak valid (periksa CRC / format). Pastikan ini merupakan teks QRIS statis.' }, 400);
   }
   const info = qrisInfo(payload);
-  await c.env.DB.prepare('UPDATE merchants SET qris_static = ?, qris_merchant_name = ? WHERE id = ?')
-    .bind(payload, info.merchantName || null, merchant.id)
+  const det = detectQrisIssuer(payload);
+  await ensureMethodCols(c.env.DB);
+  await ensureGopayColumns(c.env.DB);
+  await ensureShopeeColumns(c.env.DB);
+  // Auto-set metode server-side sesuai penerbit QRIS (device/APK tetap on sebagai cadangan).
+  if (det.issuer === 'gopay') {
+    // QRIS GoPay → nyalain GoPay (nominal unik & fee OFF biar aman), matiin ShopeePay server-side.
+    await c.env.DB.prepare('UPDATE merchants SET method_gopay = 1, gopay_unique = 0, gopay_fee = 0, method_shopee = 0 WHERE id = ?').bind(merchant.id).run();
+  } else if (det.issuer === 'shopeepay') {
+    await c.env.DB.prepare('UPDATE merchants SET method_shopee = 1, method_gopay = 0 WHERE id = ?').bind(merchant.id).run();
+  } else {
+    // DANA / lainnya: belum ada jalur server-side → andalkan APK catcher, matiin dua-duanya.
+    await c.env.DB.prepare('UPDATE merchants SET method_shopee = 0, method_gopay = 0 WHERE id = ?').bind(merchant.id).run();
+  }
+  await c.env.DB.prepare('UPDATE merchants SET qris_static = ?, qris_merchant_name = ?, qris_issuer = ? WHERE id = ?')
+    .bind(payload, info.merchantName || null, det.issuer || null, merchant.id)
     .run();
-  return json(c, { ok: true, merchant_name: info.merchantName, city: info.merchantCity });
+  return json(c, { ok: true, merchant_name: info.merchantName, city: info.merchantCity, issuer: det.issuer, issuer_name: det.name, nmid: det.nmid });
 });
 
 // Hapus QRIS statis tersimpan (supaya tau sudah terputus, tidak ketimpa diam-diam)
 app.post('/api/merchant/qris/clear', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
-  await c.env.DB.prepare('UPDATE merchants SET qris_static = NULL, qris_merchant_name = NULL WHERE id = ?')
+  await c.env.DB.prepare('UPDATE merchants SET qris_static = NULL, qris_merchant_name = NULL, qris_issuer = NULL WHERE id = ?')
     .bind(merchant.id).run();
   return json(c, { ok: true });
 });
@@ -717,7 +732,8 @@ app.get('/api/merchant/qris', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   if (!merchant.qris_static) return json(c, { has_qris: false });
-  return json(c, { has_qris: true, ...qrisInfo(merchant.qris_static) });
+  const det = detectQrisIssuer(merchant.qris_static);
+  return json(c, { has_qris: true, ...qrisInfo(merchant.qris_static), issuer: det.issuer, issuer_name: det.name, nmid: det.nmid });
 });
 
 // ─────────────────────────────────────────────────────────
@@ -753,7 +769,8 @@ app.get('/api/merchant/shopee', async (c) => {
     use_unique: m ? (m.shopee_unique ?? 1) ? true : false : true,
     use_fee: m ? (m.shopee_fee ?? 1) ? true : false : true,
     has_qris: !!merchant.qris_static,
-    qris_is_shopee: /SHOPEE/i.test(merchant.qris_static || ''),
+    qris_is_shopee: merchant.qris_issuer ? merchant.qris_issuer === 'shopeepay' : /SHOPEE/i.test(merchant.qris_static || ''),
+    qris_issuer: merchant.qris_issuer || null,
   });
 });
 
@@ -897,7 +914,8 @@ app.get('/api/merchant/gopay', async (c) => {
     use_unique: m ? (m.gopay_unique ?? 0) ? true : false : false,
     use_fee: m ? (m.gopay_fee ?? 0) ? true : false : false,
     has_qris: !!merchant.qris_static,
-    qris_is_gopay: /GOPAY|GOJEK|GOTOPAY/i.test(merchant.qris_static || ''),
+    qris_is_gopay: merchant.qris_issuer ? merchant.qris_issuer === 'gopay' : /GOPAY|GOJEK|GOTOPAY/i.test(merchant.qris_static || ''),
+    qris_issuer: merchant.qris_issuer || null,
   });
 });
 

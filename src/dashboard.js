@@ -960,7 +960,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     try{
       var r=await fetch('/api/merchant/qris',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({qris:$('qris').value.trim()})});
       var j=await r.json();
-      if(r.ok){ msg('qmsg','ok','QRIS tersimpan: '+(j.merchant_name||'-')+' ('+(j.city||'-')+')'); loadSettings(); loadShopee(); loadGopay(); }
+      if(r.ok){ var iss=j.issuer_name?(' · Penerbit terdeteksi: <b>'+escj(j.issuer_name)+'</b>'+(j.nmid?' (NMID '+escj(j.nmid)+')':'')+' — metode disetel otomatis'):' · Penerbit tidak terdeteksi (pakai APK catcher)'; msg('qmsg','ok','QRIS tersimpan: '+escj(j.merchant_name||'-')+iss); loadSettings(); loadShopee(); loadGopay(); loadMethods(); }
       else msg('qmsg','err',j.error||'gagal');
     }catch(e){ msg('qmsg','err',String(e)); }
   }

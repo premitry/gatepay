@@ -50,6 +50,50 @@ export function isValidQris(payload) {
   return expected === p.substring(idx + 4).toUpperCase();
 }
 
+// ── Deteksi penerbit/PJSP QRIS dari kode acquirer ASPI (936009xx) di merchant PAN ──
+// Jauh lebih akurat daripada nebak keyword nama. Kode ada di tag 26–51 sub-01 (PAN).
+const QRIS_ACQUIRERS = {
+  '93600914': { issuer: 'gopay', name: 'GoPay' },
+  '93600915': { issuer: 'dana', name: 'DANA' },
+  '93600918': { issuer: 'shopeepay', name: 'ShopeePay' },
+  '93600911': { issuer: 'linkaja', name: 'LinkAja' },
+  '93600110': { issuer: 'ovo', name: 'OVO' },
+};
+
+export function detectQrisIssuer(payload) {
+  const out = { issuer: null, name: null, acquirer: null, nmid: null, merchantName: null };
+  if (!payload || typeof payload !== 'string') return out;
+  const tlv = parseTLV(payload);
+  const get = (t) => (tlv.find((x) => x.tag === t) || {}).value || null;
+  out.merchantName = get('59');
+  // scan tag merchant account info (26..51) → PAN (sub-01) + NMID (sub-02)
+  for (let n = 26; n <= 51; n++) {
+    const v = get(String(n).padStart(2, '0'));
+    if (!v) continue;
+    const sub = parseTLV(v);
+    const pan = (sub.find((s) => s.tag === '01') || {}).value || '';
+    const nmid = (sub.find((s) => s.tag === '02') || {}).value || '';
+    if (nmid && !out.nmid) out.nmid = nmid;
+    for (const code in QRIS_ACQUIRERS) {
+      if (pan.indexOf(code) >= 0) { const a = QRIS_ACQUIRERS[code]; out.issuer = a.issuer; out.name = a.name; out.acquirer = code; break; }
+    }
+    if (out.issuer) break;
+  }
+  // fallback: scan seluruh payload untuk kode acquirer
+  if (!out.issuer) {
+    for (const code in QRIS_ACQUIRERS) {
+      if (payload.indexOf(code) >= 0) { const a = QRIS_ACQUIRERS[code]; out.issuer = a.issuer; out.name = a.name; out.acquirer = code; break; }
+    }
+  }
+  // fallback terakhir: keyword nama
+  if (!out.issuer) {
+    if (/GOPAY|GOJEK|GOTOPAY/i.test(payload)) { out.issuer = 'gopay'; out.name = 'GoPay'; }
+    else if (/SHOPEE/i.test(payload)) { out.issuer = 'shopeepay'; out.name = 'ShopeePay'; }
+    else if (/\bDANA\b/i.test(payload)) { out.issuer = 'dana'; out.name = 'DANA'; }
+  }
+  return out;
+}
+
 // ── Ambil info dari QRIS (nama merchant, kota, dll) buat ditampilin ──
 export function qrisInfo(payload) {
   const tlv = parseTLV(payload);
