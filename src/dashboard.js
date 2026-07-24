@@ -193,7 +193,7 @@ export function renderDashboard() {
   .res{margin-top:12px;padding:12px;background:#fff;border:2px solid;border-color:var(--edge-dark) var(--hi) var(--hi) var(--edge-dark)}
   .res{display:none}.res.show{display:block}
   .res .amt{font-size:32px;font-weight:700;font-family:'Share Tech Mono',monospace;color:var(--accent);line-height:1.1}
-  #qrcanvas{background:#fff;padding:8px;margin-top:8px;max-width:210px;border:2px solid var(--edge-dark)}
+  #qrcanvas{background:#fff;padding:8px;width:200px;height:200px;box-sizing:content-box;border:2px solid var(--edge-dark)}
   #qrprev{max-width:120px;margin-top:8px;display:none;background:#fff;padding:4px;border:2px solid var(--edge-dark)}
   #rbreak{white-space:pre-line}
 
@@ -386,7 +386,7 @@ export function renderDashboard() {
 
       <!-- QRIS & ORDER (gabung) -->
       <section class="view" id="v-qris">
-        <div class="grid2" style="align-items:start">
+        <div class="grid2">
           <div class="panel">
             <h2>QRIS_STATIS.CFG · Langkah 1</h2>
             <div class="dim" style="margin-bottom:8px">Wajib dilakukan terlebih dahulu. Unggah foto QRIS statis Anda → otomatis ter-decode → Simpan. Order tidak dapat dibuat sebelum QRIS diatur.</div>
@@ -412,7 +412,7 @@ export function renderDashboard() {
             <div class="msg" id="smsg"></div>
           </div>
 
-          <div class="panel">
+          <div class="panel" style="display:flex;flex-direction:column">
             <h2>NEW_ORDER.EXE · Langkah 2</h2>
             <div id="noqris" class="dim" style="margin-bottom:10px;padding:8px;background:#fff6d9;border:2px solid var(--accent);color:#3a2a00;display:none">⚠ Atur QRIS statis terlebih dahulu di panel kiri sebelum membuat order.</div>
             <label>Nominal (Rp)</label>
@@ -421,7 +421,7 @@ export function renderDashboard() {
             <input id="ref" type="text" placeholder="INV-001">
             <button onclick="createOrder()" style="margin-top:8px">Buat Order + QR</button>
             <div class="msg" id="omsg"></div>
-            <div class="res show" id="ores" style="min-height:420px;display:flex;flex-direction:column">
+            <div class="res show" id="ores" style="flex:1;display:flex;flex-direction:column">
               <div class="dim" id="rbreak" style="font-size:14px;line-height:1.75;margin-bottom:10px"></div>
               <div class="dim" style="font-size:14px">Bayar persis</div>
               <div class="amt" id="ramt">Rp 0</div>
