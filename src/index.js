@@ -1778,7 +1778,7 @@ app.get('/pay/:id/status', async (c) => {
   // Jalur ShopeePay opsional — kalau token diisi, metode aktif, & SHOPEE_CFG siap.
   // Throttle ~9 detik/order biar nggak nembak ShopeePay tiap polling 3 detik.
   const spLast = _spThrottle.get(order.id) || 0;
-  if (order.status === 'pending' && (order.method_shopee ?? 1) && order.shopee_token && SHOPEE_CFG && Date.now() - spLast >= 9000) {
+  if (order.status === 'pending' && (order.method_shopee ?? 1) && order.shopee_token && SHOPEE_CFG && Date.now() - spLast >= 5000) {
     _spThrottle.set(order.id, Date.now());
     const spToken = await decField(c.env, order.shopee_token);
     const r = await checkShopeePay(c.env, { ...order, shopee_token: spToken }, order);
@@ -1792,7 +1792,7 @@ app.get('/pay/:id/status', async (c) => {
   }
   // Jalur GoPay opsional — sama polanya
   const gpLast = _gpThrottle.get(order.id) || 0;
-  if (order.status === 'pending' && (order.method_gopay ?? 1) && order.gopay_email && order.gopay_email !== 'gobiz' && Date.now() - gpLast >= 9000) {
+  if (order.status === 'pending' && (order.method_gopay ?? 1) && order.gopay_email && order.gopay_email !== 'gobiz' && Date.now() - gpLast >= 5000) {
     _gpThrottle.set(order.id, Date.now());
     const gpTok = await decField(c.env, order.gopay_token);
     const gpRef = await decField(c.env, order.gopay_refresh);

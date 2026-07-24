@@ -428,8 +428,8 @@ export function renderDashboard() {
               <div style="margin-top:8px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
                 <div id="qrph" style="width:200px;max-width:100%;aspect-ratio:1;background:#fff;border:2px dashed var(--edge);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:12px;padding:12px">QR muncul otomatis<br>setelah menekan "Buat Order + QR"</div>
                 <canvas id="qrcanvas" style="display:none"></canvas>
+                <div id="rlinkwrap" style="margin-top:10px;display:none"><a class="lnk" id="rlink" target="_blank">Buka halaman checkout ↗</a></div>
               </div>
-              <div id="rlinkwrap" style="margin-top:8px;display:none"><a class="lnk" id="rlink" target="_blank">Buka halaman checkout ↗</a></div>
             </div>
           </div>
         </div>
