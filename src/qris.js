@@ -65,8 +65,10 @@ export function qrisInfo(payload) {
 }
 
 // ── CORE: static QRIS → dynamic QRIS dengan nominal ──
-// amount = rupiah integer (mis. 1210). reference opsional (masuk tag 62 sub-05).
-export function makeDynamic(staticPayload, amount, reference) {
+// amount = rupiah integer (mis. 1210). reference = kode order (opsional).
+// embedRef = true → sisipin kode order ke tag 62 sub-01 (Bill Number) buat matching-by-kode
+//            saat nominal unik dimatikan. Default false = perilaku lama (matching by nominal).
+export function makeDynamic(staticPayload, amount, reference, embedRef = false) {
   const p = staticPayload.trim();
   // buang CRC lama
   const idx = p.lastIndexOf('6304');
@@ -77,20 +79,30 @@ export function makeDynamic(staticPayload, amount, reference) {
   const map = new Map();
   for (const { tag, value } of tlv) map.set(tag, value);
 
-  // PENTING #1: JANGAN ubah POI ke '12' (dynamic).
+  // PENTING: JANGAN ubah POI ke '12' (dynamic).
   // QR dinamis (POI 12) itu harusnya digenerate sistem acquirer sendiri dgn transaksi
   // terdaftar di backend mereka. Kalau kita paksa 12, app bayar (GoPay/SeaBank/dll) kirim
-  // ke acquirer, acquirer nyari transaksi yg match → gak ketemu → DITOLAK
-  // ("service not available" / "QR gak bisa dipakai"). Cukup pertahanin POI statis '11'
-  // lalu suntik nominal (tag 54) → jadi "statis + nominal preset", diterima semua e-wallet.
+  // ke acquirer, acquirer nyari transaksi yg match → gak ketemu → DITOLAK.
+  // Cukup pertahanin POI statis '11' lalu suntik nominal (tag 54).
   if (!map.has('01')) map.set('01', '11');
   map.set('54', String(Math.round(amount))); // transaction amount (tanpa desimal)
 
-  // PENTING #2: JANGAN utak-atik tag 62 (Additional Data / reference).
-  // Matching pembayaran pakai NOMINAL UNIK, bukan baca reference dari QR — jadi reference
-  // di QR nggak diperlukan. Nyisipin sub-tag 05 bikin urutan sub-tag kebalik (07 lalu 05)
-  // dan sebagian acquirer strict nolak QR-nya. Biarin tag 62 persis kayak QRIS statis.
-  // (param `reference` sengaja diabaikan.)
+  // Kode order ke tag 62 sub-tag 01 (Bill Number) — HANYA kalau diminta.
+  // Dipakai saat nominal unik OFF (mis. mode aman GoPay) supaya order tetap bisa
+  // dibedakan lewat kode, bukan lewat sen unik. Sub-tag diurut ascending (01 di depan)
+  // biar tetap valid buat acquirer yang strict.
+  if (embedRef && reference) {
+    const ref = String(reference).replace(/[^A-Za-z0-9]/g, '').slice(0, 20);
+    if (ref) {
+      const sub = new Map();
+      if (map.has('62')) for (const s of parseTLV(map.get('62'))) sub.set(s.tag, s.value);
+      sub.set('01', ref);
+      const subOrder = [...sub.keys()].sort();
+      let subOut = '';
+      for (const t of subOrder) subOut += field(t, sub.get(t));
+      map.set('62', subOut);
+    }
+  }
 
   // urutkan tag ascending (QRIS harus urut), tag 63 (CRC) di akhir
   const order = [...map.keys()].filter((t) => t !== '63').sort();

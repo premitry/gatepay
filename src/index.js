@@ -23,6 +23,15 @@ function rid(prefix) {
   return `${prefix}_${hex(12)}`;
 }
 
+// Kode order pendek & QRIS-safe (huruf/angka, tanpa yang mirip: O/0/1/I) buat tag 62 bill number.
+function shortCode(n = 7) {
+  const s = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const b = crypto.getRandomValues(new Uint8Array(n));
+  let o = '';
+  for (const x of b) o += s[x % s.length];
+  return o;
+}
+
 const enc = new TextEncoder();
 
 // ── Password hashing (PBKDF2-SHA256 via Web Crypto) ──
@@ -180,7 +189,29 @@ async function ensureGopayColumns(DB) {
   try { await DB.prepare('ALTER TABLE merchants ADD COLUMN gopay_merchant TEXT').run(); } catch {}
   try { await DB.prepare('ALTER TABLE merchants ADD COLUMN gopay_merchant_id TEXT').run(); } catch {}
   try { await DB.prepare('ALTER TABLE merchants ADD COLUMN gopay_unique_id TEXT').run(); } catch {}
+  // login OTP (alternatif email+password): tipe login + nomor HP + token sesi OTP sementara
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN gopay_login_type TEXT').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN gopay_phone TEXT').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE merchants ADD COLUMN gopay_otp_token TEXT').run(); } catch {}
   _gopayReady = true;
+}
+
+// Toggle metode konfirmasi aktif + toggle nominal-unik/fee per metode.
+// method_*: metode aktif (1=on). *_unique / *_fee: metode itu boleh pakai nominal unik / fee.
+// GoPay default OFF (unik & fee) buat minimalisir risiko banned.
+let _methodReady = false;
+async function ensureMethodCols(DB) {
+  if (_methodReady) return;
+  const cols = [
+    ['method_device', 'INTEGER DEFAULT 1'], ['method_shopee', 'INTEGER DEFAULT 1'], ['method_gopay', 'INTEGER DEFAULT 1'],
+    ['device_unique', 'INTEGER DEFAULT 1'], ['device_fee', 'INTEGER DEFAULT 1'],
+    ['shopee_unique', 'INTEGER DEFAULT 1'], ['shopee_fee', 'INTEGER DEFAULT 1'],
+    ['gopay_unique', 'INTEGER DEFAULT 0'], ['gopay_fee', 'INTEGER DEFAULT 0'],
+  ];
+  for (const [name, def] of cols) {
+    try { await DB.prepare(`ALTER TABLE merchants ADD COLUMN ${name} ${def}`).run(); } catch {}
+  }
+  _methodReady = true;
 }
 
 // redirect_url per order — halaman tujuan setelah pembayaran berhasil (return URL).
@@ -188,6 +219,7 @@ let _redirReady = false;
 async function ensureOrderRedirect(DB) {
   if (_redirReady) return;
   try { await DB.prepare('ALTER TABLE orders ADD COLUMN redirect_url TEXT').run(); } catch {}
+  try { await DB.prepare('ALTER TABLE orders ADD COLUMN order_code TEXT').run(); } catch {}
   _redirReady = true;
 }
 const DEFAULT_TTL = 900; // 15 menit
@@ -504,35 +536,62 @@ app.post('/api/orders', async (c) => {
   const t = now();
   const expires = t + (Number.isFinite(ttl) && ttl > 0 ? ttl : DEFAULT_TTL);
 
-  // Fee: dari param order, fallback ke setting merchant, fallback 0
-  const feePct = body.fee_percent != null ? Number(body.fee_percent) : (merchant.fee_percent || 0);
+  // ── Metode aktif + kebijakan nominal-unik/fee efektif ──
+  await ensureMethodCols(c.env.DB);
+  const shopeeConnected = !!merchant.shopee_token;
+  const gopayConnected = !!(merchant.gopay_email && merchant.gopay_email !== 'gobiz');
+  const active = [];
+  if ((merchant.method_device ?? 1)) active.push({ unique: merchant.device_unique ?? 1, fee: merchant.device_fee ?? 1 });
+  if (shopeeConnected && (merchant.method_shopee ?? 1)) active.push({ unique: merchant.shopee_unique ?? 1, fee: merchant.shopee_fee ?? 1 });
+  if (gopayConnected && (merchant.method_gopay ?? 1)) active.push({ unique: merchant.gopay_unique ?? 0, fee: merchant.gopay_fee ?? 0 });
+  const methods = active.length ? active : [{ unique: 1, fee: 1 }];
+  // aturan "paling aman menang": nominal unik/fee dipakai hanya kalau SEMUA metode aktif mengizinkan
+  const useUnique = methods.every((m) => !!m.unique);
+  const useFee = methods.every((m) => !!m.fee);
+
+  // Fee: dari param order, fallback setting merchant. Dimatikan kalau useFee=false.
+  const feePct = useFee ? (body.fee_percent != null ? Number(body.fee_percent) : (merchant.fee_percent || 0)) : 0;
   const feeAmount = Math.round((base * feePct) / 100);
   const subtotal = base + feeAmount;
 
-  // Kode unik: 1..50 (dibatasi 50), tetap hormati digit setting kalau lebih kecil
-  const digits = merchant.unique_digits || 2;
-  const codeMax = Math.min(Math.pow(10, digits) - 1, 50); // maks 50
-
-  // unique_amount = subtotal + kode unik (kode ditambah di belakang).
-  // Pastikan unique_amount belum dipakai order pending aktif lain (global).
-  const uniqueAmount = await pickUniqueAmount(c.env.DB, subtotal, 1, codeMax, t);
-  if (uniqueAmount == null) {
-    return json(c, { error: 'Kode unik habis (terlalu banyak order pending dengan nominal sama), silakan coba lagi' }, 503);
+  const orderCode = shortCode(); // dipakai buat matching-by-kode saat nominal unik OFF
+  let uniqueAmount;
+  if (useUnique) {
+    // Kode unik: 1..50 (dibatasi 50), tetap hormati digit setting kalau lebih kecil
+    const digits = merchant.unique_digits || 2;
+    const codeMax = Math.min(Math.pow(10, digits) - 1, 50);
+    uniqueAmount = await pickUniqueAmount(c.env.DB, subtotal, 1, codeMax, t);
+    if (uniqueAmount == null) {
+      return json(c, { error: 'Kode unik habis (terlalu banyak order pending dengan nominal sama), silakan coba lagi' }, 503);
+    }
+  } else {
+    // Nominal bulat (tanpa sen unik). Cegah tabrakan: tolak kalau ada order pending
+    // dengan nominal sama untuk merchant ini (matching pakai kode order + claim-once).
+    uniqueAmount = subtotal;
+    const dup = await c.env.DB
+      .prepare("SELECT id FROM orders WHERE merchant_id = ? AND status = 'pending' AND unique_amount = ? AND expires_at > ? LIMIT 1")
+      .bind(merchant.id, uniqueAmount, t)
+      .first()
+      .catch(() => null);
+    if (dup) {
+      return json(c, { error: 'Masih ada order pending dengan nominal sama. Selesaikan/tunggu kedaluwarsa, atau aktifkan nominal unik.' }, 409);
+    }
   }
 
   const id = rid('ord');
   await c.env.DB.prepare(
-    `INSERT INTO orders (id, merchant_id, reference, base_amount, unique_amount, fee_amount, fee_percent, status, expires_at, created_at, redirect_url)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+    `INSERT INTO orders (id, merchant_id, reference, base_amount, unique_amount, fee_amount, fee_percent, status, expires_at, created_at, redirect_url, order_code)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
   )
-    .bind(id, merchant.id, body.reference ?? null, base, uniqueAmount, feeAmount, feePct, expires, t, redirectUrl)
+    .bind(id, merchant.id, body.reference ?? null, base, uniqueAmount, feeAmount, feePct, expires, t, redirectUrl, orderCode)
     .run();
 
-  // Generate QRIS dinamis dari QRIS statis merchant (kalau ada)
+  // Generate QRIS dinamis dari QRIS statis merchant (kalau ada).
+  // Kalau nominal unik OFF → sisipin kode order ke tag 62 biar bisa dicocokkan.
   let qris = null;
   if (merchant.qris_static) {
     try {
-      qris = makeDynamic(merchant.qris_static, uniqueAmount, body.reference || id);
+      qris = makeDynamic(merchant.qris_static, uniqueAmount, orderCode, !useUnique);
     } catch (e) {
       qris = null;
     }
@@ -548,6 +607,8 @@ app.post('/api/orders', async (c) => {
     subtotal,
     unique_code: uniqueAmount - subtotal,
     unique_amount: uniqueAmount,
+    unique_enabled: useUnique,
+    order_code: orderCode,
     reference: body.reference ?? null,
     qris,
     checkout_url: `${origin}/pay/${id}`,
@@ -668,7 +729,8 @@ app.get('/api/merchant/shopee', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   await ensureShopeeColumns(c.env.DB);
-  const m = await c.env.DB.prepare('SELECT shopee_token, shopee_token_status, shopee_checked_at, shopee_merchant FROM merchants WHERE id = ?')
+  await ensureMethodCols(c.env.DB);
+  const m = await c.env.DB.prepare('SELECT shopee_token, shopee_token_status, shopee_checked_at, shopee_merchant, method_shopee, shopee_unique, shopee_fee FROM merchants WHERE id = ?')
     .bind(merchant.id).first();
   const tokRaw = m && m.shopee_token ? String(m.shopee_token) : '';
   const tok = tokRaw ? (await decField(c.env, tokRaw)) : '';
@@ -687,9 +749,92 @@ app.get('/api/merchant/shopee', async (c) => {
     status: m ? (m.shopee_token_status || (tok ? 'ok' : null)) : null,
     checked_at: m ? m.shopee_checked_at || null : null,
     merchant: mname,
+    active: m ? (m.method_shopee ?? 1) ? true : false : true,
+    use_unique: m ? (m.shopee_unique ?? 1) ? true : false : true,
+    use_fee: m ? (m.shopee_fee ?? 1) ? true : false : true,
     has_qris: !!merchant.qris_static,
     qris_is_shopee: /SHOPEE/i.test(merchant.qris_static || ''),
   });
+});
+
+// Set toggle metode aktif + kebijakan nominal-unik/fee per metode
+app.post('/api/merchant/methods', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  await ensureMethodCols(c.env.DB);
+  const b = await c.req.json().catch(() => ({}));
+  const bit = (v, def) => (v === undefined || v === null ? def : (v ? 1 : 0));
+  const cur = await c.env.DB.prepare('SELECT method_device, method_shopee, method_gopay, device_unique, device_fee, shopee_unique, shopee_fee, gopay_unique, gopay_fee FROM merchants WHERE id = ?').bind(merchant.id).first();
+  const v = {
+    method_device: bit(b.method_device, cur?.method_device ?? 1),
+    method_shopee: bit(b.method_shopee, cur?.method_shopee ?? 1),
+    method_gopay: bit(b.method_gopay, cur?.method_gopay ?? 1),
+    device_unique: bit(b.device_unique, cur?.device_unique ?? 1),
+    device_fee: bit(b.device_fee, cur?.device_fee ?? 1),
+    shopee_unique: bit(b.shopee_unique, cur?.shopee_unique ?? 1),
+    shopee_fee: bit(b.shopee_fee, cur?.shopee_fee ?? 1),
+    gopay_unique: bit(b.gopay_unique, cur?.gopay_unique ?? 0),
+    gopay_fee: bit(b.gopay_fee, cur?.gopay_fee ?? 0),
+  };
+  await c.env.DB.prepare('UPDATE merchants SET method_device=?, method_shopee=?, method_gopay=?, device_unique=?, device_fee=?, shopee_unique=?, shopee_fee=?, gopay_unique=?, gopay_fee=? WHERE id=?')
+    .bind(v.method_device, v.method_shopee, v.method_gopay, v.device_unique, v.device_fee, v.shopee_unique, v.shopee_fee, v.gopay_unique, v.gopay_fee, merchant.id).run();
+  return json(c, { ok: true, ...v });
+});
+
+// GET current method toggles (buat load state di dashboard)
+app.get('/api/merchant/methods', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  await ensureMethodCols(c.env.DB);
+  const m = await c.env.DB.prepare('SELECT method_device, method_shopee, method_gopay, device_unique, device_fee, shopee_unique, shopee_fee, gopay_unique, gopay_fee FROM merchants WHERE id = ?').bind(merchant.id).first();
+  const g = (x, d) => ((x ?? d) ? true : false);
+  return json(c, {
+    method_device: g(m?.method_device, 1), method_shopee: g(m?.method_shopee, 1), method_gopay: g(m?.method_gopay, 1),
+    device_unique: g(m?.device_unique, 1), device_fee: g(m?.device_fee, 1),
+    shopee_unique: g(m?.shopee_unique, 1), shopee_fee: g(m?.shopee_fee, 1),
+    gopay_unique: g(m?.gopay_unique, 0), gopay_fee: g(m?.gopay_fee, 0),
+  });
+});
+
+// Raw transaksi buat verifikasi (lihat field apa yang provider balikin, mis. reference/bill).
+const _safeParse = (s) => { try { return JSON.parse(s); } catch { return s; } };
+
+app.get('/api/merchant/gopay/raw', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  await ensureGopayColumns(c.env.DB);
+  const m = await c.env.DB.prepare('SELECT * FROM merchants WHERE id = ?').bind(merchant.id).first();
+  if (!m || !m.gopay_email) return json(c, { error: 'GoPay belum tersambung' }, 400);
+  const dm = {
+    ...m,
+    gopay_token: m.gopay_token ? await decField(c.env, m.gopay_token) : null,
+    gopay_refresh: m.gopay_refresh ? await decField(c.env, m.gopay_refresh) : null,
+    gopay_password: m.gopay_password ? await decField(c.env, m.gopay_password) : null,
+  };
+  const sess = await gopayEnsureToken(c.env, dm);
+  if (!sess) return json(c, { error: 'Token GoPay mati, hubungkan ulang' }, 400);
+  let mid = sess.merchant_id;
+  if (!mid) { try { const r = await gopayResolveMerchant(sess.access_token, sess.unique_id); mid = r.merchant_id; } catch {} }
+  try {
+    const list = await gopayHistory(sess.access_token, mid, { days: 3, size: 20 });
+    return json(c, { ok: true, count: list.length, transactions: list.map((x) => ({ amount: x.amount, status: x.status, id: x.id, time: x.time, raw: _safeParse(x.raw) })) });
+  } catch (e) { return json(c, { error: e && e.message ? e.message : 'gagal' }, 400); }
+});
+
+app.get('/api/merchant/shopee/raw', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  await ensureShopeeColumns(c.env.DB);
+  const m = await c.env.DB.prepare('SELECT shopee_token FROM merchants WHERE id = ?').bind(merchant.id).first();
+  if (!m || !m.shopee_token || !SHOPEE_CFG) return json(c, { error: 'ShopeePay belum tersambung' }, 400);
+  const tok = await decField(c.env, m.shopee_token);
+  try {
+    const res = await fetch(SHOPEE_CFG.url, { method: SHOPEE_CFG.method, headers: SHOPEE_CFG.headers(tok), body: SHOPEE_CFG.body(tok) });
+    if (!res.ok) return json(c, { error: 'HTTP ' + res.status }, 400);
+    const data = await res.json().catch(() => null);
+    const list = data ? (SHOPEE_CFG.parse(data) || []) : [];
+    return json(c, { ok: true, count: list.length, transactions: list.map((x) => ({ amount: x.amount, status: x.status, id: x.id, time: x.time, raw: _safeParse(x.raw) })) });
+  } catch (e) { return json(c, { error: e && e.message ? e.message : 'gagal' }, 400); }
 });
 
 app.post('/api/merchant/shopee', async (c) => {
@@ -736,18 +881,77 @@ app.get('/api/merchant/gopay', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   await ensureGopayColumns(c.env.DB);
-  const m = await c.env.DB.prepare('SELECT gopay_email, gopay_token_status, gopay_checked_at, gopay_merchant FROM merchants WHERE id = ?')
+  await ensureMethodCols(c.env.DB);
+  const m = await c.env.DB.prepare('SELECT gopay_email, gopay_login_type, gopay_phone, gopay_token_status, gopay_checked_at, gopay_merchant, method_gopay, gopay_unique, gopay_fee FROM merchants WHERE id = ?')
     .bind(merchant.id).first();
   const enabled = !!(m && m.gopay_email && m.gopay_email !== 'gobiz');
+  const isOtp = m && m.gopay_login_type === 'otp';
   return json(c, {
     enabled,
-    email_preview: enabled ? maskEmail(m.gopay_email) : null,
+    login_type: m ? (m.gopay_login_type || 'password') : 'password',
+    email_preview: enabled ? (isOtp ? maskPhone(m.gopay_phone) : maskEmail(m.gopay_email)) : null,
     status: m ? (m.gopay_token_status || (enabled ? 'ok' : null)) : null,
     checked_at: m ? m.gopay_checked_at || null : null,
     merchant: m ? m.gopay_merchant || null : null,
+    active: m ? (m.method_gopay ?? 1) ? true : false : true,
+    use_unique: m ? (m.gopay_unique ?? 0) ? true : false : false,
+    use_fee: m ? (m.gopay_fee ?? 0) ? true : false : false,
     has_qris: !!merchant.qris_static,
     qris_is_gopay: /GOPAY|GOJEK|GOTOPAY/i.test(merchant.qris_static || ''),
   });
+});
+
+// GoPay login OTP — step 1: kirim OTP ke nomor HP
+app.post('/api/merchant/gopay/otp/request', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  await ensureGopayColumns(c.env.DB);
+  const body = await c.req.json().catch(() => ({}));
+  const phone = normPhone(body.phone || '');
+  if (phone.length < 8 || phone.length > 15) return json(c, { error: 'Nomor HP tidak valid' }, 400);
+  let r;
+  try {
+    r = await gopayOtpRequest(phone);
+  } catch (e) {
+    return json(c, { error: 'Gagal kirim OTP: ' + (e && e.message ? e.message : 'error') }, 400);
+  }
+  if (!r.otp_token) return json(c, { error: 'Server tidak mengembalikan sesi OTP. Coba lagi atau pakai login password.' }, 400);
+  const encOtp = await encField(c.env, r.otp_token);
+  await c.env.DB.prepare('UPDATE merchants SET gopay_phone = ?, gopay_unique_id = ?, gopay_otp_token = ? WHERE id = ?')
+    .bind(phone, r.unique_id, encOtp, merchant.id).run();
+  return json(c, { ok: true, sent: true, phone_preview: maskPhone(phone) });
+});
+
+// GoPay login OTP — step 2: verifikasi kode OTP → simpan token
+app.post('/api/merchant/gopay/otp/verify', async (c) => {
+  const merchant = await requireMerchant(c);
+  if (!merchant) return json(c, { error: 'invalid api key' }, 401);
+  await ensureGopayColumns(c.env.DB);
+  const body = await c.req.json().catch(() => ({}));
+  const otp = String(body.otp || '').trim();
+  if (!/^\d{4,8}$/.test(otp)) return json(c, { error: 'Kode OTP tidak valid' }, 400);
+  const m = await c.env.DB.prepare('SELECT gopay_phone, gopay_unique_id, gopay_otp_token FROM merchants WHERE id = ?').bind(merchant.id).first();
+  if (!m || !m.gopay_otp_token) return json(c, { error: 'Sesi OTP tidak ditemukan. Ulangi kirim OTP.' }, 400);
+  const otpToken = await decField(c.env, m.gopay_otp_token);
+  let sess;
+  try {
+    sess = await gopayOtpVerify(otpToken, otp, m.gopay_unique_id);
+  } catch (e) {
+    return json(c, { error: 'Verifikasi gagal: ' + (e && e.message ? e.message : 'error') }, 400);
+  }
+  let mname = null, mid = null;
+  try {
+    const rr = await gopayResolveMerchant(sess.access_token, sess.unique_id);
+    mid = rr.merchant_id; mname = rr.merchant_name;
+  } catch (e) {
+    return json(c, { error: 'Login berhasil, tetapi gagal mengambil merchant. Akun harus GoPay Merchant.' }, 400);
+  }
+  const expires = now() + Number(sess.expires_in || 3600);
+  const encRef = sess.refresh_token ? await encField(c.env, sess.refresh_token) : null;
+  const encTok = sess.access_token ? await encField(c.env, sess.access_token) : null;
+  await c.env.DB.prepare("UPDATE merchants SET gopay_email = ?, gopay_login_type = 'otp', gopay_password = NULL, gopay_token = ?, gopay_refresh = ?, gopay_expires = ?, gopay_token_status = 'ok', gopay_checked_at = ?, gopay_merchant = ?, gopay_merchant_id = ?, gopay_unique_id = ?, gopay_otp_token = NULL WHERE id = ?")
+    .bind('gopay:' + m.gopay_phone, encTok, encRef, expires, now(), mname, mid, sess.unique_id, merchant.id).run();
+  return json(c, { ok: true, enabled: true, merchant: mname });
 });
 
 app.post('/api/merchant/gopay', async (c) => {
@@ -780,7 +984,7 @@ app.post('/api/merchant/gopay', async (c) => {
   const encPwd = await encField(c.env, password);
   const encRef = sess.refresh_token ? await encField(c.env, sess.refresh_token) : null;
   const encTok = sess.access_token ? await encField(c.env, sess.access_token) : null;
-  await c.env.DB.prepare("UPDATE merchants SET gopay_email = ?, gopay_password = ?, gopay_token = ?, gopay_refresh = ?, gopay_expires = ?, gopay_token_status = 'ok', gopay_checked_at = ?, gopay_merchant = ?, gopay_merchant_id = ?, gopay_unique_id = ? WHERE id = ?")
+  await c.env.DB.prepare("UPDATE merchants SET gopay_email = ?, gopay_login_type = 'password', gopay_password = ?, gopay_token = ?, gopay_refresh = ?, gopay_expires = ?, gopay_token_status = 'ok', gopay_checked_at = ?, gopay_merchant = ?, gopay_merchant_id = ?, gopay_unique_id = ? WHERE id = ?")
     .bind(email, encPwd, encTok, encRef, expires, now(), mname, mid, sess.unique_id, merchant.id).run();
   return json(c, { ok: true, enabled: true, merchant: mname });
 });
@@ -789,7 +993,7 @@ app.post('/api/merchant/gopay/clear', async (c) => {
   const merchant = await requireMerchant(c);
   if (!merchant) return json(c, { error: 'invalid api key' }, 401);
   await ensureGopayColumns(c.env.DB);
-  await c.env.DB.prepare('UPDATE merchants SET gopay_email = NULL, gopay_password = NULL, gopay_token = NULL, gopay_refresh = NULL, gopay_expires = NULL, gopay_token_status = NULL, gopay_checked_at = NULL, gopay_merchant = NULL, gopay_merchant_id = NULL, gopay_unique_id = NULL WHERE id = ?')
+  await c.env.DB.prepare('UPDATE merchants SET gopay_email = NULL, gopay_login_type = NULL, gopay_phone = NULL, gopay_otp_token = NULL, gopay_password = NULL, gopay_token = NULL, gopay_refresh = NULL, gopay_expires = NULL, gopay_token_status = NULL, gopay_checked_at = NULL, gopay_merchant = NULL, gopay_merchant_id = NULL, gopay_unique_id = NULL WHERE id = ?')
     .bind(merchant.id).run();
   return json(c, { ok: true, enabled: false });
 });
@@ -801,6 +1005,12 @@ function maskEmail(e) {
   const u = s.slice(0, at), d = s.slice(at);
   if (u.length <= 2) return u + '…' + d;
   return u.slice(0, 2) + '…' + u.slice(-1) + d;
+}
+
+function maskPhone(p) {
+  const s = String(p || '').replace(/[^0-9]/g, '');
+  if (s.length < 5) return '0' + s;
+  return '0' + s.slice(0, 3) + '…' + s.slice(-3);
 }
 
 // Setting merchant: fee_percent + unique_digits
@@ -1072,7 +1282,10 @@ app.get('/pay/:id', async (c) => {
   let qris = null;
   if (order.qris_static && order.status === 'pending') {
     try {
-      qris = makeDynamic(order.qris_static, order.unique_amount, order.reference || order.id);
+      // Nominal unik OFF terdeteksi kalau unique_amount == subtotal (base+fee) → sisipin kode order ke QR.
+      const subtotal = order.base_amount + (order.fee_amount || 0);
+      const embedRef = order.unique_amount === subtotal;
+      qris = makeDynamic(order.qris_static, order.unique_amount, order.order_code || order.id, embedRef);
     } catch {}
   }
   const embed = c.req.query('embed') === '1';
@@ -1129,6 +1342,7 @@ const SHOPEE_CFG = {
     id: x.transactionId,
     sender: x.storeName || 'ShopeePay',
     time: x.createTime,
+    raw: JSON.stringify(x), // buat matching-by-kode
   }))),
 };
 
@@ -1198,6 +1412,48 @@ async function gopayLogin(email, password, uniqueId) {
   const res = await fetch(`${GOPAY.BASE}/goid/token`, {
     method: 'POST', headers,
     body: JSON.stringify({ client_id: GOPAY.CLIENT_ID, grant_type: 'password', data: { email, password } }),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || !j.access_token) {
+    const msg = (j.errors && j.errors[0] && j.errors[0].message) || `HTTP ${res.status}`;
+    const e = new Error(msg); e.status = res.status; throw e;
+  }
+  return { access_token: j.access_token, refresh_token: j.refresh_token || null, expires_in: j.expires_in || 3600, unique_id: uid };
+}
+
+// Normalisasi nomor HP Indonesia → format lokal tanpa 0 di depan (mis. 81234...).
+function normPhone(raw) {
+  let p = String(raw || '').replace(/[^0-9]/g, '');
+  if (p.startsWith('62')) p = p.slice(2);
+  if (p.startsWith('0')) p = p.slice(1);
+  return p;
+}
+
+// Login OTP — step 1: minta OTP dikirim ke nomor HP. Balikin { otp_token, unique_id }.
+async function gopayOtpRequest(phone, uniqueId) {
+  const uid = uniqueId || gpUniqueId();
+  const headers = gpAuthHeaders(uid);
+  const phone_number = normPhone(phone);
+  const res = await fetch(`${GOPAY.BASE}/goid/login/request`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ country_code: '+62', phone_number, login_type: 'otp', client_id: GOPAY.CLIENT_ID }),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = (j.errors && j.errors[0] && j.errors[0].message) || `HTTP ${res.status}`;
+    const e = new Error(msg); e.status = res.status; throw e;
+  }
+  const otp_token = j.otp_token || (j.data && j.data.otp_token) || j.token || (j.data && j.data.token) || null;
+  return { otp_token, unique_id: uid };
+}
+
+// Login OTP — step 2: tukar kode OTP jadi token.
+async function gopayOtpVerify(otpToken, otp, uniqueId) {
+  const uid = uniqueId || gpUniqueId();
+  const headers = gpAuthHeaders(uid);
+  const res = await fetch(`${GOPAY.BASE}/goid/token`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ client_id: GOPAY.CLIENT_ID, grant_type: 'otp', data: { otp_token: otpToken, otp: String(otp) } }),
   });
   const j = await res.json().catch(() => ({}));
   if (!res.ok || !j.access_token) {
@@ -1280,8 +1536,21 @@ async function gopayHistory(accessToken, merchantId, { days = 1, size = 50 } = {
       id: String(tx.transaction_id || tx.order_id || tx.id || ''),
       sender: tx.customer_name || tx.merchant_name || 'GoPay',
       time: tx.transaction_time || null,
+      raw: JSON.stringify(tx), // buat matching-by-kode (cari order_code di isi txn)
     };
   });
+}
+
+// Cocokkan txn ke order: utamakan KODE ORDER (kalau nominal unik OFF), fallback ke NOMINAL.
+function matchTxn(list, order) {
+  const subtotal = (order.base_amount || 0) + (order.fee_amount || 0);
+  const noUnique = order.unique_amount === subtotal;
+  const code = String(order.order_code || '').toUpperCase();
+  if (noUnique && code) {
+    const byCode = list.find((x) => x.status === 'success' && x.raw && x.raw.toUpperCase().includes(code));
+    if (byCode) return byCode;
+  }
+  return list.find((x) => x.amount === order.unique_amount && x.status === 'success') || null;
 }
 
 async function gopayProbe(email, password) {
@@ -1360,7 +1629,7 @@ async function checkGoPay(env, merchant, order) {
   }
   try {
     const list = await gopayHistory(sess.access_token, mid, { days: 1, size: 50 });
-    const hit = list.find((x) => x.amount === order.unique_amount && x.status === 'success');
+    const hit = matchTxn(list, order);
     if (hit) return { matched: true, txnId: hit.id, sender: hit.sender };
     return { matched: false };
   } catch (e) {
@@ -1396,7 +1665,7 @@ async function checkShopeePay(env, merchant, order) {
     if (!res.ok) return { matched: false };
     const data = await res.json().catch(() => null);
     const txns = data ? (SHOPEE_CFG.parse(data) || []) : [];
-    const hit = txns.find((x) => Math.round(Number(x.amount)) === order.unique_amount && String(x.status).toLowerCase() === 'success');
+    const hit = matchTxn(txns, order);
     if (hit) return { matched: true, txnId: String(hit.id || ''), sender: hit.sender || 'ShopeePay' };
     return { matched: false };
   } catch {
@@ -1449,7 +1718,7 @@ async function settleShopeeMatch(env, order, hit) {
 // Status order buat polling checkout (publik, hanya status)
 app.get('/pay/:id/status', async (c) => {
   const order = await c.env.DB.prepare(
-    `SELECT o.*, m.shopee_token, m.shopee_token_status, m.gopay_email, m.gopay_password, m.gopay_token, m.gopay_refresh, m.gopay_expires, m.gopay_token_status, m.gopay_unique_id, m.gopay_merchant_id, m.gopay_merchant
+    `SELECT o.*, m.shopee_token, m.shopee_token_status, m.method_shopee, m.method_gopay, m.gopay_email, m.gopay_password, m.gopay_token, m.gopay_refresh, m.gopay_expires, m.gopay_token_status, m.gopay_unique_id, m.gopay_merchant_id, m.gopay_merchant
      FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id WHERE o.id = ?`,
   )
     .bind(c.req.param('id'))
@@ -1459,10 +1728,10 @@ app.get('/pay/:id/status', async (c) => {
     await c.env.DB.prepare("UPDATE orders SET status='expired' WHERE id=?").bind(order.id).run();
     order.status = 'expired';
   }
-  // Jalur ShopeePay opsional — cuma kalau token diisi & SHOPEE_CFG siap (kalau nggak, no-op)
+  // Jalur ShopeePay opsional — kalau token diisi, metode aktif, & SHOPEE_CFG siap.
   // Throttle ~9 detik/order biar nggak nembak ShopeePay tiap polling 3 detik.
   const spLast = _spThrottle.get(order.id) || 0;
-  if (order.status === 'pending' && order.shopee_token && SHOPEE_CFG && Date.now() - spLast >= 9000) {
+  if (order.status === 'pending' && (order.method_shopee ?? 1) && order.shopee_token && SHOPEE_CFG && Date.now() - spLast >= 9000) {
     _spThrottle.set(order.id, Date.now());
     const spToken = await decField(c.env, order.shopee_token);
     const r = await checkShopeePay(c.env, { ...order, shopee_token: spToken }, order);
@@ -1476,7 +1745,7 @@ app.get('/pay/:id/status', async (c) => {
   }
   // Jalur GoPay opsional — sama polanya
   const gpLast = _gpThrottle.get(order.id) || 0;
-  if (order.status === 'pending' && order.gopay_email && order.gopay_email !== 'gobiz' && Date.now() - gpLast >= 9000) {
+  if (order.status === 'pending' && (order.method_gopay ?? 1) && order.gopay_email && order.gopay_email !== 'gobiz' && Date.now() - gpLast >= 9000) {
     _gpThrottle.set(order.id, Date.now());
     const gpTok = await decField(c.env, order.gopay_token);
     const gpRef = await decField(c.env, order.gopay_refresh);
@@ -1776,8 +2045,11 @@ app.post('/ingest/event', async (c) => {
 
   // matching: cari order pending dgn nominal == amount, belum expired.
   // Kalau device kebawa merchant tertentu → scoped ke order merchant itu.
+  // Hormati toggle metode: kalau owner mematikan metode Notifikasi Perangkat, jangan matching.
+  await ensureMethodCols(c.env.DB);
+  const deviceOn = owner ? (owner.method_device ?? 1) : 1;
   let matchedOrder = null;
-  if (amount != null && Number.isFinite(amount)) {
+  if (deviceOn && amount != null && Number.isFinite(amount)) {
     if (owner) {
       matchedOrder = await c.env.DB.prepare(
         `SELECT * FROM orders

@@ -425,15 +425,52 @@ export function renderDashboard() {
             <div id="gp-status" class="spstat" style="margin-bottom:10px"></div>
             <div id="gp-inputwrap">
               <a class="lnk" onclick="goTutorGopay()" style="cursor:pointer;display:inline-block;margin-bottom:8px">📚 Cara setup akun GoPay Merchant → buka Tutorial</a>
-              <label>Email GoPay Merchant</label>
-              <input id="gp-email" type="email" placeholder="[email protected]" autocomplete="off">
-              <label>Password</label>
-              <input id="gp-pass" type="password" placeholder="••••••••" autocomplete="new-password">
-              <div style="margin-top:6px"><button onclick="saveGopay()">Simpan &amp; Hubungkan</button></div>
+              <div style="display:flex;gap:6px;margin:2px 0 8px">
+                <button type="button" id="gp-mode-pw" onclick="gpMode('pw')" style="flex:1">Login Password</button>
+                <button type="button" class="sec" id="gp-mode-otp" onclick="gpMode('otp')" style="flex:1">Login OTP</button>
+              </div>
+              <div id="gp-form-pw">
+                <label>Email GoPay Merchant</label>
+                <input id="gp-email" type="email" placeholder="[email protected]" autocomplete="off">
+                <label>Password</label>
+                <input id="gp-pass" type="password" placeholder="••••••••" autocomplete="new-password">
+                <div style="margin-top:6px"><button onclick="saveGopay()">Simpan &amp; Hubungkan</button></div>
+              </div>
+              <div id="gp-form-otp" style="display:none">
+                <div id="gp-otp-step1">
+                  <label>Nomor HP GoPay Merchant</label>
+                  <input id="gp-phone" type="tel" placeholder="08xxxxxxxxxx" autocomplete="off">
+                  <div style="margin-top:6px"><button onclick="gpOtpRequest()" id="gp-otp-sendbtn">Kirim OTP</button></div>
+                </div>
+                <div id="gp-otp-step2" style="display:none">
+                  <label>Kode OTP (dikirim ke <span id="gp-otp-phone"></span>)</label>
+                  <input id="gp-otp" type="number" inputmode="numeric" placeholder="123456" autocomplete="one-time-code">
+                  <div style="display:flex;gap:6px;margin-top:6px">
+                    <button onclick="gpOtpVerify()" style="flex:1">Verifikasi &amp; Hubungkan</button>
+                    <button class="sec" onclick="gpOtpReset()" style="flex:0 0 auto;width:auto">← Ganti</button>
+                  </div>
+                </div>
+              </div>
             </div>
             <button class="sec" id="gp-clearbtn" onclick="clearGopay()" style="display:none">🗑 Putuskan</button>
             <div class="msg" id="gp-msg"></div>
             <div class="dim" style="font-size:11px;margin-top:6px">⚠ Kredensial dienkripsi AES-GCM. GatePay auto-refresh token secara berkala. Jika password akun berubah, silakan hubungkan ulang. <a href="/privasi" target="_blank">Baca risiko selengkapnya ↗</a></div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:16px">
+          <h2>METODE KONFIRMASI &amp; KEAMANAN</h2>
+          <div class="dim" style="margin-bottom:10px">Aktif/nonaktifkan metode, dan atur <b>nominal unik</b> &amp; <b>fee</b> per metode. <b style="color:var(--accent)">Untuk GoPay disarankan matikan nominal unik &amp; fee</b> — nominal ber-sen unik + fee bikin transaksi terlihat "robot" dan bisa memicu pembatasan akun. Saat nominal unik OFF, order dibedakan pakai <b>kode order</b> di QR (bukan sen).</div>
+          <div id="mth-wrap"></div>
+          <div class="msg" id="mth-msg"></div>
+          <div class="dim" style="font-size:11px;margin-top:8px">Aturan: nominal unik/fee dipakai hanya bila <b>semua metode aktif</b> mengizinkan (yang paling aman menang).</div>
+          <div style="margin-top:12px;border-top:1px solid rgba(128,128,128,.18);padding-top:10px">
+            <div class="dim" style="font-size:11px;margin-bottom:6px">🔧 Debug — lihat isi transaksi mentah dari provider (buat cek apakah kode order muncul di riwayat).</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="sec" style="width:auto" onclick="viewRaw('gopay')">Transaksi GoPay</button>
+              <button class="sec" style="width:auto" onclick="viewRaw('shopee')">Transaksi ShopeePay</button>
+            </div>
+            <pre id="raw-out" style="display:none;white-space:pre-wrap;word-break:break-word;font-size:11px;background:rgba(0,0,0,.25);padding:10px;margin-top:8px;max-height:320px;overflow:auto"></pre>
           </div>
         </div>
       </section>
@@ -828,7 +865,7 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     $('ptitle').textContent=TITLES[v]||'';
     curView=v;
     if(v==='tiket'){ closeTicket(); loadTickets(); } // selalu balik ke list pas masuk menu tiket
-    if(v==="qris"){ loadShopee(); loadGopay(); }
+    if(v==="qris"){ loadShopee(); loadGopay(); loadMethods(); }
     if(v==='profile') fa2Load();
     toggleMnav(false);
   }
@@ -1017,6 +1054,68 @@ Header <b>x-signature</b> = HMAC-SHA256(body, callback_secret).</div>
     try{ var r=await fetch('/api/merchant/gopay/clear',{method:'POST',headers:{'x-api-key':key()}});
       if(r.ok){ msg('gp-msg','ok','GoPay diputus — menggunakan APK catcher'); loadGopay(); } else msg('gp-msg','err','gagal');
     }catch(e){ msg('gp-msg','err',String(e)); }
+  }
+  // ── GoPay login mode: password / OTP ──
+  function gpMode(m){
+    var pw=$('gp-form-pw'), otp=$('gp-form-otp'), bp=$('gp-mode-pw'), bo=$('gp-mode-otp');
+    if(!pw||!otp) return;
+    if(m==='otp'){ pw.style.display='none'; otp.style.display='block'; if(bo)bo.className=''; if(bp)bp.className='sec'; }
+    else { pw.style.display='block'; otp.style.display='none'; if(bp)bp.className=''; if(bo)bo.className='sec'; gpOtpReset(); }
+  }
+  function gpOtpReset(){ var s1=$('gp-otp-step1'), s2=$('gp-otp-step2'); if(s1)s1.style.display='block'; if(s2)s2.style.display='none'; }
+  async function gpOtpRequest(){
+    var ph=$('gp-phone').value.trim();
+    if(!ph) return msg('gp-msg','err','Nomor HP wajib diisi');
+    var b=$('gp-otp-sendbtn'); if(b){ b.disabled=true; b.textContent='Mengirim...'; }
+    try{ var r=await fetch('/api/merchant/gopay/otp/request',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({phone:ph})});
+      var j=await r.json();
+      if(r.ok){ $('gp-otp-phone').textContent=j.phone_preview||ph; $('gp-otp-step1').style.display='none'; $('gp-otp-step2').style.display='block'; msg('gp-msg','ok','OTP dikirim. Cek SMS/WhatsApp.'); }
+      else msg('gp-msg','err',j.error||'Gagal kirim OTP');
+    }catch(e){ msg('gp-msg','err',String(e)); }
+    if(b){ b.disabled=false; b.textContent='Kirim OTP'; }
+  }
+  async function gpOtpVerify(){
+    var otp=$('gp-otp').value.trim();
+    if(!otp) return msg('gp-msg','err','Masukkan kode OTP');
+    try{ var r=await fetch('/api/merchant/gopay/otp/verify',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify({otp:otp})});
+      var j=await r.json();
+      if(r.ok){ msg('gp-msg','ok','Terhubung ✓'+(j.merchant?' — '+escj(j.merchant):'')); $('gp-otp').value=''; $('gp-phone').value=''; gpOtpReset(); loadGopay(); setTimeout(function(){ var e=$('gp-msg'); if(e) e.innerHTML=''; },4500); }
+      else msg('gp-msg','err',j.error||'Verifikasi gagal');
+    }catch(e){ msg('gp-msg','err',String(e)); }
+  }
+  // ── Toggle metode konfirmasi + nominal unik/fee ──
+  async function loadMethods(){
+    var w=$('mth-wrap'); if(!w) return;
+    try{ var j=await (await fetch('/api/merchant/methods',{headers:{'x-api-key':key()},cache:'no-store'})).json();
+      var row=function(k,label,desc){
+        var a=j['method_'+k], u=j[k+'_unique'], f=j[k+'_fee'];
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-top:1px solid rgba(128,128,128,.18);flex-wrap:wrap">'
+          +'<div style="min-width:170px"><label style="cursor:pointer"><input type="checkbox" data-m="method_'+k+'"'+(a?' checked':'')+'> <b>'+label+'</b></label><div class="dim" style="font-size:11px">'+desc+'</div></div>'
+          +'<div style="display:flex;gap:14px;font-size:12px">'
+            +'<label style="cursor:pointer"><input type="checkbox" data-m="'+k+'_unique"'+(u?' checked':'')+'> Nominal unik</label>'
+            +'<label style="cursor:pointer"><input type="checkbox" data-m="'+k+'_fee"'+(f?' checked':'')+'> Fee</label>'
+          +'</div></div>';
+      };
+      w.innerHTML = row('device','Notifikasi Perangkat','Lewat APK catcher di HP')
+        + row('shopee','ShopeePay Partner','Server-side tanpa HP')
+        + row('gopay','GoPay Merchant','Server-side · disarankan unik & fee OFF')
+        + '<div style="margin-top:12px"><button onclick="saveMethods()">Simpan Pengaturan Metode</button></div>';
+    }catch(e){}
+  }
+  async function viewRaw(which){
+    var out=$('raw-out'); if(!out) return;
+    out.style.display='block'; out.textContent='memuat...';
+    try{ var j=await (await fetch('/api/merchant/'+which+'/raw',{headers:{'x-api-key':key()},cache:'no-store'})).json();
+      out.textContent=JSON.stringify(j,null,2);
+    }catch(e){ out.textContent='gagal: '+String(e); }
+  }
+  async function saveMethods(){
+    var w=$('mth-wrap'); if(!w) return; var payload={};
+    w.querySelectorAll('input[data-m]').forEach(function(i){ payload[i.getAttribute('data-m')]=i.checked; });
+    try{ var r=await fetch('/api/merchant/methods',{method:'POST',headers:{'x-api-key':key(),'content-type':'application/json'},body:JSON.stringify(payload)});
+      var j=await r.json(); if(r.ok) msg('mth-msg','ok','Pengaturan metode disimpan ✓'); else msg('mth-msg','err',j.error||'gagal');
+      setTimeout(function(){ var e=$('mth-msg'); if(e) e.innerHTML=''; },4000);
+    }catch(e){ msg('mth-msg','err',String(e)); }
   }
   async function clearHook(){
     if(!confirm('Hapus webhook tersimpan?')) return;
