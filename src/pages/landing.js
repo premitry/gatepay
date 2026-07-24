@@ -74,6 +74,7 @@ export function renderLanding() {
   .step h3{font-size:14px;margin-bottom:6px}
   .step p{color:var(--dim);font-size:12.5px;line-height:1.55}
   .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .feats-2{grid-template-columns:repeat(2,1fr)}
   .feat{background:var(--chrome);border:2px solid;border-color:var(--hi) var(--edge-dark) var(--edge-dark) var(--hi);box-shadow:1px 1px 0 var(--edge);padding:11px 12px}
   .feat .ic{font-size:17px;margin-bottom:5px}
   .feat h3{font-size:13px;margin-bottom:4px}
@@ -112,6 +113,25 @@ export function renderLanding() {
     .nav-links{gap:6px}
     .nav-links .nlink{display:none}
     nav .btn{padding:7px 12px;font-size:12px}
+    .wrap{padding:0 13px}
+    section{padding:16px 0}
+    .win .bd2{padding:15px 13px}
+    .hero{padding:30px 0 22px}
+    .badge{margin-bottom:18px;font-size:10px;padding:5px 10px}
+    .sub{font-size:14px}
+    .cta{margin-top:18px}
+    .cta .btn{padding:11px 18px;font-size:13px}
+    .cta-box .bd2{padding:30px 16px}
+    .sec-title{margin-bottom:14px}
+    .feats,.steps{gap:9px}
+    .feats-2{grid-template-columns:1fr}
+    .gstat{padding:12px 8px}
+    .gl{font-size:11px}
+  }
+  @media(max-width:380px){
+    .cta{flex-direction:column}
+    .cta .btn{width:100%}
+    .chip{font-size:11px;padding:6px 10px}
   }
 </style></head><body id="top">
 <nav><div class="wrap">
@@ -202,7 +222,7 @@ export function renderLanding() {
     <div class="tt">PENYEDIA_QRIS.TXT</div>
     <div class="bd2">
       <div class="sec-title"><h2>Penyedia QRIS yang Didukung</h2><p>Bekerja dengan QRIS statis dari penyedia mana pun. Belum punya? Daftar merchant di salah satu berikut.</p></div>
-      <div class="feats" style="grid-template-columns:repeat(2,1fr)">
+      <div class="feats feats-2">
         <div class="feat"><div class="ic">💙</div><h3>DANA Bisnis</h3><p>QRIS statis dari akun DANA Bisnis Anda.</p></div>
         <div class="feat"><div class="ic">🛍</div><h3>ShopeePay Partner</h3><p>QRIS merchant dari portal ShopeePay Partner.</p></div>
         <div class="feat"><div class="ic">🟢</div><h3>GoPay Merchant (GoBiz)</h3><p>QRIS dari akun GoPay Merchant di GoBiz.</p></div>
