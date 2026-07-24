@@ -3,7 +3,12 @@ package com.gatepay.catcher;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Intent;
+import android.os.Build;
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
@@ -170,6 +175,10 @@ public class MainActivity extends Activity {
         Ui.Win head = Ui.window(this, "GATEPAY_CATCHER.EXE", keluar);
         head.body.addView(Ui.mono(this, "NOTIFICATION PAYMENT BRIDGE", Ui.DIM, 11.5f));
         head.body.addView(Ui.mono(this, "VERSION " + appVersion(), Ui.DIM, 11.5f));
+        final TextView acct = Ui.mono(this, accountLine(), Ui.NAVY, 12);
+        acct.setTypeface(Ui.MONO, Typeface.BOLD);
+        acct.setPadding(0, dp(4), 0, 0);
+        head.body.addView(acct);
         addWin(head);
 
         final boolean granted = isNlsGranted();
@@ -177,6 +186,11 @@ public class MainActivity extends Activity {
             public void onClick(View v) { openWizard(); }
         });
         addView(bar, 10);
+
+        final LinearLayout alertHost = new LinearLayout(this);
+        alertHost.setOrientation(LinearLayout.VERTICAL);
+        addView(alertHost, 0);
+        checkDeviceStatus(acct, alertHost);
 
         EventLog.Stats st = EventLog.today(this);
         Ui.Win today = Ui.window(this, "TODAY.DAT");
@@ -990,6 +1004,10 @@ public class MainActivity extends Activity {
                                 if (r.ok && r.deviceId != null && !r.deviceId.isEmpty()) {
                                     Config.save(MainActivity.this, su, r.deviceId, r.deviceSecret,
                                         Config.targetPackages(MainActivity.this));
+                                    Config.prefs(MainActivity.this).edit()
+                                        .putString("username", r.username == null ? "" : r.username)
+                                        .putString("merchant_name", r.merchantName == null ? "" : r.merchantName)
+                                        .apply();
                                     toast("Tersambung" + (r.merchantName != null && !r.merchantName.isEmpty()
                                         ? " - " + r.merchantName : ""));
                                     recreate();
@@ -1201,5 +1219,94 @@ public class MainActivity extends Activity {
 
     private String hhmmss(long epochSec) {
         return new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date(epochSec * 1000L));
+    }
+
+    // ── Akun aktif + status/alert dari server ──
+    private String accountLine() {
+        String u = Config.prefs(this).getString("username", "");
+        String mn = Config.prefs(this).getString("merchant_name", "");
+        if (u == null || u.isEmpty()) return "AKUN: (device manual)";
+        return "AKUN: " + u.toUpperCase(Locale.US) + (mn != null && !mn.isEmpty() ? " · " + mn : "");
+    }
+
+    private void checkDeviceStatus(final TextView acct, final LinearLayout alertHost) {
+        final String su = Config.serverUrl(this), did = Config.deviceId(this), sec = Config.deviceSecret(this);
+        if (did.isEmpty() || sec.isEmpty()) return;
+        new Thread(new Runnable() {
+            public void run() {
+                final Api.Status st = Api.deviceStatus(su, did, sec);
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        if (st.username != null && !st.username.isEmpty()) {
+                            Config.prefs(MainActivity.this).edit()
+                                .putString("username", st.username)
+                                .putString("merchant_name", st.merchantName == null ? "" : st.merchantName)
+                                .apply();
+                            if (acct != null) acct.setText(accountLine());
+                        }
+                        if (alertHost != null) {
+                            alertHost.removeAllViews();
+                            if (st.alerts != null && !st.alerts.isEmpty()) {
+                                for (String a : st.alerts) {
+                                    View b = alertBar(a);
+                                    Ui.marginTop(b, MainActivity.this, 0);
+                                    ((LinearLayout.LayoutParams) b.getLayoutParams()).bottomMargin = dp(8);
+                                    alertHost.addView(b);
+                                }
+                                notifyAlert(st.alerts.get(0));
+                            } else {
+                                Config.prefs(MainActivity.this).edit().remove("last_alert").apply();
+                            }
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private View alertBar(String msg) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setBackground(new Ui.Bevel(Ui.WARN_BG, Ui.WHITE, Ui.ORANGE, dp(2), false));
+        int p = dp(12);
+        row.setPadding(p, p, p, p);
+        TextView ic = new TextView(this);
+        ic.setText("⚠");
+        ic.setTextColor(Ui.ORANGE);
+        ic.setTextSize(18);
+        ic.setPadding(0, 0, dp(10), 0);
+        row.addView(ic);
+        TextView t = new TextView(this);
+        t.setText(msg);
+        t.setTextColor(0xFF8A4A00);
+        t.setTextSize(12.5f);
+        row.addView(t);
+        return row;
+    }
+
+    private void notifyAlert(String msg) {
+        try {
+            String last = Config.prefs(this).getString("last_alert", "");
+            if (msg.equals(last)) return; // hindari notif berulang
+            Config.prefs(this).edit().putString("last_alert", msg).apply();
+            NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (nm == null) return;
+            String ch = "gatepay_alert";
+            if (Build.VERSION.SDK_INT >= 26) {
+                NotificationChannel c = new NotificationChannel(ch, "GatePay Alert", NotificationManager.IMPORTANCE_HIGH);
+                nm.createNotificationChannel(c);
+            }
+            Notification.Builder b = (Build.VERSION.SDK_INT >= 26)
+                ? new Notification.Builder(this, ch) : new Notification.Builder(this);
+            b.setSmallIcon(android.R.drawable.stat_sys_warning)
+                .setContentTitle("GatePay — Perbarui Token")
+                .setContentText(msg)
+                .setStyle(new Notification.BigTextStyle().bigText(msg))
+                .setAutoCancel(true);
+            Intent it = new Intent(this, MainActivity.class);
+            int flag = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0);
+            b.setContentIntent(PendingIntent.getActivity(this, 0, it, flag));
+            nm.notify(1001, b.build());
+        } catch (Exception e) {}
     }
 }

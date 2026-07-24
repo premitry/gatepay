@@ -1,6 +1,6 @@
 {
-  "versionCode": 15,
-  "versionName": "3.2",
+  "versionCode": 16,
+  "versionName": "3.3",
   "url": "/gatepay-catcher.apk",
-  "notes": "Pilih aplikasi target langsung dari daftar app terpasang (ikon + nama). Riwayat menampilkan detail lengkap inline + Kirim Ulang. Plus login gate & redesign Y2K."
+  "notes": "Tampilkan akun (username) yang login di header. Notifikasi otomatis bila token ShopeePay/GoPay perlu diperbarui. Server kini mengecek pembayaran berkala di background (tanpa perlu halaman checkout terbuka)."
 }

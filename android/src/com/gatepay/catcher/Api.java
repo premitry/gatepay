@@ -70,6 +70,68 @@ public final class Api {
         }
     }
 
+    public static class Status {
+        public boolean ok;
+        public String username;
+        public String merchantName;
+        public String shopeeStatus;
+        public String gopayStatus;
+        public int pending;
+        public java.util.List<String> alerts = new java.util.ArrayList<>();
+        public String error;
+    }
+
+    /** Ambil status akun + alert token (sinkron, panggil dari background thread). */
+    public static Status deviceStatus(String serverUrl, String deviceId, String deviceSecret) {
+        Status s = new Status();
+        HttpURLConnection conn = null;
+        try {
+            String url = serverUrl == null ? "" : serverUrl.trim();
+            if (url.isEmpty()) url = "https://gatepay.biz.id";
+            if (!url.startsWith("http")) url = "https://" + url;
+            if (url.endsWith("/")) url = url.substring(0, url.length() - 1);
+            String sig = Sender.hmacHex(deviceSecret, deviceId);
+            conn = (HttpURLConnection) new URL(url + "/api/device/status").openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(12000);
+            conn.setRequestProperty("x-device-id", deviceId);
+            conn.setRequestProperty("x-signature", sig);
+            int code = conn.getResponseCode();
+            String resp = read(code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream());
+            s.ok = resp.contains("\"ok\":true");
+            s.username = str(resp, "\"username\":\"");
+            s.merchantName = str(resp, "\"merchant_name\":\"");
+            s.shopeeStatus = str(resp, "\"shopee_status\":\"");
+            s.gopayStatus = str(resp, "\"gopay_status\":\"");
+            // parse alerts array
+            int a = resp.indexOf("\"alerts\":[");
+            if (a >= 0) {
+                int b = resp.indexOf(']', a);
+                if (b > a) {
+                    String inner = resp.substring(a + 10, b);
+                    int i = 0;
+                    while (i < inner.length()) {
+                        int q1 = inner.indexOf('"', i);
+                        if (q1 < 0) break;
+                        int q2 = inner.indexOf('"', q1 + 1);
+                        if (q2 < 0) break;
+                        String msg = inner.substring(q1 + 1, q2).replace("\\u2014", "-");
+                        if (!msg.isEmpty()) s.alerts.add(msg);
+                        i = q2 + 1;
+                    }
+                }
+            }
+            if (!s.ok) s.error = str(resp, "\"error\":\"");
+            return s;
+        } catch (Exception e) {
+            s.error = e.getMessage();
+            return s;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
     private static String read(InputStream in) {
         if (in == null) return "";
         StringBuilder sb = new StringBuilder();
